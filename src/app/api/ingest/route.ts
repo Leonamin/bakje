@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { enqueueJob, resumeStuckJobs } from "@/lib/queue";
+import { enqueueJob, startQueue } from "@/lib/queue";
 import { parseUrl } from "@/lib/canonical";
 
 export const runtime = "nodejs";
@@ -40,7 +40,7 @@ export async function POST(req: Request) {
     return { id: Number(info.lastInsertRowid), input_url: url };
   });
 
-  resumeStuckJobs();
+  startQueue();
   for (const job of jobs) enqueueJob(job.id);
 
   return NextResponse.json({ jobs, rejected });

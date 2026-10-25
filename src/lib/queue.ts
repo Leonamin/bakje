@@ -1,31 +1,66 @@
 import { db } from "./db";
+import { parseUrl } from "./canonical";
 import { resolveCanonical, runFetch, saveParsed, markDeleted } from "./pipeline";
 import type { IngestJob, Platform } from "./types";
 
-type QueueGlobal = { pending: number[]; running: number };
+type QueueGlobal = { pending: number[]; running: number; inFlight: Set<number>; ticker?: ReturnType<typeof setInterval> };
 
 const g = globalThis as unknown as { __archiveQueue?: QueueGlobal };
-if (!g.__archiveQueue) g.__archiveQueue = { pending: [], running: 0 };
+if (!g.__archiveQueue) g.__archiveQueue = { pending: [], running: 0, inFlight: new Set() };
 
 const MAX_CONCURRENT = 2;
+export const MAX_ATTEMPTS = 5;
+/** Wait before attempt n+1, indexed by attempts already made (1-based). */
+const RETRY_DELAYS_MS = [60_000, 5 * 60_000, 30 * 60_000, 30 * 60_000];
+const TICK_MS = 30_000;
 
 function touch(jobId: number, state: IngestJob["state"], message: string | null, sourceId?: number | null): void {
   db()
-    .prepare("UPDATE job SET state=?, message=?, source_id=COALESCE(?, source_id), updated_at=? WHERE id=?")
+    .prepare("UPDATE job SET state=?, message=?, source_id=COALESCE(?, source_id), next_attempt_at=NULL, updated_at=? WHERE id=?")
     .run(state, message, sourceId ?? null, new Date().toISOString(), jobId);
+}
+
+/**
+ * Malformed links and deleted posts end the job. Anything else (blocked,
+ * timeouts, a share link the browser could not resolve, parse misses) gets
+ * another try later, because those have recovered on retry in practice.
+ */
+function fail(jobId: number, attempts: number, message: string, permanent: boolean): void {
+  if (permanent || attempts >= MAX_ATTEMPTS) {
+    touch(jobId, "failed", attempts > 1 ? `${message} (${attempts}회 시도)` : message);
+    return;
+  }
+  const delay = RETRY_DELAYS_MS[Math.min(attempts, RETRY_DELAYS_MS.length) - 1];
+  const now = Date.now();
+  db()
+    .prepare("UPDATE job SET state='pending', message=?, next_attempt_at=?, updated_at=? WHERE id=?")
+    .run(
+      `재시도 대기 (${attempts}/${MAX_ATTEMPTS}) · ${message}`,
+      new Date(now + delay).toISOString(),
+      new Date(now).toISOString(),
+      jobId,
+    );
 }
 
 async function execute(jobId: number): Promise<void> {
   const conn = db();
   const job = conn.prepare("SELECT * FROM job WHERE id = ?").get(jobId) as IngestJob | undefined;
-  if (!job) return;
+  if (!job || job.state !== "pending") return;
 
+  const attempts = job.attempts + 1;
+  conn.prepare("UPDATE job SET attempts=? WHERE id=?").run(attempts, jobId);
   touch(jobId, "running", "링크 확인 중");
 
   try {
+    const shape = parseUrl(job.input_url);
+    if ("error" in shape) {
+      fail(jobId, attempts, shape.error, true);
+      return;
+    }
+
     const canonical = await resolveCanonical(job.input_url);
     if ("error" in canonical) {
-      touch(jobId, "failed", canonical.error);
+      fail(jobId, attempts, canonical.error, false);
       return;
     }
 
@@ -44,9 +79,9 @@ async function execute(jobId: number): Promise<void> {
 
     if (!parsed) {
       if (error === "deleted") {
-        touch(jobId, "failed", "삭제되었거나 볼 수 없는 게시글입니다.");
+        fail(jobId, attempts, "삭제되었거나 볼 수 없는 게시글입니다.", true);
       } else {
-        touch(jobId, "failed", error ?? "게시글을 가져오지 못했습니다.");
+        fail(jobId, attempts, error ?? "게시글을 가져오지 못했습니다.", false);
       }
       return;
     }
@@ -55,7 +90,7 @@ async function execute(jobId: number): Promise<void> {
     const sourceId = await saveParsed(parsed, html, { extract, partial });
     touch(jobId, "done", "저장 완료", sourceId);
   } catch (err) {
-    touch(jobId, "failed", (err as Error).message.slice(0, 300));
+    fail(jobId, attempts, (err as Error).message.slice(0, 300), false);
   }
 }
 
@@ -68,6 +103,7 @@ function pump(): void {
       .catch(() => undefined)
       .finally(() => {
         state.running -= 1;
+        state.inFlight.delete(jobId);
         pump();
       });
   }
@@ -75,6 +111,9 @@ function pump(): void {
 
 export function enqueueJob(jobId: number): void {
   const state = g.__archiveQueue!;
+  // A job already queued or running must not start a second time.
+  if (state.inFlight.has(jobId)) return;
+  state.inFlight.add(jobId);
   state.pending.push(jobId);
   pump();
 }
@@ -84,14 +123,25 @@ export function queueStats(): { pending: number; running: number } {
   return { pending: state.pending.length, running: state.running };
 }
 
-/** Recovers jobs interrupted by a dev-server restart. */
-export function resumeStuckJobs(): void {
-  const conn = db();
-  const stuck = conn.prepare("SELECT id, state FROM job WHERE state IN ('pending','running')").all() as { id: number; state: string }[];
-  for (const row of stuck) {
-    conn.prepare("UPDATE job SET state='pending', message=NULL WHERE id=?").run(row.id);
-    enqueueJob(row.id);
-  }
+/** Queues every pending job whose retry time has come (or that never ran). */
+function enqueueDue(): void {
+  const due = db()
+    .prepare("SELECT id FROM job WHERE state='pending' AND (next_attempt_at IS NULL OR next_attempt_at <= ?) ORDER BY id")
+    .all(new Date().toISOString()) as { id: number }[];
+  for (const row of due) enqueueJob(row.id);
+}
+
+/**
+ * Called once when the server boots. Jobs left 'running' by a restart or
+ * deploy go back to 'pending', then a ticker keeps picking up due retries.
+ */
+export function startQueue(): void {
+  const state = g.__archiveQueue!;
+  if (state.ticker) return;
+  db().prepare("UPDATE job SET state='pending', next_attempt_at=NULL WHERE state='running'").run();
+  enqueueDue();
+  state.ticker = setInterval(enqueueDue, TICK_MS);
+  state.ticker.unref?.();
 }
 
 export async function recheckSource(sourceId: number): Promise<{ ok: boolean; message: string }> {

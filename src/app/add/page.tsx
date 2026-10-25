@@ -2,10 +2,11 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { ChevronRight, CircleAlert, CircleCheck, ClipboardPaste, Keyboard, LoaderCircle } from "lucide-react";
+import { ChevronRight, CircleAlert, CircleCheck, ClipboardPaste, Clock3, CloudOff, Keyboard, LoaderCircle } from "lucide-react";
 import { Button } from "@/components/goodcase/basic/button";
 import { Drawer } from "@/components/goodcase/overlays/dialog";
 import { useToast } from "@/components/goodcase/overlays/toast";
+import { addToOutbox, isNetworkError, OUTBOX_EVENT, readOutbox, type OutboxItem } from "@/lib/outbox";
 
 interface Job {
   id: number;
@@ -14,6 +15,7 @@ interface Job {
   message: string | null;
   source_id: number | null;
   platform: string | null;
+  next_attempt_at: string | null;
 }
 
 const STATE_TEXT: Record<Job["state"], string> = {
@@ -37,12 +39,13 @@ export default function AddPage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
+  const [outbox, setOutbox] = useState<OutboxItem[]>([]);
   const timer = useRef<ReturnType<typeof setInterval> | null>(null);
   const seen = useRef<Map<number, Job["state"]>>(new Map());
 
   const poll = useCallback(async () => {
-    const res = await fetch("/api/jobs", { cache: "no-store" });
-    if (!res.ok) return;
+    const res = await fetch("/api/jobs", { cache: "no-store" }).catch(() => null);
+    if (!res?.ok) return;
     const data = (await res.json()) as { jobs: Job[] };
     const next = data.jobs ?? [];
 
@@ -62,6 +65,13 @@ export default function AddPage() {
   }, [notify]);
 
   useEffect(() => {
+    const sync = () => setOutbox(readOutbox());
+    sync();
+    window.addEventListener(OUTBOX_EVENT, sync);
+    return () => window.removeEventListener(OUTBOX_EVENT, sync);
+  }, []);
+
+  useEffect(() => {
     poll();
     timer.current = setInterval(poll, 1500);
     return () => {
@@ -69,7 +79,7 @@ export default function AddPage() {
     };
   }, [poll]);
 
-  /** Returns true when at least one link was queued. */
+  /** Returns true when the links were accepted, either by the server or into the offline outbox. */
   async function submit(urls: string[]) {
     if (urls.length === 0) return false;
     setSubmitting(true);
@@ -88,6 +98,11 @@ export default function AddPage() {
       await poll();
       return true;
     } catch (err) {
+      if (isNetworkError(err)) {
+        addToOutbox(urls);
+        notify({ title: "연결되지 않아 대기열에 넣었습니다", description: "연결되면 자동으로 보냅니다.", tone: "warning" });
+        return true;
+      }
       setError((err as Error).message);
       notify({ title: "저장하지 못했습니다", description: (err as Error).message, tone: "error" });
       return false;
@@ -147,18 +162,34 @@ export default function AddPage() {
 
       <section>
         <h2 className="label mb-1">최근 작업</h2>
-        {jobs.length === 0 ? (
+        {outbox.length > 0 ? (
+          <ul aria-label="전송 대기">
+            {outbox.map((item) => (
+              <li key={item.url} className="flex min-h-16 items-center gap-3 border-b border-[var(--line)] py-2">
+                <CloudOff size={20} className="shrink-0 text-[var(--warn)]" />
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-[14px] text-[var(--ink)]">{item.url.replace(/^https?:\/\/(www\.)?/, "")}</p>
+                  <p className="truncate text-[12px] text-[var(--muted)]">전송 대기 · 연결되면 자동으로 보냅니다</p>
+                </div>
+              </li>
+            ))}
+          </ul>
+        ) : null}
+        {jobs.length === 0 && outbox.length === 0 ? (
           <p className="py-10 text-center text-[14px] text-[var(--muted)]">
             아직 수집한 링크가 없습니다.
           </p>
         ) : (
           <ul>
             {jobs.map((job) => {
-              const busy = job.state === "pending" || job.state === "running";
+              const waiting = job.state === "pending" && job.next_attempt_at;
+              const busy = !waiting && (job.state === "pending" || job.state === "running");
               const openable = job.state === "done" && job.source_id;
               const row = (
                 <>
-                  {busy ? (
+                  {waiting ? (
+                    <Clock3 size={20} className="shrink-0 text-[var(--warn)]" />
+                  ) : busy ? (
                     <LoaderCircle size={20} className="shrink-0 animate-spin text-[var(--muted)]" />
                   ) : job.state === "failed" ? (
                     <CircleAlert size={20} className="shrink-0 text-[var(--danger)]" />
@@ -170,7 +201,9 @@ export default function AddPage() {
                       {job.input_url.replace(/^https?:\/\/(www\.)?/, "")}
                     </p>
                     <p className={`truncate text-[12px] ${job.state === "failed" ? "text-[var(--danger)]" : "text-[var(--muted)]"}`}>
-                      {job.message ?? STATE_TEXT[job.state]}
+                      {waiting
+                        ? `${new Date(job.next_attempt_at!).toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit" })} 다시 시도 · ${job.message ?? ""}`
+                        : (job.message ?? STATE_TEXT[job.state])}
                     </p>
                   </div>
                   {openable ? <ChevronRight size={20} className="shrink-0 text-[var(--muted)]" /> : null}

@@ -15,6 +15,7 @@ const pretendard = localFont({
 export const metadata: Metadata = {
   title: "아카이브 — 개인 게시글 보관소",
   description: "X, Threads, Reddit 게시글을 원문째 보관하고 다시 찾는 개인 아카이브",
+  appleWebApp: { capable: true, title: "아카이브", statusBarStyle: "black" },
 };
 
 export const viewport: Viewport = {

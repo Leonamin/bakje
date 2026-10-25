@@ -478,9 +478,10 @@ export function ToastProvider({
 
   const notify = useCallback(
     (message: ToastMessage) =>
+      // Newest first, so a fresh result is never hidden behind an older one in the stack.
       setMessages((current) => [
-        ...current,
         { ...message, id: crypto.randomUUID() },
+        ...current,
       ]),
     [],
   );

@@ -111,6 +111,9 @@ export interface IngestJob {
   source_id: number | null;
   state: "pending" | "running" | "done" | "failed";
   message: string | null;
+  attempts: number;
+  /** Set while a failed job waits for its next try; null otherwise. */
+  next_attempt_at: string | null;
   created_at: string;
   updated_at: string;
 }
