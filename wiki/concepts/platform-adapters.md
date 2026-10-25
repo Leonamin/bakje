@@ -17,6 +17,7 @@ timestamp: 2026-10-25
 - 얻는 것: 본문(long note_tweet 포함), 작성자, 답글 타래, 부모, 인용, 좋아요·조회수, 미디어 variants
 - 없는 것: 없음에 가깝다. 로그인·API 키·브라우저가 모두 불필요하다.
 - 폴백: 페이로드가 없으면 `cdn.syndication.twimg.com/tweet-result`로 단일 글만 저장하고 `partial`로 표시한다.
+- **Article(장문 뷰어)**: TweetDetail에는 제목·미리보기뿐이다. 본문은 *그 Article 트윗 자신의 페이지* SSR 스크립트의 `articleDocument.contentKey`(블록 목록 `[id, type, text]`)와 `highlights`(코드 블록)에 있다. 인용된 Article이면 그 트윗 페이지를 한 번 더 가져온다(`pipeline.ts`). 인라인 이미지·표지는 저장하지 않는다. 헤드리스 브라우저로는 x.com이 빈 페이지를 주므로 fetch로만 가져온다.
 - 리스크: X가 SSR 구조를 바꾸면 즉시 깨진다. → [결정 004](../decisions/004-x-logged-out-ssr.md)
 
 ## Threads — 하이드레이션 후 Relay JSON
@@ -25,6 +26,7 @@ timestamp: 2026-10-25
 
 - 공유 링크(`/share/...`)는 브라우저 내비게이션으로 해소한다(fetch는 JS 리다이렉트라 실패).
 - 미디어는 `image_versions2.candidates` 최대 해상도, 영상은 `video_versions`.
+- **장문 글**: `caption`은 앞부분만 담고, 전문은 `text_post_app_info.snippet_attachment_info.text_fragments.fragments[].plaintext`에 있다. 별도 뷰어 요청은 필요 없다.
 - 한계: 타래 복원 휴리스틱. 링크 프리뷰(OG 카드)는 미디어로 저장하지 않는다.
 
 ## Reddit — 브라우저 DOM 추출
@@ -60,3 +62,4 @@ timestamp: 2026-10-25
 - 2026-10-25 실제 URL 3건으로 수집 성공: X(본문+이어쓰기+이미지 4), Threads(본문), Reddit(본문+미디어 4).
 - Reddit은 같은 날 반복 요청 중 차단이 여러 번 발생했다. 로컬 IP에서는 대체로 통과한다.
 - Threads 다단 타래는 실물 검증 전이다.
+- Threads 장문 첨부(1470자)와 X Article(인용된 글, 약 2.4만 자)은 파서 단위로 확인했다. 서버 재수집은 미검증이다. → [로그](../logs/2026-10-25-long-form-capture.md)

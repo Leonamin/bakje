@@ -12,7 +12,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { RAW_DIR, db } from "../src/lib/db";
 import { closeBrowser } from "../src/lib/browser";
-import { extractTweetDetail, parseX } from "../src/lib/adapters/x";
+import { extractArticle, extractTweetDetail, parseX } from "../src/lib/adapters/x";
 import { parseThreads } from "../src/lib/adapters/threads";
 import { parseRedditHtml, type RedditExtract } from "../src/lib/adapters/reddit";
 import { saveParsed } from "../src/lib/pipeline";
@@ -50,7 +50,9 @@ for (const source of rows) {
   try {
     if (source.platform === "x" && html) {
       const payload = extractTweetDetail(html);
-      parsed = payload ? parseX(payload, source.native_id) : null;
+      // 스냅샷에는 원글 페이지만 있다. 인용된 Article 본문은 다시 수집해야 채워진다.
+      const article = extractArticle(html);
+      parsed = payload ? parseX(payload, source.native_id, article ? new Map([[source.native_id, article]]) : undefined) : null;
     } else if (source.platform === "threads" && html) {
       parsed = parseThreads(html, source.native_id);
     } else if (source.platform === "reddit") {

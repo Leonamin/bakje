@@ -5,7 +5,7 @@ import { RAW_DIR, db } from "./db";
 import { parseUrl, type Canonical } from "./canonical";
 import { resolveRedditShare, fetchReddit, parseReddit } from "./adapters/reddit";
 import { fetchThreads, parseThreads, resolveThreadsShare } from "./adapters/threads";
-import { fetchX, fetchXSyndication, parseX, parseXSyndication } from "./adapters/x";
+import { articleTweetIds, extractArticle, fetchX, fetchXSyndication, parseX, parseXSyndication } from "./adapters/x";
 import { archiveMedia } from "./media";
 import { detectLang } from "./lang";
 import { LLM_PROMPT_VERSION, llmConfig, translateAndSummarize } from "./llm";
@@ -277,7 +277,15 @@ export async function runFetch(
     if (raw.status === 404 || raw.status === 410) {
       return { parsed: null, html: raw.html, error: "deleted" };
     }
-    let parsed = raw.payload ? parseX(raw.payload, nativeId) : null;
+    // Article 본문은 그 트윗 자신의 페이지에만 있어서, 인용된 Article은 한 번 더 가져온다.
+    const articles = new Map<string, string>();
+    if (raw.payload) {
+      for (const id of articleTweetIds(raw.payload, nativeId)) {
+        const text = extractArticle(id === nativeId ? raw.html : (await fetchX(id)).html);
+        if (text) articles.set(id, text);
+      }
+    }
+    let parsed = raw.payload ? parseX(raw.payload, nativeId, articles) : null;
     let partial = false;
     if (!parsed) {
       const synd = await fetchXSyndication(nativeId);

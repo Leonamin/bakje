@@ -64,6 +64,8 @@ interface TweetNode {
   media: MediaRef[];
   metrics: { likes?: number | null; replies?: number | null; reposts?: number | null; views?: number | null };
   quoted?: TweetNode;
+  /** X Article(장문 뷰어)가 붙은 트윗이면 제목. 본문은 그 트윗 페이지에만 있다. */
+  articleTitle?: string;
 }
 
 function unwrap(result: any): any {
@@ -162,6 +164,7 @@ function toNode(raw: any, displayType: string | null): TweetNode | null {
       views: node.views?.count ? Number(node.views.count) : null,
     },
     quoted: undefined,
+    articleTitle: node.article?.article_results?.result?.title,
   };
 }
 
@@ -204,6 +207,11 @@ function collectNodes(data: any): Map<string, TweetNode> {
       }
     }
   }
+  // 새 SSR 형식은 인용 글을 tweet_result_by_rest_id 쪽에만 싣는다.
+  const solo = unwrap(data?.data?.tweet_result_by_rest_id?.result);
+  const sq = solo?.quoted_status_result?.result ?? solo?.quoted_tweet_results?.result;
+  const existing = solo?.rest_id ? nodes.get(String(solo.rest_id)) : undefined;
+  if (sq && existing && !existing.quoted) existing.quoted = toNode(sq, null) ?? undefined;
   return nodes;
 }
 
@@ -216,17 +224,61 @@ function cleanText(text: string, node: TweetNode): string {
   return out.replace(/\u200b/g, "").trim();
 }
 
-function partFrom(node: TweetNode, kind: ParsedPart["kind"], canonicalUrl: string): ParsedPart {
+/**
+ * Article 트윗의 페이지에는 draft.js 비슷한 블록 목록(`articleDocument.contentKey`)이
+ * 이스케이프된 JS 문자열로 실려 있다. 코드 블록은 같은 페이지의 `highlights`에
+ * "<블록 번호>:<언어><코드>" 키로 따로 있다.
+ */
+export function extractArticle(html: string): string | null {
+  const m = /articleDocument:\$R\[\d+\]=\{contentKey:("(?:[^"\\]|\\.)*")/.exec(html);
+  if (!m) return null;
+  let blocks: [string, string, string][];
+  try {
+    blocks = JSON.parse(JSON.parse(m[1]));
+  } catch {
+    return null;
+  }
+  const code = new Map<number, string>();
+  const hl = html.indexOf("highlights:", m.index);
+  for (const k of html.slice(hl, hl + 2_000_000).matchAll(/"(\d+):(bash|shell|sh|json|markdown|md|text|python|javascript|js|typescript|ts|tsx|jsx|yaml|yml|toml|html|css|sql|diff|)((?:[^"\\]|\\.)*)":\$R\[/g)) {
+    try {
+      code.set(Number(k[1]), "```" + k[2] + "\n" + JSON.parse(`"${k[3]}"`) + "\n```");
+    } catch {
+      /* 해당 블록은 건너뛴다 */
+    }
+  }
+  let n = 0;
+  return blocks
+    .map(([, type, text], i) => {
+      if (type === "atomic") return code.get(i) ?? "";
+      if (type === "header-one" || type === "header-two") return `## ${text}`;
+      if (type === "header-three") return `### ${text}`;
+      if (type === "unordered-list-item") return `- ${text}`;
+      if (type === "ordered-list-item") return `${++n}. ${text}`;
+      return text;
+    })
+    .filter(Boolean)
+    .join("\n\n");
+}
+
+/** 본문을 따로 가져와야 하는 Article 트윗 id (원글 자신, 인용 글). */
+export function articleTweetIds(payload: any, nativeId: string): string[] {
+  const focal = collectNodes(payload).get(nativeId);
+  return [focal, focal?.quoted].filter((n) => n?.articleTitle).map((n) => n!.id);
+}
+
+function partFrom(node: TweetNode, kind: ParsedPart["kind"], canonicalUrl: string, articles?: Map<string, string>): ParsedPart {
+  const article = articles?.get(node.id);
   return {
     kind,
-    text: cleanText(node.text, node),
+    text: article ? `# ${node.articleTitle}\n\n${article}` : cleanText(node.text, node),
     sourceUrl: `https://x.com/${node.author ?? "i"}/status/${node.id}`,
     postedAt: node.createdAt,
     media: node.media,
   };
 }
 
-export function parseX(payload: any, nativeId: string): ParsedPost | null {
+export function parseX(payload: any, nativeId: string, articles?: Map<string, string>): ParsedPost | null {
   const nodes = collectNodes(payload);
   const focal = nodes.get(nativeId);
   if (!focal) return null;
@@ -239,7 +291,7 @@ export function parseX(payload: any, nativeId: string): ParsedPost | null {
     if (parent && parent.author !== focal.author) parts.push(partFrom(parent, "parent_context", focal.id));
   }
 
-  parts.push(partFrom(focal, "main", focal.id));
+  parts.push(partFrom(focal, "main", focal.id, articles));
 
   // Continuation chain: only posts by the same author answering their own post.
   const chain: TweetNode[] = [];
@@ -257,7 +309,7 @@ export function parseX(payload: any, nativeId: string): ParsedPost | null {
   chain.sort((a, b) => (a.createdAt ?? "").localeCompare(b.createdAt ?? ""));
   for (const n of chain) parts.push(partFrom(n, "continuation", n.id));
 
-  if (focal.quoted) parts.push(partFrom(focal.quoted, "quoted", focal.id));
+  if (focal.quoted) parts.push(partFrom(focal.quoted, "quoted", focal.id, articles));
 
   return {
     platform: "x",

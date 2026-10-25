@@ -9,6 +9,7 @@ okf_version: "0.1"
 # Logs
 
 - [2026-10-25-refresh-button-and-ios27-help.md](./2026-10-25-refresh-button-and-ios27-help.md) — 새로고침 버튼 추가, iOS 27 실기기 캡처로 단축어 도움말 재작성
+- [2026-10-25-long-form-capture.md](./2026-10-25-long-form-capture.md) — Threads 장문 첨부·X Article 본문 수집
 - [2026-10-25-three-tracks-impl.md](./2026-10-25-three-tracks-impl.md) — 요청형 번역·LLM 설정, 바텀 시트 인터랙션, iOS 단축어 구현과 배포
 - [2026-10-25-next-work-plan.md](./2026-10-25-next-work-plan.md) — 요청형 번역·LLM 설정, 바텀 시트 인터랙션, iOS 단축어 3갈래 착수와 삭제 감지 제외
 - [2026-10-25-rename-bakje.md](./2026-10-25-rename-bakje.md) — 서비스 이름 박제로 변경, 운영 경로·식별자 이전과 재배포

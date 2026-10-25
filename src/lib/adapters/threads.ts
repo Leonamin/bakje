@@ -15,6 +15,13 @@ interface ThreadsPost {
   likes: number | null;
 }
 
+/** 장문 첨부("snippet")는 caption 대신 text_post_app_info 안에 따로 실린다. */
+function withLongText(caption: string, info: any): string {
+  const frags = info?.snippet_attachment_info?.text_fragments?.fragments;
+  const long = Array.isArray(frags) ? frags.map((f: any) => f?.plaintext ?? "").join("").trim() : "";
+  return long ? `${caption}\n\n${long}` : caption;
+}
+
 function collectPosts(html: string): Map<string, ThreadsPost> {
   const posts = new Map<string, ThreadsPost>();
 
@@ -72,7 +79,7 @@ function collectPosts(html: string): Map<string, ThreadsPost> {
       author: raw.user?.username ?? null,
       authorName: raw.user?.full_name ?? null,
       avatar: raw.user?.profile_pic_url ?? null,
-      text: String(raw.caption?.text ?? "").trim(),
+      text: withLongText(String(raw.caption?.text ?? "").trim(), info),
       takenAt: typeof raw.taken_at === "number" ? raw.taken_at : null,
       isReply: Boolean(info.is_reply ?? info.reply_to_author),
       replyToAuthor: info.reply_to_author?.username ?? null,
