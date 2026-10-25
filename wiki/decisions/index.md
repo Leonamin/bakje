@@ -17,3 +17,4 @@ okf_version: "0.1"
 - [007-goodcase-ui-bridge.md](./007-goodcase-ui-bridge.md) — Goodcase UI 이식과 토큰 브리지
 - [008-colorhunt-palette.md](./008-colorhunt-palette.md) — ColorHunt Popular #23 팔레트
 - [009-docker-release-deploy.md](./009-docker-release-deploy.md) — /opt 릴리스 + 심볼릭 링크 배포
+- [010-capture-first-ui.md](./010-capture-first-ui.md) — 수집 우선 UI와 장식 제거, 타입 스케일 고정

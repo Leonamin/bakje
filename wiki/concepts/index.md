@@ -15,5 +15,5 @@ okf_version: "0.1"
 - [korean-search.md](./korean-search.md) — trigram FTS와 2글자 이하 폴백
 - [media-pipeline.md](./media-pipeline.md) — 30MB 상한, HLS 처리, 포스터, 정리
 - [translation.md](./translation.md) — OpenAI 호환 번역·요약과 실패 격리
-- [ui-system.md](./ui-system.md) — 모바일 우선 IA, Goodcase 이식, 토큰
+- [ui-system.md](./ui-system.md) — 수집 우선 모바일 IA, 타입 스케일, Goodcase 이식, 토큰
 - [operations.md](./operations.md) — 릴리스 배포, 데이터 경로, 백업
