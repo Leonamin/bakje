@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { ChevronRight, CircleAlert, CircleCheck, ClipboardPaste, Clock3, CloudOff, Keyboard, LoaderCircle, Share } from "lucide-react";
+import { ChevronRight, CircleAlert, CircleCheck, CopyCheck, ClipboardPaste, Clock3, CloudOff, Keyboard, LoaderCircle, Share } from "lucide-react";
 import { Button } from "@/components/goodcase/basic/button";
 import { Drawer } from "@/components/goodcase/overlays/dialog";
 import { useToast } from "@/components/goodcase/overlays/toast";
@@ -12,7 +12,7 @@ import { addToOutbox, isNetworkError, OUTBOX_EVENT, readOutbox, type OutboxItem 
 interface Job {
   id: number;
   input_url: string;
-  state: "pending" | "running" | "done" | "failed";
+  state: "pending" | "running" | "done" | "failed" | "duplicate";
   message: string | null;
   source_id: number | null;
   platform: string | null;
@@ -24,6 +24,7 @@ const STATE_TEXT: Record<Job["state"], string> = {
   running: "수집 중",
   done: "저장 완료",
   failed: "실패",
+  duplicate: "이미 저장됨",
 };
 
 function splitUrls(text: string) {
@@ -55,6 +56,8 @@ export default function AddPage() {
       if (before && before !== job.state && before !== "done" && before !== "failed") {
         if (job.state === "done") {
           notify({ title: "저장 완료", description: job.message ?? undefined, tone: "success" });
+        } else if (job.state === "duplicate") {
+          notify({ title: "이미 저장된 게시글입니다", description: "다시 가져올지 선택해주세요.", tone: "warning" });
         } else if (job.state === "failed") {
           notify({ title: "수집 실패", description: job.message ?? undefined, tone: "error" });
         }
@@ -110,6 +113,18 @@ export default function AddPage() {
     } finally {
       setSubmitting(false);
     }
+  }
+
+  async function answerDuplicate(job: Job, refetch: boolean) {
+    // Optimistic: the row leaves the "duplicate" state at once so the buttons cannot be pressed twice.
+    setJobs((list) => list.map((j) => (j.id === job.id ? { ...j, state: refetch ? "running" : "done", message: refetch ? "다시 가져오는 중" : "다시 가져오지 않았습니다." } : j)));
+    const res = await fetch(`/api/jobs/${job.id}`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ refetch }),
+    }).catch(() => null);
+    if (!res?.ok) notify({ title: "처리하지 못했습니다", tone: "error" });
+    await poll();
   }
 
   function openSheet() {
@@ -193,13 +208,16 @@ export default function AddPage() {
             {jobs.map((job) => {
               const waiting = job.state === "pending" && job.next_attempt_at;
               const busy = !waiting && (job.state === "pending" || job.state === "running");
-              const openable = job.state === "done" && job.source_id;
+              const openable = (job.state === "done" || job.state === "duplicate") && job.source_id;
+              const asking = job.state === "duplicate";
               const row = (
                 <>
                   {waiting ? (
                     <Clock3 size={20} className="shrink-0 text-[var(--warn)]" />
                   ) : busy ? (
                     <LoaderCircle size={20} className="shrink-0 animate-spin text-[var(--muted)]" />
+                  ) : asking ? (
+                    <CopyCheck size={20} className="shrink-0 text-[var(--warn)]" />
                   ) : job.state === "failed" ? (
                     <CircleAlert size={20} className="shrink-0 text-[var(--danger)]" />
                   ) : (
@@ -215,7 +233,7 @@ export default function AddPage() {
                         : (job.message ?? STATE_TEXT[job.state])}
                     </p>
                   </div>
-                  {openable ? <ChevronRight size={20} className="shrink-0 text-[var(--muted)]" /> : null}
+                  {openable && !asking ? <ChevronRight size={20} className="shrink-0 text-[var(--muted)]" /> : null}
                 </>
               );
               return (
@@ -227,6 +245,24 @@ export default function AddPage() {
                   ) : (
                     <div className="flex min-h-16 items-center gap-3 py-2">{row}</div>
                   )}
+                  {asking ? (
+                    <div className="flex gap-2 pb-3 pl-8">
+                      <button
+                        type="button"
+                        onClick={() => answerDuplicate(job, true)}
+                        className="h-10 flex-1 rounded-xl bg-[var(--accent)] text-[14px] font-semibold text-[var(--gc-on-accent)]"
+                      >
+                        다시 가져오기
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => answerDuplicate(job, false)}
+                        className="h-10 flex-1 rounded-xl border border-[var(--line-strong)] text-[14px] text-[var(--ink)]"
+                      >
+                        그대로 두기
+                      </button>
+                    </div>
+                  ) : null}
                 </li>
               );
             })}

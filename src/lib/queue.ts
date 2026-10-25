@@ -68,7 +68,7 @@ async function execute(jobId: number): Promise<void> {
       .prepare("SELECT id FROM source WHERE platform = ? AND native_id = ?")
       .get(canonical.platform, canonical.nativeId) as { id: number } | undefined;
     if (existing) {
-      touch(jobId, "done", "이미 저장된 게시글입니다.", existing.id);
+      touch(jobId, "duplicate", "이미 저장된 게시글입니다. 다시 가져올까요?", existing.id);
       return;
     }
 
@@ -161,4 +161,25 @@ export async function recheckSource(sourceId: number): Promise<{ ok: boolean; me
 
   await saveParsed(parsed, html, { extract, partial });
   return { ok: true, message: "최신 상태로 갱신했습니다." };
+}
+
+/** Answer to a "duplicate" job: re-fetch the saved post (approve) or leave it as is (decline). */
+export async function resolveDuplicate(jobId: number, refetch: boolean): Promise<{ ok: boolean; message: string }> {
+  const job = db().prepare("SELECT * FROM job WHERE id = ?").get(jobId) as IngestJob | undefined;
+  if (!job || job.state !== "duplicate" || !job.source_id) return { ok: false, message: "처리할 중복 작업이 아닙니다." };
+  if (!refetch) {
+    touch(jobId, "done", "다시 가져오지 않았습니다.");
+    return { ok: true, message: "기존 게시글을 유지했습니다." };
+  }
+  touch(jobId, "running", "다시 가져오는 중");
+  try {
+    const result = await recheckSource(job.source_id);
+    if (result.ok) touch(jobId, "done", "다시 가져왔습니다.");
+    else touch(jobId, "failed", result.message);
+    return result;
+  } catch (err) {
+    const message = (err as Error).message.slice(0, 300);
+    touch(jobId, "failed", message);
+    return { ok: false, message };
+  }
 }

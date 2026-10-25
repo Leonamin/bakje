@@ -109,7 +109,8 @@ export interface IngestJob {
   input_url: string;
   platform: Platform | null;
   source_id: number | null;
-  state: "pending" | "running" | "done" | "failed";
+  /** "duplicate" waits for the user to approve or decline a re-fetch of the saved post. */
+  state: "pending" | "running" | "done" | "failed" | "duplicate";
   message: string | null;
   attempts: number;
   /** Set while a failed job waits for its next try; null otherwise. */
