@@ -114,6 +114,10 @@ html {
   font-size: 16px; /* below 16px iOS zooms the page on focus */
 }
 
+.gc-combobox-input {
+  font-size: 16px; /* its inner input inherits this; below 16px iOS zooms on focus */
+}
+
 .gc-input::placeholder,
 .gc-textarea::placeholder {
   color: color-mix(in srgb, var(--muted) 75%, transparent);
