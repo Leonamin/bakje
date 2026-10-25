@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Image as ImageIcon, Play } from "lucide-react";
+import { Play } from "lucide-react";
 import type { SearchHit } from "@/lib/search";
 import { formatDate, mediaUrl, platformName } from "@/lib/format";
 
@@ -9,15 +9,32 @@ const PLATFORM_TONE: Record<string, string> = {
   reddit: "#d99a86",
 };
 
-function PlatformMark({ platform }: { platform: string }) {
+function Byline({ hit }: { hit: SearchHit }) {
   return (
-    <span
-      className="mono !text-[10px]"
-      style={{ color: PLATFORM_TONE[platform] ?? "var(--muted)" }}
-    >
-      {platformName(platform)}
+    <span className="min-w-0 truncate">
+      <span style={{ color: PLATFORM_TONE[hit.platform] ?? "var(--muted)" }}>{platformName(hit.platform)}</span>
+      {hit.author_handle ? ` · @${hit.author_handle}` : null}
     </span>
   );
+}
+
+function Meta({ hit }: { hit: SearchHit }) {
+  return (
+    <div className="label flex items-center justify-between gap-2">
+      <Byline hit={hit} />
+      <span className="numeric shrink-0">{formatDate(hit.posted_at).slice(5)}</span>
+    </div>
+  );
+}
+
+function StatusBadge({ status }: { status: string }) {
+  if (status === "deleted") {
+    return <span className="rounded-md bg-[#2c1a18] px-2 py-0.5 text-[12px] text-[var(--danger)]">원문 삭제</span>;
+  }
+  if (status === "partial" || status === "error") {
+    return <span className="rounded-md bg-[#2b2517] px-2 py-0.5 text-[12px] text-[var(--warn)]">부분 수집</span>;
+  }
+  return null;
 }
 
 function Highlight({ text, q }: { text: string; q?: string }) {
@@ -39,40 +56,65 @@ function Highlight({ text, q }: { text: string; q?: string }) {
   );
 }
 
-export function SourceCard({ hit, query, view }: { hit: SearchHit; query?: string; view: "grid" | "list" }) {
+function Thumb({ hit, src, className }: { hit: SearchHit; src: string; className: string }) {
+  const hasVideo = hit.thumb?.endsWith(".poster.jpg");
+  return (
+    // Posts are mostly portrait photos of people; bias the crop toward the top.
+    <div className={`media-tile [&_img]:object-[50%_25%] ${className}`}>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={src} alt="" loading="lazy" />
+      {hasVideo ? (
+        <span className="absolute bottom-2 right-2 flex h-7 w-7 items-center justify-center rounded-full bg-black/60 text-white">
+          <Play size={14} fill="currentColor" />
+        </span>
+      ) : null}
+      <span className="absolute left-2 top-2">
+        <StatusBadge status={hit.status} />
+      </span>
+    </div>
+  );
+}
+
+/**
+ * grid: library tiles. list: compact library rows. feed: search results, where
+ * a thumbnail spans the full card width.
+ */
+export function SourceCard({ hit, query, view }: { hit: SearchHit; query?: string; view: "grid" | "list" | "feed" }) {
   const thumb = mediaUrl(hit.thumb);
-  const deleted = hit.status === "deleted";
-  const partial = hit.status === "partial" || hit.status === "error";
-  const hasVideo = hit.media_count > 0 && hit.thumb?.endsWith(".poster.jpg");
+  const text = hit.title || hit.snippet;
+
+  if (view === "feed") {
+    return (
+      <Link href={`/sources/${hit.id}`} className="plate-hover block overflow-hidden rounded-2xl bg-[var(--surface)]">
+        {thumb ? <Thumb hit={hit} src={thumb} className="aspect-video w-full" /> : null}
+        <div className="px-4 pb-4 pt-3">
+          <Meta hit={hit} />
+          {!thumb && hit.status !== "ok" ? (
+            <div className="mt-1">
+              <StatusBadge status={hit.status} />
+            </div>
+          ) : null}
+          <p className={`mt-1 text-[14px] leading-normal text-[var(--ink)] ${thumb ? "line-clamp-2" : "line-clamp-3"}`}>
+            <Highlight text={text} q={query} />
+          </p>
+        </div>
+      </Link>
+    );
+  }
 
   if (view === "list") {
     return (
-      <Link
-        href={`/sources/${hit.id}`}
-        className="plate plate-hover flex gap-3 p-3 transition-colors"
-      >
-        <div className="media-tile h-[64px] w-[64px] shrink-0">
-          {thumb ? (
-            // eslint-disable-next-line @next/next/no-img-element
+      <Link href={`/sources/${hit.id}`} className="plate-hover flex gap-3 rounded-2xl bg-[var(--surface)] p-3">
+        {thumb ? (
+          <div className="media-tile h-16 w-16 shrink-0 rounded-xl">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={thumb} alt="" loading="lazy" />
-          ) : (
-            <div className="flex h-full items-center justify-center">
-              <span className="mono !text-[9px]">{platformName(hit.platform).slice(0, 2)}</span>
-            </div>
-          )}
-        </div>
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2">
-            <PlatformMark platform={hit.platform} />
-            <span className="mono-sm truncate">
-              {hit.author_handle ? `@${hit.author_handle}` : "unknown"}
-            </span>
-            <span className="numeric ml-auto shrink-0 text-[10.5px] text-[var(--muted)]">
-              {formatDate(hit.posted_at).slice(5)}
-            </span>
           </div>
-          <p className="mt-1 line-clamp-2 text-[13.5px] leading-snug text-[var(--ink)]">
-            <Highlight text={hit.title || hit.snippet} q={query} />
+        ) : null}
+        <div className="min-w-0 flex-1">
+          <Meta hit={hit} />
+          <p className="mt-1 line-clamp-2 text-[14px] leading-normal text-[var(--ink)]">
+            <Highlight text={text} q={query} />
           </p>
         </div>
       </Link>
@@ -80,66 +122,24 @@ export function SourceCard({ hit, query, view }: { hit: SearchHit; query?: strin
   }
 
   return (
-    <Link
-      href={`/sources/${hit.id}`}
-      className="plate plate-hover group flex flex-col overflow-hidden transition-colors"
-    >
-      <div className="relative aspect-[4/3] w-full overflow-hidden border-b border-[var(--line)] bg-[#10151c]">
-        {thumb ? (
-          <>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={thumb}
-              alt=""
-              loading="lazy"
-              className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.03]"
-            />
-            {hasVideo ? (
-              <span className="absolute bottom-2 right-2 flex h-6 w-6 items-center justify-center rounded-full bg-black/60 text-white">
-                <Play size={11} fill="currentColor" />
-              </span>
-            ) : null}
-          </>
-        ) : (
-          <div className="flex h-full flex-col justify-between p-3">
-            <PlatformMark platform={hit.platform} />
-            <span className="select-none font-serif text-[34px] leading-none text-[var(--line-strong)]" aria-hidden="true">
-              &rdquo;
-            </span>
-            <span className="mono !text-[9.5px]">no media</span>
-          </div>
-        )}
-        {deleted ? (
-          <span className="absolute left-2 top-2 rounded-sm bg-[#2c1a18] px-1.5 py-0.5 text-[10px] text-[var(--danger)]">
-            원문 삭제
-          </span>
-        ) : partial ? (
-          <span className="absolute left-2 top-2 rounded-sm bg-[#2b2517] px-1.5 py-0.5 text-[10px] text-[var(--warn)]">
-            부분 수집
-          </span>
-        ) : null}
-      </div>
-
+    <Link href={`/sources/${hit.id}`} className="plate-hover flex h-full flex-col overflow-hidden rounded-2xl bg-[var(--surface)]">
+      {thumb ? <Thumb hit={hit} src={thumb} className="aspect-[4/3] w-full" /> : null}
       <div className="flex flex-1 flex-col gap-1.5 p-3">
-        <div className="flex items-center gap-1.5">
-          <PlatformMark platform={hit.platform} />
-          <span className="mono-sm truncate !text-[10.5px]">
-            {hit.author_handle ? `@${hit.author_handle}` : "unknown"}
-          </span>
-        </div>
-        <p className="line-clamp-3 text-[13px] leading-snug text-[var(--ink)]">
+        {thumb ? null : (
+          <>
+            <Meta hit={hit} />
+            <StatusBadge status={hit.status} />
+          </>
+        )}
+        {/* Without media the text takes the thumbnail's room. */}
+        <p className={`text-[14px] leading-normal text-[var(--ink)] ${thumb ? "line-clamp-2" : "line-clamp-[7]"}`}>
           <Highlight text={hit.snippet} q={query} />
         </p>
-        <div className="mt-auto flex items-center gap-2 pt-1 text-[var(--muted)]">
-          {hit.media_count > 0 ? (
-            <span className="flex items-center gap-1 text-[10.5px]">
-              <ImageIcon size={11} strokeWidth={1.8} />
-              {hit.media_count}
-            </span>
-          ) : null}
-          {hit.part_count > 1 ? <span className="mono !text-[9.5px]">이어쓰기 {hit.part_count - 1}</span> : null}
-          <span className="numeric ml-auto text-[10.5px]">{formatDate(hit.posted_at).slice(5)}</span>
-        </div>
+        {thumb ? (
+          <div className="mt-auto pt-1">
+            <Meta hit={hit} />
+          </div>
+        ) : null}
       </div>
     </Link>
   );

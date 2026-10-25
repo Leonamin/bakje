@@ -1,15 +1,21 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, ArrowUpRight, Clock3, Heart, MessageSquare, Repeat2, Eye } from "lucide-react";
+import { ArrowLeft, ExternalLink, Eye, Heart, MessageSquare, Repeat2 } from "lucide-react";
 import { getSource } from "@/lib/search";
 import { ReadingBody } from "@/components/reading-body";
 import { SourceOrganizer } from "@/components/source-organizer";
-import { compactNumber, formatDateTime, platformName, relative } from "@/lib/format";
+import { compactNumber, formatDateTime, platformName } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
 
+const PLATFORM_TONE: Record<string, string> = {
+  x: "#9fb3c8",
+  threads: "#c6ada4",
+  reddit: "#d99a86",
+};
+
+// "ok" is the normal case and gets no badge.
 const STATUS: Record<string, { text: string; color: string; bg: string }> = {
-  ok: { text: "보존됨", color: "var(--accent)", bg: "color-mix(in srgb, var(--accent) 12%, transparent)" },
   partial: { text: "부분 수집", color: "var(--warn)", bg: "#2b2517" },
   deleted: { text: "원문 삭제", color: "var(--danger)", bg: "#2c1a18" },
   error: { text: "확인 필요", color: "var(--warn)", bg: "#2b2517" },
@@ -20,86 +26,70 @@ export default async function SourcePage({ params }: { params: Promise<{ id: str
   const data = getSource(Number(id));
   if (!data) notFound();
 
-  const { source, parts, media, tags, translation, snapshots } = data;
-  const status = STATUS[source.status] ?? STATUS.ok;
-  const continuation = parts.filter((p) => p.kind === "continuation").length;
-  const savedMedia = media.filter((m) => m.status === "ok").length;
+  const { source, parts, media, tags, translation } = data;
+  const status = STATUS[source.status];
+
+  const organizer = (
+    <SourceOrganizer sourceId={source.id} tags={tags} note={source.note} lastCheckedAt={source.last_checked_at} />
+  );
+  const openOriginal = (
+    <a
+      href={source.canonical_url}
+      target="_blank"
+      rel="noreferrer"
+      className="flex h-12 flex-1 items-center justify-center gap-2 rounded-xl bg-[var(--accent)] px-4 text-[14px] font-semibold text-[var(--gc-on-accent)] md:h-10 md:flex-none"
+    >
+      <ExternalLink size={18} />
+      원문 열기
+    </a>
+  );
 
   return (
     <div className="mx-auto max-w-5xl">
-      <div className="sticky-tools flex items-center gap-2 px-5 py-2.5 md:px-6">
+      <div className="sticky-tools flex h-14 items-center gap-1 px-2 md:px-4">
         <Link
           href="/"
-          className="flex h-9 items-center gap-1.5 rounded-md pr-2 text-[13px] text-[var(--muted)] hover:text-[var(--ink)]"
+          aria-label="라이브러리로"
+          className="flex h-11 w-11 items-center justify-center rounded-xl text-[var(--ink)]"
         >
-          <ArrowLeft size={16} />
-          <span className="hidden sm:inline">라이브러리</span>
+          <ArrowLeft size={22} />
         </Link>
-        <span className="mono">{platformName(source.platform)}</span>
-        <span
-          className="rounded px-1.5 py-0.5 text-[10px]"
-          style={{ color: status.color, background: status.bg }}
-        >
-          {status.text}
+        <span className="text-[14px] font-semibold" style={{ color: PLATFORM_TONE[source.platform] }}>
+          {platformName(source.platform)}
         </span>
-        <div className="ml-auto flex items-center gap-1.5">
-          <span className="lg:hidden">
-            <SourceOrganizer
-              sourceId={source.id}
-              tags={tags}
-              note={source.note}
-              lastCheckedAt={source.last_checked_at}
-            />
+        {status ? (
+          <span className="ml-1 rounded-md px-2 py-0.5 text-[12px]" style={{ color: status.color, background: status.bg }}>
+            {status.text}
           </span>
-          <a
-            href={source.canonical_url}
-            target="_blank"
-            rel="noreferrer"
-            className="flex h-9 items-center gap-1.5 rounded-md border border-[var(--line-strong)] px-3 text-[12.5px] text-[var(--ink)]"
-          >
-            원문
-            <ArrowUpRight size={13} />
-          </a>
+        ) : null}
+        <div className="ml-auto hidden items-center gap-2 md:flex">
+          <span className="lg:hidden">{organizer}</span>
+          {openOriginal}
         </div>
       </div>
 
-      <div className="px-5 pb-12 pt-5 md:px-6 md:pt-8">
+      <div className="px-5 pb-12 pt-3 md:px-6 md:pt-6">
         {source.status === "deleted" ? (
-          <div className="mb-5 rounded-md border border-[#4a2a24] bg-[#2c1a18] px-4 py-3 text-[12.5px] leading-relaxed text-[var(--danger)]">
-            원문이 삭제되었습니다. 저장된 사본으로 열람 중입니다
+          <div className="mb-5 rounded-xl border border-[#4a2a24] bg-[#2c1a18] px-4 py-3 text-[14px] leading-relaxed text-[var(--danger)]">
+            원문이 삭제되어 저장된 사본을 보여줍니다
             {source.deleted_detected_at ? ` · ${formatDateTime(source.deleted_detected_at)} 확인` : ""}.
           </div>
         ) : null}
 
-        <header className="mb-6">
-          <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1">
-            <span className="mono !text-[11px] !text-[var(--accent)]">
-              {platformName(source.platform)}
-            </span>
-            <span className="mono">{source.lang && source.lang !== "ko" ? source.lang.toUpperCase() : "KO"}</span>
-            <span className="mono">·</span>
-            <span className="mono">{relative(source.posted_at)}</span>
-          </div>
-
+        <header className="mb-5">
           {source.title ? (
-            <h1 className="mt-2 text-[21px] font-semibold leading-snug tracking-tight md:text-[26px]">
-              {source.title}
-            </h1>
+            <h1 className="mb-3 text-[20px] font-bold leading-snug tracking-tight md:text-[24px]">{source.title}</h1>
           ) : null}
 
-          <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[13px]">
-            <span className="text-[var(--ink)]">
+          <div className="flex flex-wrap items-baseline gap-x-2">
+            <span className="text-[16px] font-semibold">
               {source.author_name ?? source.author_handle ?? "unknown"}
             </span>
-            {source.author_handle ? (
-              <span className="mono-sm">@{source.author_handle}</span>
+            {source.author_handle && source.author_handle !== source.author_name ? (
+              <span className="label">@{source.author_handle}</span>
             ) : null}
-            <span className="mono-sm">·</span>
-            <span className="mono-sm flex items-center gap-1">
-              <Clock3 size={11} />
-              {formatDateTime(source.posted_at)}
-            </span>
           </div>
+          <p className="label numeric mt-0.5">{formatDateTime(source.posted_at)}</p>
 
           <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1.5">
             {[
@@ -110,43 +100,55 @@ export default async function SourcePage({ params }: { params: Promise<{ id: str
             ]
               .filter((metric) => metric.value != null)
               .map((metric) => (
-                <span key={metric.label} className="flex items-center gap-1.5 text-[var(--muted)]">
-                  <metric.icon size={12} strokeWidth={1.7} />
-                  <span className="numeric text-[11.5px]">{compactNumber(metric.value)}</span>
+                <span key={metric.label} className="label numeric flex items-center gap-1" aria-label={`${metric.label} ${metric.value}`}>
+                  <metric.icon size={16} strokeWidth={1.8} />
+                  {compactNumber(metric.value)}
                 </span>
               ))}
-            <span className="mono">미디어 {savedMedia} · 파트 {parts.length}</span>
           </div>
         </header>
 
-        <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_248px]">
+        <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_280px]">
           <div className="min-w-0">
             {translation?.summary_ko ? (
-              <section className="mb-6 rounded-lg border border-[var(--line)] bg-[var(--surface)] p-4">
-                <p className="mono mb-2">요약</p>
-                <p className="whitespace-pre-wrap text-[13.5px] leading-relaxed text-[var(--ink)]">
-                  {translation.summary_ko}
-                </p>
-                {translation.model ? <p className="mono mt-2">model {translation.model}</p> : null}
+              <section className="mb-6 rounded-2xl bg-[var(--surface)] p-4">
+                <h2 className="label mb-2">요약</h2>
+                <p className="whitespace-pre-wrap text-[14px] leading-relaxed text-[var(--ink)]">{translation.summary_ko}</p>
               </section>
             ) : null}
 
-            <ReadingBody parts={parts} media={media} />
+            <ReadingBody
+              parts={parts}
+              media={media}
+              actions={
+                <>
+                  {organizer}
+                  {openOriginal}
+                </>
+              }
+            />
 
             {source.note ? (
               <section className="mt-8 border-t border-[var(--line)] pt-4">
-                <p className="mono mb-2">내 메모</p>
-                <p className="whitespace-pre-wrap text-[13.5px] leading-relaxed text-[var(--muted)]">
-                  {source.note}
-                </p>
+                <h2 className="label mb-2">내 메모</h2>
+                <p className="whitespace-pre-wrap text-[14px] leading-relaxed text-[var(--ink)]">{source.note}</p>
               </section>
+            ) : null}
+
+            {tags.length > 0 ? (
+              <div className="mt-6 flex flex-wrap gap-2 lg:hidden">
+                {tags.map((tag) => (
+                  <Link key={tag} href={`/?tag=${encodeURIComponent(tag)}`} className="chip">
+                    #{tag}
+                  </Link>
+                ))}
+              </div>
             ) : null}
           </div>
 
           <aside className="hidden lg:block">
             <div className="sticky top-[88px] space-y-5">
-              <section>
-                <p className="mono mb-2">정리</p>
+              <section aria-label="정리">
                 <SourceOrganizer
                   sourceId={source.id}
                   tags={tags}
@@ -154,37 +156,6 @@ export default async function SourcePage({ params }: { params: Promise<{ id: str
                   lastCheckedAt={source.last_checked_at}
                   inline
                 />
-              </section>
-
-              {tags.length > 0 ? (
-                <section>
-                  <p className="mono mb-2">태그</p>
-                  <div className="flex flex-wrap gap-1.5">
-                    {tags.map((tag) => (
-                      <Link key={tag} href={`/?tag=${encodeURIComponent(tag)}`} className="chip !h-7 !text-[11px]">
-                        #{tag}
-                      </Link>
-                    ))}
-                  </div>
-                </section>
-              ) : null}
-
-              <section className="border-t border-[var(--line)] pt-4">
-                <p className="mono mb-2">보존 정보</p>
-                <dl className="space-y-1.5">
-                  {[
-                    ["구성", `본문 ${parts.filter((p) => p.kind === "main").length} · 이어쓰기 ${continuation}`],
-                    ["미디어", `${savedMedia} / ${media.length}`],
-                    ["스냅샷", `${snapshots.length}개`],
-                    ["파서", `v${source.parser_version}`],
-                    ["저장", relative(source.first_seen_at)],
-                  ].map(([label, value]) => (
-                    <div key={label} className="flex items-baseline justify-between gap-2">
-                      <dt className="mono">{label}</dt>
-                      <dd className="mono-sm !text-[var(--ink)]">{value}</dd>
-                    </div>
-                  ))}
-                </dl>
               </section>
             </div>
           </aside>

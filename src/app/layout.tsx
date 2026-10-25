@@ -1,7 +1,16 @@
 import type { Metadata, Viewport } from "next";
+import localFont from "next/font/local";
 import { Providers } from "@/components/providers";
 import { BottomNav, TopBar } from "@/components/app-nav";
 import "./globals.css";
+
+// ponytail: one 2MB variable file, cached after first load; switch to Pretendard's dynamic subset if first paint on mobile data hurts.
+const pretendard = localFont({
+  src: "./fonts/PretendardVariable.woff2",
+  weight: "45 920",
+  display: "swap",
+  variable: "--font-pretendard",
+});
 
 export const metadata: Metadata = {
   title: "아카이브 — 개인 게시글 보관소",
@@ -17,7 +26,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="ko">
+    <html lang="ko" className={pretendard.variable}>
       <body>
         <Providers>
           <div className="app-shell">

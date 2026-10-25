@@ -34,7 +34,7 @@ export function SearchInput({ initialQuery }: { initialQuery: string }) {
       className="relative"
     >
       <Search
-        size={17}
+        size={20}
         strokeWidth={1.8}
         className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--muted)]"
       />
@@ -46,33 +46,23 @@ export function SearchInput({ initialQuery }: { initialQuery: string }) {
         aria-label="검색"
         enterKeyHint="search"
         autoComplete="off"
-        className="h-12 w-full rounded-lg border border-[var(--line-strong)] bg-[#11161e] pl-10 pr-20 text-[15px] text-[var(--ink)] outline-none focus:border-[var(--accent)]"
+        className="h-12 w-full rounded-xl border border-[var(--line)] bg-[var(--surface)] pl-11 pr-12 text-[16px] text-[var(--ink)] outline-none focus:border-[var(--line-strong)]"
       />
-      <div className="absolute right-2 top-1/2 flex -translate-y-1/2 items-center gap-1">
-        {value ? (
-          <button
-            type="button"
-            onClick={() => {
-              setValue("");
-              submit("");
-              ref.current?.focus();
-            }}
-            aria-label="검색어 지우기"
-            className="flex h-8 w-8 items-center justify-center rounded-md text-[var(--muted)]"
-          >
-            <X size={16} />
-          </button>
-        ) : null}
+      {value ? (
         <button
-          type="submit"
-          className="h-8 rounded-md bg-[color-mix(in_srgb,var(--accent)_16%,transparent)] px-3 text-[12.5px] text-[var(--accent-strong)]"
+          type="button"
+          onClick={() => {
+            setValue("");
+            submit("");
+            ref.current?.focus();
+          }}
+          aria-label="검색어 지우기"
+          className="absolute right-1 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-lg text-[var(--muted)]"
         >
-          검색
+          <X size={20} />
         </button>
-      </div>
-      {isPending ? (
-        <span className="absolute -bottom-5 left-1 mono">검색 중…</span>
       ) : null}
+      {isPending ? <span className="label absolute -bottom-6 left-1">검색 중…</span> : null}
     </form>
   );
 }

@@ -236,17 +236,3 @@ export function topTags(limit = 12): { name: string; count: number }[] {
     )
     .all(limit) as { name: string; count: number }[];
 }
-
-export function libraryStats(): {
-  sources: number;
-  media: number;
-  deleted: number;
-  lastSaved: string | null;
-} {
-  const conn = db();
-  const sources = (conn.prepare("SELECT COUNT(*) AS n FROM source").get() as { n: number }).n;
-  const media = (conn.prepare("SELECT COUNT(*) AS n FROM media WHERE status='ok'").get() as { n: number }).n;
-  const deleted = (conn.prepare("SELECT COUNT(*) AS n FROM source WHERE status='deleted'").get() as { n: number }).n;
-  const last = conn.prepare("SELECT MAX(first_seen_at) AS t FROM source").get() as { t: string | null };
-  return { sources, media, deleted, lastSaved: last.t };
-}

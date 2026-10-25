@@ -83,39 +83,31 @@ export function LibraryToolbar({
         role="search"
       >
         <Search
-          size={16}
+          size={20}
           strokeWidth={1.8}
-          className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[var(--muted)]"
+          className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--muted)]"
         />
         <input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="키워드, 작성자, 번역문 검색"
+          placeholder="키워드, 작성자, 번역문"
           aria-label="검색"
           enterKeyHint="search"
-          className="h-11 w-full rounded-lg border border-[var(--line)] bg-[#11161e] pl-9 pr-20 text-[14px] text-[var(--ink)] outline-none placeholder:text-[color-mix(in_srgb,var(--muted)_75%,transparent)] focus:border-[var(--line-strong)]"
+          className="h-12 w-full rounded-xl border border-[var(--line)] bg-[var(--surface)] pl-11 pr-12 text-[16px] text-[var(--ink)] outline-none placeholder:text-[color-mix(in_srgb,var(--muted)_75%,transparent)] focus:border-[var(--line-strong)]"
         />
-        <div className="absolute right-1.5 top-1/2 flex -translate-y-1/2 items-center gap-1">
-          {query ? (
-            <button
-              type="button"
-              onClick={() => {
-                setQuery("");
-                push({ q: "" });
-              }}
-              aria-label="검색어 지우기"
-              className="flex h-8 w-8 items-center justify-center rounded-md text-[var(--muted)] hover:text-[var(--ink)]"
-            >
-              <X size={15} />
-            </button>
-          ) : null}
+        {query ? (
           <button
-            type="submit"
-            className="h-8 rounded-md bg-[color-mix(in_srgb,var(--accent)_16%,transparent)] px-2.5 text-[12px] text-[var(--accent-strong)]"
+            type="button"
+            onClick={() => {
+              setQuery("");
+              push({ q: "" });
+            }}
+            aria-label="검색어 지우기"
+            className="absolute right-1 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-lg text-[var(--muted)] hover:text-[var(--ink)]"
           >
-            검색
+            <X size={20} />
           </button>
-        </div>
+        ) : null}
       </form>
 
       <div className="mt-3">
@@ -146,33 +138,32 @@ export function LibraryToolbar({
         </div>
       </div>
 
-      <div className="mt-3 flex items-center gap-2">
-        <span className={`mono ${isPending ? "opacity-50" : ""}`}>
+      <div className="mt-2 flex items-center gap-2">
+        <span className={`label numeric ${isPending ? "opacity-50" : ""}`}>
           {total}건{current.q ? ` · “${current.q}”` : ""}
         </span>
         {current.tag ? (
-          <button type="button" className="chip !h-7 !text-[11px]" data-active="true" onClick={() => push({ tag: "" })}>
+          <button type="button" className="chip !h-8 !text-[12px]" data-active="true" onClick={() => push({ tag: "" })}>
             #{current.tag}
-            <X size={11} />
+            <X size={14} />
           </button>
         ) : null}
 
-        <div className="ml-auto flex shrink-0 items-center gap-1">
+        <div className="ml-auto flex shrink-0 items-center">
           <button
             type="button"
             onClick={() => setSheetOpen(true)}
             aria-label="필터"
-            className="relative flex h-9 items-center gap-1.5 rounded-md border border-[var(--line)] px-2.5 text-[12px] text-[var(--muted)] hover:text-[var(--ink)]"
+            className="relative flex h-11 w-11 items-center justify-center rounded-xl text-[var(--muted)] hover:text-[var(--ink)]"
           >
-            <SlidersHorizontal size={14} strokeWidth={1.8} />
-            <span className="hidden sm:inline">필터</span>
+            <SlidersHorizontal size={20} strokeWidth={1.8} />
             {activeFilterCount > 0 ? (
-              <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-[var(--accent)] px-1 text-[9px] font-semibold text-[var(--gc-on-accent)]">
+              <span className="absolute right-1 top-1 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-[var(--accent)] px-1 text-[11px] font-semibold text-[var(--gc-on-accent)]">
                 {activeFilterCount}
               </span>
             ) : null}
           </button>
-          <div className="flex overflow-hidden rounded-md border border-[var(--line)]">
+          <div className="flex">
             {(["grid", "list"] as const).map((v) => {
               const Icon = v === "grid" ? LayoutGrid : List;
               return (
@@ -182,11 +173,11 @@ export function LibraryToolbar({
                   onClick={() => push({ view: v })}
                   aria-label={v === "grid" ? "그리드 보기" : "리스트 보기"}
                   aria-pressed={view === v}
-                  className={`flex h-9 w-9 items-center justify-center ${
-                    view === v ? "bg-[color-mix(in_srgb,var(--accent)_14%,transparent)] text-[var(--accent-strong)]" : "text-[var(--muted)]"
+                  className={`flex h-11 w-11 items-center justify-center rounded-xl ${
+                    view === v ? "text-[var(--ink)]" : "text-[var(--muted)]"
                   }`}
                 >
-                  <Icon size={14} strokeWidth={1.8} />
+                  <Icon size={20} strokeWidth={1.8} />
                 </button>
               );
             })}
@@ -198,7 +189,6 @@ export function LibraryToolbar({
         isOpen={sheetOpen}
         onOpenChange={setSheetOpen}
         title="필터"
-        description="적용을 눌러야 결과에 반영됩니다."
         footer={
           <div className="flex w-full gap-2">
             <Button
@@ -226,7 +216,7 @@ export function LibraryToolbar({
       >
         <div className="space-y-5">
           <fieldset>
-            <legend className="mono mb-2">미디어</legend>
+            <legend className="label mb-2">미디어</legend>
             <div className="flex gap-2">
               {MEDIA.map((m) => (
                 <button
@@ -243,7 +233,7 @@ export function LibraryToolbar({
           </fieldset>
 
           <fieldset>
-            <legend className="mono mb-2">정렬</legend>
+            <legend className="label mb-2">정렬</legend>
             <div className="flex gap-2">
               {SORT.map((s) => (
                 <button
@@ -261,7 +251,7 @@ export function LibraryToolbar({
 
           {tags.length > 0 ? (
             <fieldset>
-              <legend className="mono mb-2">태그</legend>
+              <legend className="label mb-2">태그</legend>
               <div className="flex flex-wrap gap-2">
                 {tags.map((t) => (
                   <button
@@ -271,14 +261,14 @@ export function LibraryToolbar({
                     data-active={draft.tag === t}
                     onClick={() => setDraft({ ...draft, tag: draft.tag === t ? "" : t })}
                   >
-                    {draft.tag === t ? <Check size={11} /> : null}
+                    {draft.tag === t ? <Check size={14} /> : null}
                     #{t}
                   </button>
                 ))}
               </div>
             </fieldset>
           ) : (
-            <p className="mono">태그가 아직 없습니다. 게시글 상세에서 추가할 수 있습니다.</p>
+            <p className="label">태그가 아직 없습니다. 게시글 상세의 정리에서 추가할 수 있습니다.</p>
           )}
 
         </div>

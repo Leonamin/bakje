@@ -5,6 +5,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import { ChevronLeft, ChevronRight, Minus, Plus, X } from "lucide-react";
 import { Dialog } from "../overlays/dialog";
 import { Button } from "../basic/button";
 import { GalleryImage } from "./gallery-image";
@@ -96,7 +97,7 @@ export function ImageViewer({
               aria-label="축소"
               onClick={() => changeZoom(zoom - 0.5)}
             >
-              −
+              <Minus size={18} />
             </Button>
             <span className="gc-viewer-zoom">{Math.round(zoom * 100)}%</span>
             <Button
@@ -105,7 +106,7 @@ export function ImageViewer({
               aria-label="확대"
               onClick={() => changeZoom(zoom + 0.5)}
             >
-              +
+              <Plus size={18} />
             </Button>
             <Button variant="secondary" onClick={() => changeZoom(1)}>
               초기화
@@ -118,7 +119,7 @@ export function ImageViewer({
               aria-label="닫기"
               onClick={() => onOpenChange(false)}
             >
-              ×
+              <X size={24} />
             </Button>
           </div>
         </div>
@@ -199,20 +200,20 @@ export function ImageViewer({
           <Button
             variant="secondary"
             className="gc-viewer-nav gc-viewer-nav-previous"
-            aria-label="← 이전"
+            aria-label="이전 이미지"
             disabled={index <= 0 || !current}
             onClick={() => onIndexChange(index - 1)}
           >
-            ‹
+            <ChevronLeft size={32} />
           </Button>
           <Button
             variant="secondary"
             className="gc-viewer-nav gc-viewer-nav-next"
-            aria-label="다음 →"
+            aria-label="다음 이미지"
             disabled={!current || index >= images.length - 1}
             onClick={() => onIndexChange(index + 1)}
           >
-            ›
+            <ChevronRight size={32} />
           </Button>
         </div>
         <div className="gc-viewer-caption" data-viewer-blank>

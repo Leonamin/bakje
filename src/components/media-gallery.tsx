@@ -25,8 +25,8 @@ export function MediaGallery({ media }: { media: MediaRow[] }) {
         <div
           className={
             images.length === 1
-              ? "grid grid-cols-1"
-              : "grid grid-cols-2 gap-1.5"
+              ? "grid grid-cols-1 overflow-hidden rounded-2xl"
+              : "grid grid-cols-2 gap-1 overflow-hidden rounded-2xl"
           }
         >
           {images.map((m, i) => (
@@ -37,7 +37,7 @@ export function MediaGallery({ media }: { media: MediaRow[] }) {
                 setIndex(i);
                 setOpen(true);
               }}
-              className={`media-tile group relative ${images.length === 1 ? "max-h-[560px]" : "aspect-square"}`}
+              className={`media-tile group relative ${images.length === 1 ? "max-h-[560px]" : "aspect-[3/4]"}`}
               aria-label={`이미지 ${i + 1} 크게 보기`}
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -48,7 +48,7 @@ export function MediaGallery({ media }: { media: MediaRow[] }) {
                 className={images.length === 1 ? "max-h-[560px] w-full object-contain" : "h-full w-full object-cover"}
               />
               {i === 3 && images.length > 4 ? (
-                <span className="absolute inset-0 flex items-center justify-center bg-black/55 text-[15px] font-semibold text-white">
+                <span className="absolute inset-0 flex items-center justify-center bg-black/55 text-[20px] font-semibold text-white">
                   +{images.length - 4}
                 </span>
               ) : null}
@@ -58,16 +58,16 @@ export function MediaGallery({ media }: { media: MediaRow[] }) {
       ) : null}
 
       {clips.map((m) => (
-        <figure key={m.id} className="media-tile overflow-hidden">
+        <figure key={m.id} className="media-tile overflow-hidden rounded-2xl">
           {m.status === "too_large" ? (
-            <div className="flex h-32 items-center justify-center px-4 text-center text-[12px] text-[var(--muted)]">
+            <div className="flex h-32 items-center justify-center px-4 text-center text-[14px] text-[var(--muted)]">
               30MB를 넘어 저장하지 않았습니다 ·{" "}
               <a href={m.remote_url} target="_blank" rel="noreferrer" className="ml-1 text-[var(--accent)] underline">
                 원본 보기
               </a>
             </div>
           ) : m.status === "failed" ? (
-            <div className="flex h-32 items-center justify-center px-4 text-center text-[12px] text-[var(--muted)]">
+            <div className="flex h-32 items-center justify-center px-4 text-center text-[14px] text-[var(--muted)]">
               다운로드 실패 ·{" "}
               <a href={m.remote_url} target="_blank" rel="noreferrer" className="ml-1 text-[var(--accent)] underline">
                 원본 보기
@@ -85,9 +85,9 @@ export function MediaGallery({ media }: { media: MediaRow[] }) {
             </video>
           )}
           {m.kind === "gif" ? (
-            <figcaption className="mono absolute bottom-2 left-2 flex items-center gap-1 rounded bg-black/60 px-1.5 py-0.5 !text-white">
-              <Play size={9} fill="currentColor" />
-              gif
+            <figcaption className="absolute bottom-2 left-2 flex items-center gap-1 rounded-md bg-black/60 px-2 py-0.5 text-[12px] text-white">
+              <Play size={12} fill="currentColor" />
+              GIF
             </figcaption>
           ) : null}
         </figure>

@@ -12,14 +12,12 @@ export function SourceOrganizer({
   tags: initialTags,
   note: initialNote,
   lastCheckedAt,
-  trigger,
   inline = false,
 }: {
   sourceId: number;
   tags: string[];
   note: string | null;
   lastCheckedAt: string | null;
-  trigger?: React.ReactNode;
   inline?: boolean;
 }) {
   const router = useRouter();
@@ -81,20 +79,20 @@ export function SourceOrganizer({
   const panel = (
     <div className="space-y-6">
       <section>
-        <label className="mono mb-2 block" htmlFor={`tag-input-${sourceId}`}>
+        <label className="label mb-2 block" htmlFor={`tag-input-${sourceId}`}>
           태그
         </label>
         <div className="flex flex-wrap gap-1.5">
           {tags.map((tag) => (
-            <span key={tag} className="chip !h-7 !text-[11.5px]" data-active="true">
+            <span key={tag} className="chip !h-8 !pr-1 !text-[12px]" data-active="true">
               #{tag}
               <button
                 type="button"
                 aria-label={`${tag} 태그 삭제`}
                 onClick={() => setTags(tags.filter((t) => t !== tag))}
-                className="text-[var(--muted)] hover:text-[var(--danger)]"
+                className="flex h-7 w-7 items-center justify-center text-[var(--muted)] hover:text-[var(--danger)]"
               >
-                <X size={11} />
+                <X size={14} />
               </button>
             </span>
           ))}
@@ -111,21 +109,21 @@ export function SourceOrganizer({
               }
             }}
             placeholder="태그 입력 후 Enter"
-            className="h-9 flex-1 rounded-md border border-[var(--line)] bg-[#11161e] px-2.5 text-[13px] text-[var(--ink)] outline-none focus:border-[var(--line-strong)]"
+            className="h-11 min-w-0 flex-1 rounded-xl border border-[var(--line)] bg-[#11161e] px-3 text-[16px] text-[var(--ink)] outline-none focus:border-[var(--line-strong)]"
           />
           <button
             type="button"
             onClick={addTag}
-            className="flex h-9 items-center gap-1 rounded-md border border-[var(--line-strong)] px-2.5 text-[12px] text-[var(--muted)] hover:text-[var(--ink)]"
+            className="flex h-11 shrink-0 items-center gap-1.5 rounded-xl border border-[var(--line-strong)] px-3 text-[14px] text-[var(--ink)]"
           >
-            <Tag size={12} />
+            <Tag size={16} />
             추가
           </button>
         </div>
       </section>
 
       <section>
-        <label className="mono mb-2 block" htmlFor={`note-${sourceId}`}>
+        <label className="label mb-2 block" htmlFor={`note-${sourceId}`}>
           메모
         </label>
         <textarea
@@ -134,20 +132,20 @@ export function SourceOrganizer({
           onChange={(e) => setNote(e.target.value)}
           rows={4}
           placeholder="왜 저장했는지, 나중에 볼 때 필요한 맥락"
-          className="w-full resize-y rounded-md border border-[var(--line)] bg-[#11161e] p-3 text-[13px] leading-relaxed text-[var(--ink)] outline-none focus:border-[var(--line-strong)]"
+          className="w-full resize-y rounded-xl border border-[var(--line)] bg-[#11161e] p-3 text-[16px] leading-relaxed text-[var(--ink)] outline-none focus:border-[var(--line-strong)]"
         />
       </section>
 
       <section className="flex items-center justify-between border-t border-[var(--line)] pt-4">
         <div>
-          <p className="mono">원문 재확인</p>
-          <p className="mono-sm">
+          <p className="text-[14px]">원문 재확인</p>
+          <p className="label">
             마지막 확인 {lastCheckedAt ? new Date(lastCheckedAt).toLocaleString("ko-KR") : "없음"}
           </p>
         </div>
         <Button variant="secondary" onClick={recheck} isLoading={checking} className="shrink-0">
           <span className="flex items-center gap-1.5">
-            <RefreshCw size={13} />
+            <RefreshCw size={16} />
             확인
           </span>
         </Button>
@@ -156,7 +154,14 @@ export function SourceOrganizer({
   );
 
   if (inline) {
-    return <div>{panel}</div>;
+    return (
+      <div className="space-y-4">
+        {panel}
+        <Button className="w-full" onClick={save} isLoading={saving}>
+          저장
+        </Button>
+      </div>
+    );
   }
 
   return (
@@ -164,9 +169,9 @@ export function SourceOrganizer({
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="flex h-9 items-center gap-1.5 rounded-md border border-[var(--line-strong)] px-3 text-[12.5px] text-[var(--ink)]"
+        className="flex h-12 shrink-0 items-center gap-2 rounded-xl border border-[var(--line-strong)] px-4 text-[14px] font-semibold text-[var(--ink)] md:h-10"
       >
-        <Tag size={13} />
+        <Tag size={18} />
         정리
       </button>
       <Drawer
