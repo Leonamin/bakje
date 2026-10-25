@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LibraryBig, Plus, Search } from "lucide-react";
+import { LibraryBig, Plus, Search, Settings } from "lucide-react";
 
 const ITEMS = [
   { href: "/", label: "라이브러리", icon: LibraryBig, match: (p: string) => p === "/" || p.startsWith("/sources") },
@@ -40,6 +40,14 @@ export function TopBar() {
             );
           })}
         </nav>
+        <Link
+          href="/settings"
+          aria-label="설정"
+          aria-current={pathname.startsWith("/settings") ? "page" : undefined}
+          className="-ml-4 flex h-10 w-10 items-center justify-center rounded-xl text-[var(--muted)] hover:text-[var(--ink)] aria-[current=page]:text-[var(--ink)]"
+        >
+          <Settings size={18} strokeWidth={1.8} />
+        </Link>
       </div>
     </header>
   );

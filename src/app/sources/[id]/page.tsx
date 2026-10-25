@@ -5,6 +5,7 @@ import { getSource } from "@/lib/search";
 import { ReadingBody } from "@/components/reading-body";
 import { SourceOrganizer } from "@/components/source-organizer";
 import { compactNumber, formatDateTime, platformName } from "@/lib/format";
+import { needsTranslation } from "@/lib/lang";
 
 export const dynamic = "force-dynamic";
 
@@ -76,11 +77,7 @@ export default async function SourcePage({ params }: { params: Promise<{ id: str
           </div>
         ) : null}
 
-        <header className="mb-5">
-          {source.title ? (
-            <h1 className="mb-3 text-[20px] font-bold leading-snug tracking-tight md:text-[24px]">{source.title}</h1>
-          ) : null}
-
+        <header className="mb-3">
           <div className="flex flex-wrap items-baseline gap-x-2">
             <span className="text-[16px] font-semibold">
               {source.author_name ?? source.author_handle ?? "unknown"}
@@ -110,14 +107,11 @@ export default async function SourcePage({ params }: { params: Promise<{ id: str
 
         <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_280px]">
           <div className="min-w-0">
-            {translation?.summary_ko ? (
-              <section className="mb-6 rounded-2xl bg-[var(--surface)] p-4">
-                <h2 className="label mb-2">요약</h2>
-                <p className="whitespace-pre-wrap text-[14px] leading-relaxed text-[var(--ink)]">{translation.summary_ko}</p>
-              </section>
-            ) : null}
-
             <ReadingBody
+              sourceId={source.id}
+              title={source.title}
+              translation={translation}
+              translatable={needsTranslation(source.lang, parts.map((p) => p.text_original).join("\n"))}
               parts={parts}
               media={media}
               actions={

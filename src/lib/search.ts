@@ -205,7 +205,7 @@ export function getSource(id: number): {
   parts: PartRow[];
   media: MediaRow[];
   tags: string[];
-  translation: { summary_ko: string | null; model: string | null; created_at: string } | null;
+  translation: { title_ko: string | null; summary_ko: string | null; model: string | null; created_at: string } | null;
   snapshots: { fetched_at: string; body_path: string }[];
 } | null {
   const conn = db();
@@ -222,8 +222,8 @@ export function getSource(id: number): {
     .all(id) as { fetched_at: string; body_path: string }[];
   const translation =
     (conn
-      .prepare("SELECT summary_ko, model, created_at FROM translation WHERE source_id = ?")
-      .get(id) as { summary_ko: string | null; model: string | null; created_at: string } | undefined) ?? null;
+      .prepare("SELECT title_ko, summary_ko, model, created_at FROM translation WHERE source_id = ?")
+      .get(id) as { title_ko: string | null; summary_ko: string | null; model: string | null; created_at: string } | undefined) ?? null;
   return { source, parts, media, tags, translation, snapshots };
 }
 

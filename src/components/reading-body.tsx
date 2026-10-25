@@ -1,7 +1,10 @@
 "use client";
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { ChevronDown, ChevronUp, ExternalLink } from "lucide-react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { AlertCircle, ChevronDown, ChevronUp, ExternalLink, Languages, RotateCw, Settings } from "lucide-react";
+import { Spinner } from "@/components/goodcase/basic/spinner";
 import type { MediaRow, PartRow } from "@/lib/types";
 import { MediaGallery } from "./media-gallery";
 
@@ -30,39 +33,109 @@ function linkify(text: string) {
   );
 }
 
-function LanguageToggle({ showOriginal, onChange }: { showOriginal: boolean; onChange: (v: boolean) => void }) {
+type TranslateState = { kind: "idle" } | { kind: "loading" } | { kind: "error"; message: string };
+
+/** X-style control between the title and the body: translate on request, then flip between Korean and the original. */
+function TranslationControl({
+  sourceId,
+  hasTranslation,
+  showOriginal,
+  onShowOriginal,
+}: {
+  sourceId: number;
+  hasTranslation: boolean;
+  showOriginal: boolean;
+  onShowOriginal: (v: boolean) => void;
+}) {
+  const router = useRouter();
+  const [state, setState] = useState<TranslateState>({ kind: "idle" });
+  const linkClass =
+    "inline-flex h-11 items-center gap-1.5 text-[14px] font-semibold text-[var(--accent-strong)] disabled:text-[var(--muted)]";
+
+  async function translate() {
+    setState({ kind: "loading" });
+    try {
+      const res = await fetch(`/api/sources/${sourceId}/translate`, { method: "POST" });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.ok) throw new Error(data.message ?? "번역하지 못했습니다.");
+      onShowOriginal(false);
+      setState({ kind: "idle" });
+      router.refresh();
+    } catch (err) {
+      setState({ kind: "error", message: err instanceof Error && err.message !== "Failed to fetch" ? err.message : "서버에 연결하지 못했습니다." });
+    }
+  }
+
+  if (state.kind === "loading") {
+    return (
+      <p className="flex h-11 items-center gap-2 text-[14px] text-[var(--muted)]" role="status">
+        <Spinner size="small" tone="muted" isDecorative />
+        번역 중…
+      </p>
+    );
+  }
+
+  if (state.kind === "error") {
+    return (
+      <div className="rounded-xl border border-[#4a2a24] bg-[#2c1a18] px-4 py-3" role="alert">
+        <p className="flex items-start gap-2 text-[14px] leading-relaxed text-[var(--danger)]">
+          <AlertCircle size={16} className="mt-[3px] shrink-0" />
+          <span className="min-w-0 break-words">{state.message}</span>
+        </p>
+        <div className="mt-1 flex gap-4">
+          <button type="button" onClick={translate} className={linkClass}>
+            <RotateCw size={16} />
+            다시 시도
+          </button>
+          {state.message.includes("설정") ? (
+            <Link href="/settings" className={linkClass}>
+              <Settings size={16} />
+              번역 설정
+            </Link>
+          ) : null}
+        </div>
+      </div>
+    );
+  }
+
+  if (!hasTranslation) {
+    return (
+      <button type="button" onClick={translate} className={linkClass}>
+        <Languages size={16} />
+        번역하기
+      </button>
+    );
+  }
+
   return (
-    <div role="group" aria-label="표시 언어" className="flex shrink-0 overflow-hidden rounded-xl border border-[var(--line-strong)]">
-      {[
-        { key: false, label: "번역" },
-        { key: true, label: "원문" },
-      ].map((option) => (
-        <button
-          key={String(option.key)}
-          type="button"
-          aria-pressed={showOriginal === option.key}
-          onClick={() => onChange(option.key)}
-          className={`h-12 px-3 text-[14px] transition-colors md:h-10 ${
-            showOriginal === option.key
-              ? "bg-[color-mix(in_srgb,var(--accent)_16%,transparent)] text-[var(--accent-strong)]"
-              : "text-[var(--muted)]"
-          }`}
-        >
-          {option.label}
-        </button>
-      ))}
-    </div>
+    <p className="flex flex-wrap items-center gap-x-2 text-[14px] text-[var(--muted)]">
+      <Languages size={16} />
+      {showOriginal ? "원문" : "한국어로 번역됨"}
+      <span aria-hidden>·</span>
+      <button type="button" onClick={() => onShowOriginal(!showOriginal)} className={linkClass}>
+        {showOriginal ? "번역 보기" : "원문 보기"}
+      </button>
+    </p>
   );
 }
 
 export function ReadingBody({
+  sourceId,
+  title,
+  translation,
+  translatable,
   parts,
   media,
   actions,
 }: {
+  sourceId: number;
+  title: string | null;
+  translation: { title_ko: string | null; summary_ko: string | null } | null;
+  /** The post is not Korean, so offering a translation makes sense. */
+  translatable: boolean;
   parts: PartRow[];
   media: MediaRow[];
-  /** Rendered in the bottom bar on phones, next to the language toggle. */
+  /** Rendered in the bottom bar on phones. */
   actions: ReactNode;
 }) {
   const hasTranslation = parts.some((p) => p.text_ko);
@@ -96,8 +169,33 @@ export function ReadingBody({
     });
   }
 
+  const translated = hasTranslation && !showOriginal;
+  const shownTitle = translated && translation?.title_ko ? translation.title_ko : title;
+
   return (
     <div>
+      {shownTitle ? (
+        <h1 className="mb-1 text-[20px] font-bold leading-snug tracking-tight md:text-[24px]">{shownTitle}</h1>
+      ) : null}
+
+      {hasTranslation || translatable ? (
+        <div className="mb-4">
+          <TranslationControl
+            sourceId={sourceId}
+            hasTranslation={hasTranslation}
+            showOriginal={showOriginal}
+            onShowOriginal={setShowOriginal}
+          />
+        </div>
+      ) : null}
+
+      {translated && translation?.summary_ko ? (
+        <section className="mb-6 rounded-2xl bg-[var(--surface)] p-4">
+          <h2 className="label mb-2">요약</h2>
+          <p className="whitespace-pre-wrap text-[14px] leading-relaxed text-[var(--ink)]">{translation.summary_ko}</p>
+        </section>
+      ) : null}
+
       {showIndex ? (
         <nav
           aria-label="게시글 구성"
@@ -115,12 +213,6 @@ export function ReadingBody({
             </button>
           ))}
         </nav>
-      ) : null}
-
-      {hasTranslation ? (
-        <div className="mb-5 hidden md:flex">
-          <LanguageToggle showOriginal={showOriginal} onChange={setShowOriginal} />
-        </div>
       ) : null}
 
       <div className="space-y-6">
@@ -209,7 +301,6 @@ export function ReadingBody({
       </div>
 
       <div className="bottom-bar flex gap-2 md:hidden">
-        {hasTranslation ? <LanguageToggle showOriginal={showOriginal} onChange={setShowOriginal} /> : null}
         {actions}
       </div>
     </div>
