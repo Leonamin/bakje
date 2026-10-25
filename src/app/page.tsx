@@ -3,6 +3,7 @@ import { Suspense } from "react";
 import { Archive, Plus, Settings } from "lucide-react";
 import { searchSources, topTags } from "@/lib/search";
 import { LibraryToolbar } from "@/components/library-toolbar";
+import { RefreshButton } from "@/components/refresh-button";
 import { SourceCard } from "@/components/source-card";
 
 export const dynamic = "force-dynamic";
@@ -30,10 +31,13 @@ export default async function LibraryPage({
     <div className="mx-auto max-w-6xl px-5 pb-10 pt-2 md:px-6 md:pt-8">
       <header className="flex h-16 items-center md:mb-4">
         <h1 className="text-[24px] font-bold tracking-tight">라이브러리</h1>
+        <div className="ml-auto">
+          <RefreshButton />
+        </div>
         <Link
           href="/settings"
           aria-label="설정"
-          className="-mr-2 ml-auto flex h-11 w-11 items-center justify-center rounded-xl text-[var(--muted)] md:hidden"
+          className="-mr-2 flex h-11 w-11 items-center justify-center rounded-xl text-[var(--muted)] md:hidden"
         >
           <Settings size={22} strokeWidth={1.8} />
         </Link>

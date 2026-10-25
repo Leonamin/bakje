@@ -6,6 +6,7 @@ import { ChevronRight, CircleAlert, CircleCheck, ClipboardPaste, Clock3, CloudOf
 import { Button } from "@/components/goodcase/basic/button";
 import { Drawer } from "@/components/goodcase/overlays/dialog";
 import { useToast } from "@/components/goodcase/overlays/toast";
+import { RefreshButton } from "@/components/refresh-button";
 import { addToOutbox, isNetworkError, OUTBOX_EVENT, readOutbox, type OutboxItem } from "@/lib/outbox";
 
 interface Job {
@@ -139,11 +140,12 @@ export default function AddPage() {
         <h1 className="text-[24px] font-bold tracking-tight">수집</h1>
         <Link
           href="/help/shortcut"
-          className="ml-auto inline-flex h-10 items-center gap-1.5 rounded-xl px-3 text-[14px] text-[var(--muted)] hover:text-[var(--ink)]"
+          className="ml-auto mr-1 inline-flex h-10 items-center gap-1.5 rounded-xl px-3 text-[14px] text-[var(--muted)] hover:text-[var(--ink)]"
         >
           <Share size={16} />
           공유 시트로 저장
         </Link>
+        <RefreshButton />
       </div>
 
       {/* Phones: pinned above the tab bar, in thumb reach. Desktop: under the title. */}
