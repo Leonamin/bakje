@@ -64,6 +64,37 @@ export function parseUrl(input: string): Canonical | { error: string } {
   return { error: "지원하지 않는 URL입니다. X, Threads, Reddit 게시글 링크를 넣어주세요." };
 }
 
+const URL_IN_TEXT = /https?:\/\/[^\s<>"']+/gi;
+
+/**
+ * Reads an ingest request body: `{urls: [...]}`, `{url}`, `{text}` JSON or plain text.
+ * iOS Shortcuts may hand over shared text with a link inside ("... https://x.com/..."),
+ * so each value is reduced to the links it contains; a bare value without spaces is kept
+ * as-is so scheme-less input like `x.com/...` still works.
+ */
+export function extractCandidates(raw: string): string[] {
+  let body: unknown;
+  try {
+    body = JSON.parse(raw);
+  } catch {
+    body = raw;
+  }
+  const b = body as { urls?: unknown; url?: unknown; text?: unknown } | null;
+  const values: unknown[] =
+    typeof body === "string"
+      ? [body]
+      : Array.isArray(b?.urls)
+        ? b.urls
+        : [b?.url, b?.text].filter((v) => v != null);
+
+  return values.flatMap((v) => {
+    const s = String(v).trim();
+    const links = s.match(URL_IN_TEXT);
+    if (links) return links;
+    return s && !/\s/.test(s) ? [s] : [];
+  });
+}
+
 export function platformLabel(p: Platform): string {
   return p === "x" ? "X" : p === "threads" ? "Threads" : "Reddit";
 }
