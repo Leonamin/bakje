@@ -185,6 +185,8 @@ export default function AddPage() {
                     >
                       열기
                     </Link>
+                  ) : job.state === "failed" ? (
+                    <TriangleAlert size={14} className="shrink-0 text-[var(--danger)]" />
                   ) : (
                     <Check size={14} className="shrink-0 text-[var(--line-strong)]" />
                   )}
