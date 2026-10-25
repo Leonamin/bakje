@@ -19,3 +19,4 @@ okf_version: "0.1"
 - [009-docker-release-deploy.md](./009-docker-release-deploy.md) — /opt 릴리스 + 심볼릭 링크 배포
 - [010-capture-first-ui.md](./010-capture-first-ui.md) — 수집 우선 UI와 장식 제거, 타입 스케일 고정
 - [011-resilient-capture-queue.md](./011-resilient-capture-queue.md) — 수집 작업 재시도와 오프라인 대기열
+- [012-service-name-bakje.md](./012-service-name-bakje.md) — 서비스 이름 박제와 운영 경로·식별자 이전

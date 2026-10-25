@@ -1,6 +1,6 @@
-# 아카이브
+# 박제
 
-X, Threads, Reddit 게시글을 링크 하나로 내 디스크에 복제하고, 한국어로 다시 찾는 개인 아카이빙 도구.
+X, Threads, Reddit 게시글을 링크 하나로 내 디스크에 복제하고, 한국어로 다시 찾는 개인 아카이빙 도구. 지워지기 전에 원문째 "박제"해 둔다는 뜻으로 이름을 붙였다.
 
 북마크의 원래 문제는 **원문이 사라진다**는 것이다. 이 도구는 본문·작성자 이어쓰기·미디어·원본 HTML 스냅샷을 전부 로컬에 남기므로, 원문이 삭제되어도 계속 읽을 수 있다.
 
@@ -147,15 +147,15 @@ src/lib/llm.ts       OpenAI 호환 번역·요약 (JSON 모드, 실패 시 수�
 호스트의 다른 서비스(puri, nanuri)와 같은 릴리스 방식이다.
 
 ```
-/opt/post-archive/
+/opt/bakje/
   releases/20261025T082710Z/   배포 시점의 소스 스냅샷
   current -> releases/...      지금 실행 중인 릴리스
-/var/lib/post-archive/         SQLite · 미디어 · 원본 스냅샷 (배포와 무관)
-/etc/post-archive/
-  post-archive.env             시크릿·LLM 설정 (0600)
+/var/lib/bakje/         SQLite · 미디어 · 원본 스냅샷 (배포와 무관)
+/etc/bakje/
+  bakje.env             시크릿·LLM 설정 (0600)
 ```
 
-- **데이터는 릴리스 밖에 있다.** 배포는 프로그램만 교체하고 `/var/lib/post-archive`는 건드리지 않는다.
+- **데이터는 릴리스 밖에 있다.** 배포는 프로그램만 교체하고 `/var/lib/bakje`는 건드리지 않는다.
 - **매 배포마다 새 릴리스 디렉터리**를 만들고 `current` 심볼릭 링크를 원자적으로 바꾼다. 이전 빌드 산출물을 재사용하지 않고 이미지를 새로 빌드해 컨테이너를 `--force-recreate`로 갈아끼운다.
 - 최근 `ARCHIVE_KEEP_RELEASES`(기본 3)개만 남기고 오래된 릴리스는 지운다. `current`가 가리키는 릴리스는 항상 보존한다.
 - 배포는 `flock`으로 중복 실행을 막고, 실패하면 해당 릴리스 디렉터리를 진단용으로 남긴다(자동 롤백 없음).
@@ -164,15 +164,15 @@ src/lib/llm.ts       OpenAI 호환 번역·요약 (JSON 모드, 실패 시 수�
 
 ```bash
 sudo ARCHIVE_UID=$(id -u) ARCHIVE_GID=$(id -g) ./scripts/prepare-host.sh
-sudo vi /etc/post-archive/post-archive.env     # OPENAI_API_KEY 입력
+sudo vi /etc/bakje/bakje.env     # OPENAI_API_KEY 입력
 ```
 
 sudo가 없는 환경(이 호스트)에서는 Docker로 같은 상태를 만든다.
 
 ```bash
 docker run --rm -v /opt:/opt -v /var/lib:/var/lib -v /etc:/etc alpine sh -c '
-  mkdir -p /opt/post-archive/releases /var/lib/post-archive /etc/post-archive
-  chown -R 1000:1000 /opt/post-archive /var/lib/post-archive /etc/post-archive'
+  mkdir -p /opt/bakje/releases /var/lib/bakje /etc/bakje
+  chown -R 1000:1000 /opt/bakje /var/lib/bakje /etc/bakje'
 ```
 
 ### 배포
@@ -186,8 +186,8 @@ Docker 데몬 접근 권한만 있으면 된다(root 불필요). Playwright 이�
 ### 운영 확인
 
 ```bash
-docker compose -f /opt/post-archive/current/compose.yml ps
-docker compose -f /opt/post-archive/current/compose.yml logs -f web
+docker compose -f /opt/bakje/current/compose.yml ps
+docker compose -f /opt/bakje/current/compose.yml logs -f web
 curl -s http://127.0.0.1:3020/api/health
 ```
 
@@ -201,10 +201,10 @@ curl -s http://127.0.0.1:3020/api/health
 ### 백업
 
 ```bash
-tar czf post-archive-$(date -u +%Y%m%dT%H%M%SZ).tar.gz -C /var/lib post-archive
+tar czf bakje-$(date -u +%Y%m%dT%H%M%SZ).tar.gz -C /var/lib bakje
 ```
 
-SQLite는 WAL 모드이므로 서비스 중 백업하려면 `sqlite3 /var/lib/post-archive/archive.db ".backup /tmp/archive.db"`를 쓰고 미디어 디렉터리를 함께 복사한다.
+SQLite는 WAL 모드이므로 서비스 중 백업하려면 `sqlite3 /var/lib/bakje/archive.db ".backup /tmp/archive.db"`를 쓰고 미디어 디렉터리를 함께 복사한다.
 
 ### 릴리스 정리
 

@@ -11,7 +11,7 @@ timestamp: 2026-10-25
 ## 저장 위치
 
 ```
-data/  (운영: /var/lib/post-archive)
+data/  (운영: /var/lib/bakje)
   archive.db                  SQLite (WAL)
   media/<sha256>.<ext>        미디어 원본
   media/<sha256>.poster.jpg   영상·gif 포스터

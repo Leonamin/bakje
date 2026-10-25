@@ -1,4 +1,4 @@
-name: post-archive
+name: bakje
 
 x-logging: &default-logging
   driver: json-file
@@ -11,15 +11,15 @@ services:
     build:
       context: .
       target: runner
-    image: post-archive-web:latest
+    image: bakje-web:latest
     env_file:
-      - ${ARCHIVE_CONFIG_DIR:-/etc/post-archive}/post-archive.env
+      - ${ARCHIVE_CONFIG_DIR:-/etc/bakje}/bakje.env
     environment:
       ARCHIVE_DATA_DIR: /data
       ARCHIVE_NO_SANDBOX: "1"
       HOME: /tmp
     volumes:
-      - /var/lib/post-archive:/data
+      - /var/lib/bakje:/data
     ports:
       - "127.0.0.1:3020:3000"
     restart: unless-stopped

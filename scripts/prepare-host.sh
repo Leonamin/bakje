@@ -14,12 +14,12 @@ fi
 uid="${ARCHIVE_UID:-1000}"
 gid="${ARCHIVE_GID:-1000}"
 
-install -d -m 0755 -o "$uid" -g "$gid" /opt/post-archive
-install -d -m 0755 -o "$uid" -g "$gid" /opt/post-archive/releases
-install -d -m 0750 -o "$uid" -g "$gid" /var/lib/post-archive
-install -d -m 0750 -o "$uid" -g "$gid" /etc/post-archive
+install -d -m 0755 -o "$uid" -g "$gid" /opt/bakje
+install -d -m 0755 -o "$uid" -g "$gid" /opt/bakje/releases
+install -d -m 0750 -o "$uid" -g "$gid" /var/lib/bakje
+install -d -m 0750 -o "$uid" -g "$gid" /etc/bakje
 
-env_file=/etc/post-archive/post-archive.env
+env_file=/etc/bakje/bakje.env
 if [ ! -f "$env_file" ]; then
   cat > "$env_file" <<'EOF'
 # OpenAI-compatible endpoint used only for translation and summaries.

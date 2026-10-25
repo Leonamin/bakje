@@ -8,14 +8,16 @@ timestamp: 2026-10-25
 
 # 운영과 배포
 
+> 2026-10-25에 운영 경로와 식별자를 `post-archive`에서 `bakje`로 옮겼다. 이전 경로는 남아 있지 않다. → [결정 012](../decisions/012-service-name-bakje.md)
+
 ## 릴리스 구조
 
 ```
-/opt/post-archive/
+/opt/bakje/
   releases/20261025T084223Z/   배포 시점 소스 스냅샷
   current -> releases/...      지금 실행 중인 릴리스
-/var/lib/post-archive/         SQLite · 미디어 · 원본 스냅샷
-/etc/post-archive/post-archive.env
+/var/lib/bakje/         SQLite · 미디어 · 원본 스냅샷
+/etc/bakje/bakje.env
 ```
 
 puri·nanuri와 같은 방식이다. **데이터는 릴리스 밖에** 있으므로 배포는 프로그램만 교체한다.
@@ -58,8 +60,8 @@ sudo가 있으면 `sudo ARCHIVE_UID=$(id -u) ./scripts/prepare-host.sh`.
 ## 백업
 
 ```bash
-sqlite3 /var/lib/post-archive/archive.db ".backup /tmp/archive.db"
-tar czf backup.tar.gz -C /var/lib post-archive
+sqlite3 /var/lib/bakje/archive.db ".backup /tmp/archive.db"
+tar czf backup.tar.gz -C /var/lib bakje
 ```
 
 SQLite는 WAL 모드이므로 실행 중에는 `.backup`을 쓴다.

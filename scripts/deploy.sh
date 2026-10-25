@@ -2,21 +2,21 @@
 set -eu
 
 # Release layout mirrors the other services on this host:
-#   /opt/post-archive/releases/<UTC>   immutable snapshot
-#   /opt/post-archive/current          symlink to the live snapshot
-#   /var/lib/post-archive              SQLite, media, raw snapshots (never replaced)
-#   /etc/post-archive/post-archive.env configuration
+#   /opt/bakje/releases/<UTC>   immutable snapshot
+#   /opt/bakje/current          symlink to the live snapshot
+#   /var/lib/bakje              SQLite, media, raw snapshots (never replaced)
+#   /etc/bakje/bakje.env configuration
 #
 # The database and media live outside the release, so a deploy only swaps the
 # program. Every update builds a new image and recreates the container; nothing
 # from the previous build is reused at runtime.
 
 project_dir="$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"
-releases_root="${ARCHIVE_RELEASES_DIR:-/opt/post-archive/releases}"
-config_dir="${ARCHIVE_CONFIG_DIR:-/etc/post-archive}"
-config_file="${config_dir}/post-archive.env"
+releases_root="${ARCHIVE_RELEASES_DIR:-/opt/bakje/releases}"
+config_dir="${ARCHIVE_CONFIG_DIR:-/etc/bakje}"
+config_file="${config_dir}/bakje.env"
 keep_releases="${ARCHIVE_KEEP_RELEASES:-3}"
-data_dir="${ARCHIVE_DATA_DIR:-/var/lib/post-archive}"
+data_dir="${ARCHIVE_DATA_DIR:-/var/lib/bakje}"
 
 if [ "$(id -u)" -eq 0 ]; then
   echo "Run as the service user, not root (docker group is enough)." >&2
@@ -30,7 +30,7 @@ for path in "$releases_root" "$data_dir" "$config_file"; do
   fi
 done
 
-lock_file="${ARCHIVE_DEPLOY_LOCK:-/tmp/post-archive-deploy.lock}"
+lock_file="${ARCHIVE_DEPLOY_LOCK:-/tmp/bakje-deploy.lock}"
 exec 9>"$lock_file"
 if ! flock -n 9; then
   echo "Another deploy is already running (lock: $lock_file)." >&2
@@ -56,10 +56,10 @@ tar \
   --exclude='scripts/_*' \
   -C "$project_dir" -cf - . | tar -C "$release_dir" -xf -
 
-ln -sfn "$release_dir" /opt/post-archive/current.new
-mv -Tf /opt/post-archive/current.new /opt/post-archive/current
+ln -sfn "$release_dir" /opt/bakje/current.new
+mv -Tf /opt/bakje/current.new /opt/bakje/current
 
-cd /opt/post-archive/current
+cd /opt/bakje/current
 ARCHIVE_DATA_DIR="$data_dir" docker compose --env-file "$config_file" up -d --build --remove-orphans --force-recreate
 
 echo "==> waiting for health"

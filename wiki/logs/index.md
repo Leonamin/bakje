@@ -8,6 +8,7 @@ okf_version: "0.1"
 
 # Logs
 
+- [2026-10-25-rename-bakje.md](./2026-10-25-rename-bakje.md) — 서비스 이름 박제로 변경, 운영 경로·식별자 이전과 재배포
 - [2026-10-25-tailnet-port-8888.md](./2026-10-25-tailnet-port-8888.md) — 수집 큐 배포, tailnet 포트 8888로 변경
 - [2026-10-25-resilient-capture-impl.md](./2026-10-25-resilient-capture-impl.md) — 수집 재시도·오프라인 대기열·서비스 워커 구현
 - [2026-10-25-resilient-capture-plan.md](./2026-10-25-resilient-capture-plan.md) — 수집 재시도·오프라인 대기열 계획 기록

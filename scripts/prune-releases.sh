@@ -4,7 +4,7 @@ set -eu
 # Keeps the newest N releases and always keeps the one `current` points at.
 # Timestamped directories only; anything else is left alone.
 
-releases_root="${ARCHIVE_RELEASES_DIR:-/opt/post-archive/releases}"
+releases_root="${ARCHIVE_RELEASES_DIR:-/opt/bakje/releases}"
 keep=3
 
 while [ $# -gt 0 ]; do
@@ -16,7 +16,7 @@ done
 
 [ -d "$releases_root" ] || exit 0
 
-current_target="$(readlink -f /opt/post-archive/current 2>/dev/null || true)"
+current_target="$(readlink -f /opt/bakje/current 2>/dev/null || true)"
 
 count=0
 for dir in $(ls -1 "$releases_root" | grep -E '^[0-9]{8}T[0-9]{6}Z$' | sort -r); do

@@ -21,9 +21,9 @@ timestamp: 2026-10-25
 
 puri와 같은 릴리스 구조를 Docker Compose로 구현한다.
 
-- `/opt/post-archive/releases/<UTC>`에 소스 스냅샷
-- `/opt/post-archive/current` 심볼릭 링크를 `mv -T`로 원자적 교체
-- `/var/lib/post-archive`에 모든 상태(SQLite·미디어·원본)를 두고 릴리스와 분리
+- `/opt/bakje/releases/<UTC>`에 소스 스냅샷
+- `/opt/bakje/current` 심볼릭 링크를 `mv -T`로 원자적 교체
+- `/var/lib/bakje`에 모든 상태(SQLite·미디어·원본)를 두고 릴리스와 분리
 - 매 배포마다 이미지를 새로 빌드하고 `--force-recreate`로 컨테이너 교체
 - 최근 3개 릴리스만 유지, 실패한 릴리스는 디버깅용으로 보존
 
