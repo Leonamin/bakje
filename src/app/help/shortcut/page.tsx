@@ -51,162 +51,99 @@ function Row({ y, label, value, strong }: { y: number; label: string; value?: st
   );
 }
 
-function Toggle({ y, label }: { y: number; label: string }) {
-  return (
-    <g>
-      <Row y={y} label={label} />
-      <rect x="196" y={y + 8} width="38" height="20" rx="10" fill={C.accent} />
-      <circle cx="224" cy={y + 18} r="8" fill="#fff" />
-    </g>
-  );
-}
-
-/** An action block in the shortcut editor. */
-function Action({ y, title, lines = [], dim, strong }: { y: number; title: string; lines?: string[]; dim?: boolean; strong?: boolean }) {
-  const h = 36 + lines.length * 20;
-  return (
-    <g opacity={dim ? 0.55 : 1}>
-      <rect x="16" y={y} width="228" height={h} rx="12" fill={C.surface} stroke={strong ? C.accent : C.line} strokeWidth={strong ? 2 : 1} />
-      <rect x="26" y={y + 10} width="16" height="16" rx="4" fill={C.accent} />
-      <text x="50" y={y + 23} fill={C.ink} fontSize="12" fontWeight="700">
-        {title}
-      </text>
-      {lines.map((line, i) => (
-        <text key={line} x="28" y={y + 46 + i * 18} fill={C.muted} fontSize="11">
-          {line}
-        </text>
-      ))}
-    </g>
-  );
-}
-
-/** Where to tap, for targets without text under them; rows and actions use `strong` instead. */
-function Tap({ x, y }: { x: number; y: number }) {
-  return (
-    <g>
-      <circle cx={x} cy={y} r="16" fill="none" stroke={C.accent} strokeWidth="2.5" />
-      <circle cx={x} cy={y} r="5" fill={C.accent} />
-    </g>
-  );
-}
-
 interface Step {
   title: string;
   body: React.ReactNode;
-  figure: React.ReactNode;
-  /** Path under public/ of a real screenshot that replaces the drawing. */
+  /** Drawing used when there is no real capture. */
+  figure?: React.ReactNode;
+  /** Path under public/ of a real screenshot (iOS 27, Korean UI); replaces the drawing. */
   capture?: string;
 }
 
 const STEPS: Step[] = [
   {
     title: "새 단축어 만들기",
+    capture: "/help/shortcut-all.webp",
     body: (
       <>
-        iPhone에 기본으로 들어 있는 <b>단축어</b> 앱을 열고 오른쪽 위 <b>+</b>를 누릅니다. 맨 위 이름을 눌러{" "}
-        <b>박제에 저장</b>으로 바꿉니다.
+        iPhone에 기본으로 들어 있는 <b>단축어</b> 앱을 열고 <b>모든 단축어</b> 화면 아래 가운데에 떠 있는 <b>+</b>를
+        누릅니다.
       </>
     ),
-    figure: (
-      <Phone title="단축어" label="단축어 앱 첫 화면에서 오른쪽 위 더하기 버튼을 누르는 그림">
-        <text x="226" y="62" fill={C.accent} fontSize="24" textAnchor="middle">
-          +
-        </text>
-        <Tap x={226} y={55} />
-        <rect x="16" y="90" width="110" height="80" rx="14" fill={C.surface2} />
-        <rect x="134" y="90" width="110" height="80" rx="14" fill={C.surface2} />
-        <rect x="16" y="178" width="110" height="80" rx="14" fill={C.surface2} />
-        <text x="28" y="160" fill={C.muted} fontSize="11">
-          기존 단축어
-        </text>
-      </Phone>
+  },
+  {
+    title: "편집 화면 열기",
+    capture: "/help/shortcut-describe.webp",
+    body: (
+      <>
+        “단축어로 어떤 동작을 실행하겠습니까?” 입력창이 나오면 쓰지 말고 오른쪽 위 <b>편집</b>을 누릅니다. 위쪽{" "}
+        <b>새로운 단축어</b>를 눌러 이름을 <b>박제하기</b>로 바꿉니다.
+      </>
+    ),
+  },
+  {
+    title: "첫 동작 추가하기",
+    capture: "/help/shortcut-search-url.webp",
+    body: (
+      <>
+        아래 검색창에 <b>URL</b>을 입력하고 목록에서 <b>URL 콘텐츠 가져오기</b>를 누릅니다.
+        <p className="mt-2 text-[var(--muted)]">
+          동작이 하나 있어야 아래 도구 막대(↶ ↷ <b>ⓘ</b> ⇪ ▶)가 나타납니다. 검색 시트가 펼쳐져 있으면 막대가 가려지니
+          시트를 아래로 내리세요.
+        </p>
+      </>
     ),
   },
   {
     title: "공유 시트에 나오게 하기",
+    capture: "/help/shortcut-details.webp",
     body: (
       <>
-        편집 화면 아래의 <b>ⓘ</b>(또는 맨 위 이름 → <b>세부사항</b>)을 열고 <b>공유 시트에서 보기</b>를 켭니다. 그러면
-        편집 화면 맨 위에 <b>“공유 시트에서 입력 받기”</b> 블록이 생깁니다. 받는 종류를 눌러 <b>URL</b>과{" "}
+        도구 막대의 <b>ⓘ</b>를 눌러 <b>세부사항</b>을 열고 <b>공유 시트에서 보기</b>를 켠 뒤 오른쪽 위 ✓를 누릅니다. 그러면
+        맨 위에 <b>“공유 시트에서 … 받기”</b> 블록이 생깁니다. 받는 종류(<b>앱 및 18개</b>)를 눌러 <b>URL</b>과{" "}
         <b>텍스트</b>만 남기면 다른 앱의 공유 목록이 깔끔해집니다.
       </>
     ),
-    figure: (
-      <Phone title="세부사항" label="세부사항에서 공유 시트에서 보기를 켜는 그림">
-        <Row y={84} label="홈 화면에 추가" />
-        <Toggle y={128} label="공유 시트에서 보기" />
-        <Row y={172} label="Mac 메뉴 막대에 고정" />
-        <Action y={232} title="공유 시트에서 입력 받기" lines={["받는 종류: URL, 텍스트"]} />
-      </Phone>
-    ),
   },
   {
-    title: "박제 주소로 보내는 동작 추가",
+    title: "박제 주소와 보내는 방법 정하기",
+    capture: "/help/shortcut-url-action.webp",
     body: (
       <>
-        아래 검색창에서 <b>URL의 콘텐츠 가져오기</b>를 찾아 추가하고, URL 칸에 아래 주소를 붙여넣습니다.
+        <b>URL 콘텐츠 가져오기</b> 제목의 파란 <b>URL</b> 칸에 아래 주소를 붙여넣고, 오른쪽 <b>⌄</b>를 눌러 펼칩니다.
         <span className="mt-3 block">
           <CopyField value={ENDPOINT} label="박제 수집 주소" />
         </span>
-      </>
-    ),
-    figure: (
-      <Phone title="박제에 저장" label="공유 시트 입력 블록 아래에 URL의 콘텐츠 가져오기 동작을 추가한 그림">
-        <Action y={84} title="공유 시트에서 입력 받기" dim />
-        <Action y={130} title="URL의 콘텐츠 가져오기" lines={["<기기이름>.<tailnet>.ts.net:8888", "/api/ingest?format=text"]} strong />
-        <rect x="16" y="290" width="228" height="32" rx="10" fill={C.surface2} />
-        <text x="30" y="311" fill={C.muted} fontSize="11">
-          동작 검색
-        </text>
-      </Phone>
-    ),
-  },
-  {
-    title: "보내는 방법 정하기",
-    body: (
-      <>
-        동작의 <b>›</b>(더 보기)를 눌러 펼칩니다.
-        <ul className="mt-2 list-disc space-y-1 pl-5">
+        <ul className="mt-3 list-disc space-y-1 pl-5">
           <li>
-            <b>방법</b>: POST
+            <b>메소드</b>: POST
           </li>
           <li>
-            <b>요청 본문</b>: JSON
+            <b>본문 요청</b>: JSON
           </li>
           <li>
-            <b>새로운 필드 추가 → 텍스트</b>: 키에 <code className="font-mono text-[var(--accent-strong)]">url</code>, 값에는
-            키보드 위 변수 막대에서 <b>단축어 입력</b>을 고릅니다.
+            <b>새로운 필드 추가</b>를 눌러 만든 줄의 <b>키</b> 칸(그림의 빨간 테두리)에{" "}
+            <code className="font-mono text-[var(--accent-strong)]">url</code>을 직접 입력하고, 값은{" "}
+            <b>단축어 입력</b>으로 둡니다.
           </li>
         </ul>
+        <p className="mt-2 font-semibold text-[var(--warn)]">
+          키 칸을 비워 두면 박제가 링크를 찾지 못해 “URL을 입력해주세요.”가 뜹니다.
+        </p>
         <p className="mt-2 text-[var(--muted)]">
           공유된 내용이 “글 내용 + 링크”처럼 텍스트로 와도 박제가 그 안의 링크만 골라냅니다.
         </p>
       </>
     ),
-    figure: (
-      <Phone title="박제에 저장" label="URL의 콘텐츠 가져오기 동작을 펼쳐 POST와 JSON 본문을 설정한 그림">
-        <Action y={84} title="URL의 콘텐츠 가져오기" />
-        <Row y={128} label="방법" value="POST" />
-        <Row y={168} label="헤더" value="없음" />
-        <Row y={208} label="요청 본문" value="JSON" />
-        <Row y={248} label="url · 텍스트" value="단축어 입력" strong />
-      </Phone>
-    ),
   },
   {
     title: "결과 알림 띄우기",
+    capture: "/help/shortcut-notify.webp",
     body: (
       <>
-        <b>알림 보기</b> 동작을 추가하고 본문을 비운 뒤 변수 막대에서 <b>URL의 콘텐츠</b>를 넣습니다. 이제 저장할 때마다
-        “박제를 시작했습니다.” 같은 한 줄이 알림으로 뜹니다. 오른쪽 위 <b>완료</b>를 눌러 저장합니다.
+        <b>알림 보기</b> 동작을 추가하고 본문에 <b>URL 콘텐츠</b>를 넣습니다. 이제 저장할 때마다 “박제를 시작했습니다.”
+        같은 한 줄이 뜹니다. 위 그림처럼 세 블록이 차례로 놓이면 완성입니다. 위쪽 ‹로 나가면 저장됩니다.
       </>
-    ),
-    figure: (
-      <Phone title="박제에 저장" label="알림 보기 동작에 URL의 콘텐츠를 넣은 그림">
-        <Action y={84} title="공유 시트에서 입력 받기" dim />
-        <Action y={130} title="URL의 콘텐츠 가져오기" dim />
-        <Action y={176} title="알림 보기" lines={["본문: URL의 콘텐츠"]} strong />
-      </Phone>
     ),
   },
   {
@@ -214,19 +151,19 @@ const STEPS: Step[] = [
     body: (
       <>
         X, Threads, Reddit에서 게시글의 <b>공유</b> 버튼을 누르고, 앱 자체 메뉴가 먼저 뜨면 <b>더 보기</b>(또는{" "}
-        <b>다음으로 공유…</b>)를 눌러 iPhone 공유 시트를 엽니다. 목록 아래쪽의 <b>박제에 저장</b>을 누르면 끝입니다.
+        <b>다음으로 공유…</b>)를 눌러 iPhone 공유 시트를 엽니다. 목록 아래쪽의 <b>박제하기</b>을 누르면 끝입니다.
         <p className="mt-2 text-[var(--muted)]">
           자주 쓰면 공유 시트 맨 아래 <b>작업 편집…</b>에서 즐겨찾기에 넣어 위로 올려 두세요.
         </p>
       </>
     ),
     figure: (
-      <Phone title="공유" label="게시글 공유 시트 목록에서 박제에 저장을 누르는 그림">
+      <Phone title="공유" label="게시글 공유 시트 목록에서 박제하기을 누르는 그림">
         {[40, 92, 144, 196].map((cx) => (
           <circle key={cx} cx={cx} cy={104} r="20" fill={C.surface2} />
         ))}
         <Row y={146} label="링크 복사" />
-        <Row y={186} label="박제에 저장" strong />
+        <Row y={186} label="박제하기" strong />
         <Row y={226} label="작업 편집…" />
       </Phone>
     ),
@@ -235,7 +172,7 @@ const STEPS: Step[] = [
     title: "처음 한 번은 허용하기",
     body: (
       <>
-        처음 실행하면 “박제에 저장이(가) <기기이름>…에 접근하도록 허용하겠습니까?” 같은 확인 창이 뜹니다.{" "}
+        처음 실행하면 “‘박제하기’ 단축어가 <기기이름>…에 접근하도록 허용하겠습니까?” 같은 확인 창이 뜹니다.{" "}
         <b>항상 허용</b>을 누르면 다음부터는 묻지 않습니다. 그다음 위에서 결과 알림이 내려옵니다.
       </>
     ),
@@ -244,7 +181,7 @@ const STEPS: Step[] = [
         <rect x="16" y="40" width="228" height="54" rx="14" fill={C.surface} stroke={C.line} />
         <rect x="28" y="54" width="26" height="26" rx="6" fill={C.accent} />
         <text x="64" y="64" fill={C.ink} fontSize="11" fontWeight="700">
-          박제에 저장
+          박제하기
         </text>
         <text x="64" y="82" fill={C.muted} fontSize="11">
           박제를 시작했습니다.
@@ -272,6 +209,17 @@ const STEPS: Step[] = [
 
 const TROUBLES: { q: string; a: React.ReactNode }[] = [
   {
+    q: "“URL을 입력해주세요.”라고 나와요",
+    a: (
+      <>
+        박제가 받은 요청에서 링크를 찾지 못했다는 뜻입니다. 두 가지를 확인하세요. 5단계의 <b>키</b> 칸에{" "}
+        <code className="font-mono text-[var(--accent-strong)]">url</code>이 적혀 있는지, 그리고 단축어 앱의 ▶로 직접 실행하지
+        않았는지입니다. ▶로 실행하면 공유된 내용이 없어 같은 메시지가 뜹니다. 반드시 X·Threads·Reddit의 공유 시트에서
+        실행하세요.
+      </>
+    ),
+  },
+  {
     q: "“서버에 연결할 수 없습니다” 같은 오류가 떠요",
     a: (
       <>
@@ -295,10 +243,10 @@ const TROUBLES: { q: string; a: React.ReactNode }[] = [
     a: <>이미 박제한 글입니다. 라이브러리에서 바로 찾을 수 있고 새로 저장되지는 않습니다.</>,
   },
   {
-    q: "공유 시트에 “박제에 저장”이 없어요",
+    q: "공유 시트에 “박제하기”가 없어요",
     a: (
       <>
-        2단계의 <b>공유 시트에서 보기</b>가 켜져 있는지, 받는 종류에 <b>URL</b>이 들어 있는지 확인하세요. 그래도 없으면
+        4단계의 <b>공유 시트에서 보기</b>가 켜져 있는지, 받는 종류에 <b>URL</b>이 들어 있는지 확인하세요. 그래도 없으면
         공유 시트 맨 아래 <b>작업 편집…</b>에서 찾아 켭니다.
       </>
     ),
@@ -307,7 +255,7 @@ const TROUBLES: { q: string; a: React.ReactNode }[] = [
     q: "허용 창에서 실수로 “허용 안 함”을 눌렀어요",
     a: (
       <>
-        단축어 앱에서 <b>박제에 저장</b>을 길게 눌러 세부사항(또는 <b>개인 정보 보호</b>)으로 들어가 접근 권한을
+        단축어 앱에서 <b>박제하기</b>을 길게 눌러 세부사항(또는 <b>개인 정보 보호</b>)으로 들어가 접근 권한을
         재설정하면 다음 실행 때 다시 묻습니다.
       </>
     ),
@@ -332,7 +280,7 @@ export default function ShortcutHelpPage() {
       </Link>
       <h1 className="mt-2 text-[24px] font-bold tracking-tight">공유 시트로 바로 저장하기</h1>
       <p className="mt-2 text-[16px] leading-[1.7] text-[var(--muted)]">
-        iPhone 단축어를 한 번 만들어 두면, X·Threads·Reddit에서 <b className="text-[var(--ink)]">공유 → 박제에 저장</b>{" "}
+        iPhone 단축어를 한 번 만들어 두면, X·Threads·Reddit에서 <b className="text-[var(--ink)]">공유 → 박제하기</b>{" "}
         두 번만 눌러 게시글을 보관할 수 있습니다. 만드는 데 3분쯤 걸립니다.
       </p>
 
