@@ -55,6 +55,7 @@ export function useViewerGesture({
   const imageRef = useRef<HTMLImageElement>(null);
   const settleRef = useRef<Animation | null>(null);
   const offsetRef = useRef(0);
+  const dropRef = useRef(0);
   const lastTapRef = useRef<{ x: number; y: number; time: number } | null>(
     null,
   );
@@ -95,6 +96,7 @@ export function useViewerGesture({
     settleRef.current = null;
     animation?.cancel();
     writeOffset(0);
+    writeDrop(0);
   }
 
   function resetPointerSession() {
@@ -329,6 +331,39 @@ export function useViewerGesture({
       target instanceof HTMLElement && target.hasAttribute("data-viewer-blank")
     );
   }
+  /** Vertical drag-to-close: the page follows the finger and the backdrop thins. */
+  function writeDrop(drop: number) {
+    dropRef.current = drop;
+    const dialog = viewportRef.current?.closest<HTMLElement>(".gc-viewer-dialog");
+    if (trackRef.current)
+      // No scale here: shrinking the track would pull the neighbour pages into view.
+      trackRef.current.style.transform = drop
+        ? `translateY(${drop}px)`
+        : `translateX(${offsetRef.current}px)`;
+    if (!dialog) return;
+    dialog.style.setProperty("--gc-viewer-drop", String(Math.min(1, drop / 400)));
+    dialog.toggleAttribute("data-dropping", drop > 0);
+  }
+  function settleDrop(isCanceled: boolean, elapsed: number) {
+    const drop = dropRef.current;
+    if (
+      !isCanceled &&
+      (drop > 120 || (drop > 40 && drop / elapsed > 0.55))
+    ) {
+      // Leave the page where it was let go; the dialog's exit fade runs from there.
+      onOpenChange(false);
+      return;
+    }
+    const track = trackRef.current;
+    const from = track?.style.transform;
+    writeOffset(0);
+    writeDrop(0);
+    if (track && from && shouldAnimate)
+      track.animate([{ transform: from }, { transform: "translateX(0px)" }], {
+        duration: 180,
+        easing: "cubic-bezier(.2,.7,.2,1)",
+      });
+  }
   function writeOffset(offset: number) {
     offsetRef.current = offset;
     if (trackRef.current)
@@ -375,6 +410,10 @@ export function useViewerGesture({
     if (event.currentTarget.hasPointerCapture(event.pointerId))
       event.currentTarget.releasePointerCapture(event.pointerId);
     if (zoomRef.current > 1 || !gesture.canSwipe) return;
+    if (gesture.isHorizontal === false) {
+      settleDrop(isCanceled, Math.max(1, performance.now() - gesture.startedAt));
+      return;
+    }
     const offset = offsetRef.current;
     const width = viewportRef.current?.clientWidth || 0;
     const elapsed = Math.max(1, performance.now() - gesture.startedAt);
@@ -502,6 +541,10 @@ export function useViewerGesture({
     if (!gesture.canSwipe) return;
     if (gesture.isHorizontal === null && Math.abs(dx) + Math.abs(dy) > 8)
       gesture.isHorizontal = Math.abs(dx) > Math.abs(dy) * 1.15;
+    if (gesture.isHorizontal === false) {
+      writeDrop(Math.max(0, dy));
+      return;
+    }
     if (!gesture.isHorizontal) return;
     const hasNeighbor = dx < 0 ? index < imageCount - 1 : index > 0;
     writeOffset(hasNeighbor ? dx : dx * 0.22);

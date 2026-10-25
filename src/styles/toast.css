@@ -30,6 +30,20 @@
   list-style: none;
   will-change: transform;
 }
+/* Radix toast swipe: the card follows the finger, snaps back on cancel. */
+.gc-toast-slot {
+  touch-action: pan-y;
+}
+.gc-toast-slot[data-swipe="move"] > div {
+  translate: var(--radix-toast-swipe-move-x) 0;
+}
+.gc-toast-slot[data-swipe="cancel"] > div {
+  translate: 0 0;
+  transition: translate var(--gc-toast-exit-duration) ease-out;
+}
+.gc-toast-slot[data-swipe="end"] > div {
+  translate: var(--radix-toast-swipe-end-x) 0;
+}
 .gc-toast-slot[aria-hidden="true"] {
   pointer-events: none;
 }

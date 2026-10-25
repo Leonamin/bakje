@@ -62,6 +62,9 @@
   --gc-tab-count-font-size: 10px;
   --gc-tab-badge-ring: 2px;
   --gc-stepper-value-width: 64px;
+  --gc-sheet-duration: 280ms;
+  --gc-sheet-exit-duration: 200ms;
+  --gc-sheet-easing: cubic-bezier(0.32, 0.72, 0, 1);
   --gc-accordion-duration: 240ms;
   --gc-accordion-easing: cubic-bezier(0.22, 0.68, 0.3, 1);
   --gc-slider-track-height: 6px;

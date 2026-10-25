@@ -77,7 +77,18 @@ body {
   color: var(--muted);
   font-size: 14px;
   white-space: nowrap;
-  transition: color 120ms ease, border-color 120ms ease, background 120ms ease;
+  transition: color 120ms ease, border-color 120ms ease, background 120ms ease,
+    scale var(--gc-press-duration) var(--gc-press-easing);
+}
+
+.chip:active {
+  scale: var(--gc-press-scale);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chip:active {
+    scale: 1;
+  }
 }
 
 .chip:hover {
