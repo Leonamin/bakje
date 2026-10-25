@@ -8,6 +8,7 @@ okf_version: "0.1"
 
 # Logs
 
+- [2026-10-25-duplicate-refetch-and-pnpm.md](./2026-10-25-duplicate-refetch-and-pnpm.md) — 중복 링크 재수집 승인·거부, npm에서 pnpm으로 전환
 - [2026-10-25-refresh-button-and-ios27-help.md](./2026-10-25-refresh-button-and-ios27-help.md) — 새로고침 버튼 추가, iOS 27 실기기 캡처로 단축어 도움말 재작성
 - [2026-10-25-long-form-capture.md](./2026-10-25-long-form-capture.md) — Threads 장문 첨부·X Article 본문 수집
 - [2026-10-25-three-tracks-impl.md](./2026-10-25-three-tracks-impl.md) — 요청형 번역·LLM 설정, 바텀 시트 인터랙션, iOS 단축어 구현과 배포

@@ -18,6 +18,8 @@ X, Threads, Reddit 게시글을 링크 하나로 내 디스크에 복제하고 �
 - 요청형 번역과 LLM 설정 화면 `/settings`. 운영에는 아직 키가 없어 번역을 쓸 수 없다. → [결정 013](./decisions/013-on-demand-translation-and-llm-settings.md)
 - 바텀 시트 애니메이션·끌어내려 닫기, 이미지 뷰어 쓸어 닫기. → [UI 시스템](./concepts/ui-system.md)
 - iOS 단축어 수집용 API 입력 확장과 도움말 `/help/shortcut`(iOS 27 실기기 캡처, 동작 확인). → [iOS 단축어 수집](./concepts/ios-shortcut.md)
+- 이미 저장된 링크를 다시 붙여넣으면 수집 화면에서 다시 가져오기를 승인·거부한다. → [수집 작업 큐](./concepts/capture-queue.md)
+- 패키지 매니저는 pnpm(`pnpm-lock.yaml`, `pnpm-workspace.yaml`의 `allowBuilds`). npm 락 파일은 쓰지 않는다.
 - 라이브러리·수집 머리글의 새로고침 버튼(홈 화면 웹앱용). → [UI 시스템](./concepts/ui-system.md)
 
 ## 문서 지도
