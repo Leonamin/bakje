@@ -1,7 +1,7 @@
 ---
 type: Decision
 title: "012. 서비스 이름 박제"
-description: "서비스 이름을 박제(bakje)로 정하고, 운영 경로·식별자는 이전 이름 post-archive로 유지"
+description: "서비스 이름을 박제(bakje)로 정하고 운영 경로·식별자까지 bakje로 이전"
 tags: [naming, branding, operations]
 timestamp: 2026-10-25
 ---
