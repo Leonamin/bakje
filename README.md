@@ -139,3 +139,73 @@ src/lib/llm.ts       OpenAI 호환 번역·요약 (JSON 모드, 실패 시 수�
 - 로그인 세션으로 북마크 폴링 자동 수집
 - 브라우저 공유 시트/익스텐션
 - 삭제 감지 스케줄러 (지수 백오프)
+
+---
+
+## 운영 배포
+
+호스트의 다른 서비스(puri, nanuri)와 같은 릴리스 방식이다.
+
+```
+/opt/post-archive/
+  releases/20261025T082710Z/   배포 시점의 소스 스냅샷
+  current -> releases/...      지금 실행 중인 릴리스
+/var/lib/post-archive/         SQLite · 미디어 · 원본 스냅샷 (배포와 무관)
+/etc/post-archive/
+  post-archive.env             시크릿·LLM 설정 (0600)
+```
+
+- **데이터는 릴리스 밖에 있다.** 배포는 프로그램만 교체하고 `/var/lib/post-archive`는 건드리지 않는다.
+- **매 배포마다 새 릴리스 디렉터리**를 만들고 `current` 심볼릭 링크를 원자적으로 바꾼다. 이전 빌드 산출물을 재사용하지 않고 이미지를 새로 빌드해 컨테이너를 `--force-recreate`로 갈아끼운다.
+- 최근 `ARCHIVE_KEEP_RELEASES`(기본 3)개만 남기고 오래된 릴리스는 지운다. `current`가 가리키는 릴리스는 항상 보존한다.
+- 배포는 `flock`으로 중복 실행을 막고, 실패하면 해당 릴리스 디렉터리를 진단용으로 남긴다(자동 롤백 없음).
+
+### 최초 준비 (root)
+
+```bash
+sudo ARCHIVE_UID=$(id -u) ARCHIVE_GID=$(id -g) ./scripts/prepare-host.sh
+sudo vi /etc/post-archive/post-archive.env     # OPENAI_API_KEY 입력
+```
+
+sudo가 없는 환경(이 호스트)에서는 Docker로 같은 상태를 만든다.
+
+```bash
+docker run --rm -v /opt:/opt -v /var/lib:/var/lib -v /etc:/etc alpine sh -c '
+  mkdir -p /opt/post-archive/releases /var/lib/post-archive /etc/post-archive
+  chown -R 1000:1000 /opt/post-archive /var/lib/post-archive /etc/post-archive'
+```
+
+### 배포
+
+```bash
+./scripts/deploy.sh
+```
+
+Docker 데몬 접근 권한만 있으면 된다(root 불필요). Playwright 이미지에 Chromium과 ffmpeg가 들어 있어 호스트에 별도 설치할 것이 없다. 컨테이너는 `--no-sandbox`로 Chromium을 띄운다(`ARCHIVE_NO_SANDBOX=1`).
+
+### 운영 확인
+
+```bash
+docker compose -f /opt/post-archive/current/compose.yml ps
+docker compose -f /opt/post-archive/current/compose.yml logs -f web
+curl -s http://127.0.0.1:3020/api/health
+```
+
+### 접속
+
+- 호스트 로컬: `http://127.0.0.1:3020`
+- tailnet: `https://<기기이름>.<tailnet>.ts.net:8444` (`tailscale serve`로 프록시)
+
+### 백업
+
+```bash
+tar czf post-archive-$(date -u +%Y%m%dT%H%M%SZ).tar.gz -C /var/lib post-archive
+```
+
+SQLite는 WAL 모드이므로 서비스 중 백업하려면 `sqlite3 /var/lib/post-archive/archive.db ".backup /tmp/archive.db"`를 쓰고 미디어 디렉터리를 함께 복사한다.
+
+### 릴리스 정리
+
+```bash
+./scripts/prune-releases.sh --keep 2
+```

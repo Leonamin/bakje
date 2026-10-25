@@ -226,3 +226,27 @@ export function getSource(id: number): {
       .get(id) as { summary_ko: string | null; model: string | null; created_at: string } | undefined) ?? null;
   return { source, parts, media, tags, translation, snapshots };
 }
+
+export function topTags(limit = 12): { name: string; count: number }[] {
+  return db()
+    .prepare(
+      `SELECT t.name AS name, COUNT(*) AS count
+       FROM tag t JOIN source_tag st ON st.tag_id = t.id
+       GROUP BY t.id ORDER BY count DESC, t.name ASC LIMIT ?`,
+    )
+    .all(limit) as { name: string; count: number }[];
+}
+
+export function libraryStats(): {
+  sources: number;
+  media: number;
+  deleted: number;
+  lastSaved: string | null;
+} {
+  const conn = db();
+  const sources = (conn.prepare("SELECT COUNT(*) AS n FROM source").get() as { n: number }).n;
+  const media = (conn.prepare("SELECT COUNT(*) AS n FROM media WHERE status='ok'").get() as { n: number }).n;
+  const deleted = (conn.prepare("SELECT COUNT(*) AS n FROM source WHERE status='deleted'").get() as { n: number }).n;
+  const last = conn.prepare("SELECT MAX(first_seen_at) AS t FROM source").get() as { t: string | null };
+  return { sources, media, deleted, lastSaved: last.t };
+}

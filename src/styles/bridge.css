@@ -1,0 +1,201 @@
+/**
+ * Bridge between the Goodcase reference components and this app's palette.
+ *
+ * Palette: ColorHunt Popular #23 — #E0F8C7 / #B7D894 / #36415A / #202734.
+ * The slate base carries the surface ladder; the phosphor greens are the only
+ * accent, which keeps a terminal/industrial feel without neon noise.
+ */
+
+:root {
+  color-scheme: dark;
+
+  --accent-bg: #141922;
+  --surface: #1d2431;
+  --surface-2: #242d3c;
+  --line: #2e3848;
+  --line-strong: #435068;
+  --ink: #eef3e6;
+  --muted: #93a1af;
+  --accent: #b7d894;
+  --accent-strong: #e0f8c7;
+  --danger: #e8927c;
+  --warn: #e3c77a;
+
+  --font-sans: "Pretendard", "Apple SD Gothic Neo", "Noto Sans KR", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "SF Mono", ui-monospace, "JetBrains Mono", Menlo, monospace;
+
+  /* Goodcase tokens */
+  --gc-font-sans: var(--font-sans);
+  --gc-font-mono: var(--font-mono);
+  --gc-bg: var(--accent-bg);
+  --gc-surface: var(--surface);
+  --gc-surface-subtle: var(--surface-2);
+  --gc-text: var(--ink);
+  --gc-text-muted: var(--muted);
+  --gc-border: var(--line);
+  --gc-control-border: var(--line-strong);
+  --gc-interactive-hover: #ffffff0d;
+  --gc-progress-track: var(--surface-2);
+  --gc-on-accent: #12180f;
+  --gc-accent: var(--accent);
+  --gc-accent-hover: #cbe8ab;
+  --gc-accent-soft: #202b22;
+  --gc-danger: var(--danger);
+  --gc-danger-soft: #2c1d19;
+  --gc-success: var(--accent);
+  --gc-success-soft: #1e2a20;
+  --gc-warning: var(--warn);
+  --gc-warning-soft: #2b2517;
+  --gc-overlay: #080b10d9;
+  --gc-focus: var(--accent);
+  --gc-focus-clearance: 6px;
+
+  --gc-radius-sm: 4px;
+  --gc-radius: 8px;
+  --gc-radius-lg: 12px;
+  --gc-shadow: 0 18px 48px #00000073;
+
+  --gc-control-height: 44px;
+  --gc-text-sm: 12.5px;
+  --gc-text-base: 15px;
+  --gc-text-lg: 19px;
+  --gc-text-title: 26px;
+
+  --gc-space-1: 4px;
+  --gc-space-2: 8px;
+  --gc-space-3: 12px;
+  --gc-space-4: 16px;
+  --gc-space-6: 24px;
+  --gc-space-8: 32px;
+}
+
+html {
+  font-size: var(--gc-text-base);
+  background: var(--accent-bg);
+  color: var(--ink);
+}
+
+/* Goodcase defaults assume a light page. These keep its overlays legible. */
+.gc-card {
+  background: var(--surface);
+  border-color: var(--line);
+}
+
+.gc-badge {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  border-radius: 4px;
+  border-width: 1px;
+}
+
+.gc-modal,
+.gc-drawer {
+  background: var(--surface);
+  border: 1px solid var(--line);
+}
+
+.gc-modal header,
+.gc-drawer header {
+  border-bottom: 1px solid var(--line);
+}
+
+.gc-modal footer,
+.gc-drawer footer {
+  border-top: 1px solid var(--line);
+  background: var(--surface);
+}
+
+.gc-input,
+.gc-textarea,
+.gc-select-trigger {
+  background: #11161e;
+  border-color: var(--line-strong);
+  color: var(--ink);
+  border-radius: 6px;
+}
+
+.gc-input::placeholder,
+.gc-textarea::placeholder {
+  color: color-mix(in srgb, var(--muted) 75%, transparent);
+}
+
+.gc-button-primary {
+  background: var(--accent);
+  color: var(--gc-on-accent);
+  border-color: var(--accent);
+}
+
+.gc-button-primary:hover:not(:disabled) {
+  background: var(--gc-accent-hover);
+  border-color: var(--gc-accent-hover);
+}
+
+.gc-button-secondary {
+  background: #1b222d;
+  color: var(--ink);
+  border-color: var(--line-strong);
+}
+
+.gc-button-secondary:hover:not(:disabled) {
+  background: #232c39;
+}
+
+/* Drawer slides from the bottom on phones, the side on wide screens. */
+@media (max-width: 767px) {
+  .gc-drawer {
+    inset: auto 0 0 0 !important;
+    width: 100% !important;
+    max-width: none !important;
+    height: auto !important;
+    max-height: 88dvh !important;
+    border-radius: 14px 14px 0 0 !important;
+    border-bottom: 0 !important;
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+}
+
+.gc-tabs-bottom {
+  border-top: 1px solid var(--line);
+  background: color-mix(in srgb, var(--accent-bg) 92%, transparent);
+}
+
+.gc-toast {
+  background: var(--surface);
+  border-color: var(--line-strong);
+  color: var(--ink);
+}
+
+a {
+  color: inherit;
+}
+
+input,
+textarea,
+select {
+  font-family: inherit;
+}
+
+/* Tailwind preflight is loaded first; restore what Goodcase relies on. */
+button {
+  cursor: pointer;
+}
+
+/* Keep toasts clear of the mobile tab bar. */
+@media (max-width: 767px) {
+  .gc-toast-viewport {
+    bottom: calc(64px + env(safe-area-inset-bottom)) !important;
+  }
+}
+
+/* The focus ring should read as a hairline, not a glow. */
+:focus-visible {
+  outline: 2px solid var(--gc-focus);
+  outline-offset: 2px;
+}
+
+input:focus-visible,
+textarea:focus-visible {
+  outline: none;
+}

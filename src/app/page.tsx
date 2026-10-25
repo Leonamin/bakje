@@ -1,26 +1,12 @@
 import Link from "next/link";
-import { searchSources } from "@/lib/search";
-import { formatDate, mediaUrl, platformName, relative, statusLabel } from "@/lib/format";
+import { Suspense } from "react";
+import { Archive, Plus } from "lucide-react";
+import { libraryStats, searchSources, topTags } from "@/lib/search";
+import { LibraryToolbar } from "@/components/library-toolbar";
+import { SourceCard } from "@/components/source-card";
+import { relative } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
-
-function Highlight({ text, q }: { text: string; q?: string }) {
-  if (!q) return <>{text}</>;
-  const parts = text.split(new RegExp(`(${q.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")})`, "gi"));
-  return (
-    <>
-      {parts.map((part, i) =>
-        part.toLowerCase() === q.toLowerCase() ? (
-          <mark key={i} className="bg-transparent font-semibold text-[var(--color-accent)]">
-            {part}
-          </mark>
-        ) : (
-          <span key={i}>{part}</span>
-        ),
-      )}
-    </>
-  );
-}
 
 export default async function LibraryPage({
   searchParams,
@@ -34,124 +20,90 @@ export default async function LibraryPage({
   const media = get("media") as "image" | "video" | "any" | undefined;
   const sort = (get("sort") as "relevance" | "recent" | "posted" | undefined) ?? undefined;
   const tag = get("tag");
+  const view = get("view") === "list" ? "list" : "grid";
 
-  const { hits, total } = searchSources({ q, platform, media, sort, tag, limit: 40 });
+  const [{ hits, total }, tags, stats] = [
+    searchSources({ q, platform, media, sort, tag, limit: 60 }),
+    topTags(10),
+    libraryStats(),
+  ];
+
+  const isFiltered = Boolean(q || platform || media || tag || sort);
 
   return (
-    <div className="space-y-6">
-      <form className="space-y-3" action="/" method="get">
-        <div className="flex gap-2">
-          <input
-            name="q"
-            defaultValue={q}
-            placeholder="키워드로 찾기 — 제목, 본문, 번역, 요약, 작성자"
-            className="flex-1 !py-2.5 text-[15px]"
-            autoComplete="off"
-          />
-          <button className="btn btn-accent px-5" type="submit">
-            검색
-          </button>
-        </div>
-        <div className="flex flex-wrap items-center gap-2 text-[13px]">
-          <select name="platform" defaultValue={platform ?? ""} className="!py-1.5">
-            <option value="">모든 플랫폼</option>
-            <option value="x">X</option>
-            <option value="threads">Threads</option>
-            <option value="reddit">Reddit</option>
-          </select>
-          <select name="media" defaultValue={media ?? ""} className="!py-1.5">
-            <option value="">미디어 전체</option>
-            <option value="image">이미지 있음</option>
-            <option value="video">영상 있음</option>
-          </select>
-          <select name="sort" defaultValue={sort ?? ""} className="!py-1.5">
-            <option value="">정렬: 저장일</option>
-            <option value="posted">원문 작성일</option>
-            <option value="relevance">관련도</option>
-          </select>
-          {tag ? (
-            <span className="tag">
-              #{tag}
-              <Link href="/" className="ml-1.5 text-[var(--color-dim)]">
-                ×
-              </Link>
-            </span>
-          ) : null}
-          <span className="ml-auto meta">
-            {total}건{q ? ` · “${q}”` : ""}
-          </span>
-        </div>
-      </form>
-
-      {hits.length === 0 ? (
-        <div className="card rounded-lg px-6 py-16 text-center">
-          <p className="text-[15px] text-[var(--color-dim)]">
-            {q ? "검색 결과가 없습니다." : "아직 저장된 게시글이 없습니다."}
-          </p>
-          <Link href="/add" className="btn mt-4 inline-block">
-            링크 추가하기
+    <div className="mx-auto max-w-6xl px-5 pb-10 pt-4 md:px-6 md:pt-8">
+      <header className="relative mb-5 md:mb-8">
+        <div className="pointer-events-none absolute -inset-x-5 -top-4 h-28 grid-paper md:-inset-x-6" aria-hidden="true" />
+        <div className="relative flex items-end justify-between gap-3">
+          <div>
+            <p className="mono mb-1">personal post archive</p>
+            <h1 className="text-[24px] font-semibold leading-none tracking-tight md:text-[30px]">라이브러리</h1>
+          </div>
+          <Link
+            href="/add"
+            className="hidden h-9 items-center gap-1.5 rounded-md bg-[var(--accent)] px-3.5 text-[13px] font-semibold text-[var(--gc-on-accent)] md:flex"
+          >
+            <Plus size={15} strokeWidth={2.2} />
+            링크 수집
           </Link>
         </div>
+
+        <dl className="relative mt-4 flex flex-wrap items-center gap-x-5 gap-y-1.5">
+          {[
+            ["게시글", stats.sources],
+            ["미디어", stats.media],
+            ["삭제됨", stats.deleted],
+          ].map(([label, value]) => (
+            <div key={String(label)} className="flex items-baseline gap-1.5">
+              <dt className="mono">{label}</dt>
+              <dd className="numeric text-[13px] text-[var(--ink)]">{value as number}</dd>
+            </div>
+          ))}
+          <div className="flex items-baseline gap-1.5">
+            <dt className="mono">최근 저장</dt>
+            <dd className="mono-sm !text-[var(--ink)]">{stats.lastSaved ? relative(stats.lastSaved) : "—"}</dd>
+          </div>
+        </dl>
+      </header>
+
+      <Suspense fallback={<div className="h-11 rounded-lg border border-[var(--line)]" />}>
+        <LibraryToolbar total={total} tags={tags.map((t) => t.name)} view={view} />
+      </Suspense>
+
+      {hits.length === 0 ? (
+        <div className="mt-8 rounded-xl border border-dashed border-[var(--line)] px-6 py-16 text-center">
+          <Archive size={22} strokeWidth={1.4} className="mx-auto mb-3 text-[var(--muted)]" />
+          <p className="text-[14px] text-[var(--ink)]">
+            {isFiltered ? "조건에 맞는 게시글이 없습니다." : "아직 저장한 게시글이 없습니다."}
+          </p>
+          <p className="mono mt-2">{isFiltered ? "필터를 지우거나 다른 키워드로 찾아보세요." : "링크를 붙여넣으면 본문과 미디어를 함께 보관합니다."}</p>
+          {isFiltered ? (
+            <Link href="/" className="mt-4 inline-flex h-9 items-center rounded-md border border-[var(--line-strong)] px-3 text-[12.5px]">
+              필터 초기화
+            </Link>
+          ) : (
+            <Link
+              href="/add"
+              className="mt-4 inline-flex h-9 items-center gap-1.5 rounded-md bg-[var(--accent)] px-3.5 text-[12.5px] font-semibold text-[var(--gc-on-accent)]"
+            >
+              <Plus size={14} strokeWidth={2.2} />
+              첫 게시글 저장
+            </Link>
+          )}
+        </div>
       ) : (
-        <ul className="space-y-2.5">
-          {hits.map((hit) => {
-            const st = statusLabel(hit.status);
-            const thumb = mediaUrl(hit.thumb);
-            return (
-              <li key={hit.id}>
-                <Link
-                  href={`/sources/${hit.id}`}
-                  className="card group flex gap-4 rounded-lg p-4 transition-colors hover:border-[#3a3a40]"
-                >
-                  {thumb ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={thumb}
-                      alt=""
-                      className="h-[74px] w-[74px] shrink-0 rounded-md border border-[var(--color-line)] object-cover"
-                    />
-                  ) : (
-                    <div className="flex h-[74px] w-[74px] shrink-0 items-center justify-center rounded-md border border-dashed border-[var(--color-line)] text-[10px] text-[var(--color-dim)]">
-                      no media
-                    </div>
-                  )}
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2">
-                      <span className="meta !text-[var(--color-accent)]">{platformName(hit.platform)}</span>
-                      <span className="meta truncate">
-                        {hit.author_handle ? `@${hit.author_handle}` : "unknown"}
-                      </span>
-                      <span className="meta">·</span>
-                      <span className="meta">{formatDate(hit.posted_at)}</span>
-                      {st.tone !== "ok" ? (
-                        <span
-                          className={`tag !border-transparent ${
-                            st.tone === "bad" ? "bg-[#3a1d1d] text-[#e8a0a0]" : "bg-[#33280f] text-[#e0bd7c]"
-                          }`}
-                        >
-                          {st.text}
-                        </span>
-                      ) : null}
-                    </div>
-                    {hit.title ? (
-                      <h2 className="mt-1 truncate text-[15px] font-semibold">
-                        <Highlight text={hit.title} q={q} />
-                      </h2>
-                    ) : null}
-                    <p className="mt-1 line-clamp-2 text-[13.5px] leading-relaxed text-[var(--color-dim)]">
-                      <Highlight text={hit.snippet} q={q} />
-                    </p>
-                    <div className="mt-1.5 flex items-center gap-3 meta">
-                      <span>저장 {relative(hit.first_seen_at)}</span>
-                      {hit.media_count > 0 ? <span>미디어 {hit.media_count}</span> : null}
-                      {hit.part_count > 1 ? <span>이어쓰기 {hit.part_count - 1}</span> : null}
-                      {hit.lang && hit.lang !== "ko" ? <span>{hit.lang.toUpperCase()}</span> : null}
-                    </div>
-                  </div>
-                </Link>
-              </li>
-            );
-          })}
+        <ul
+          className={
+            view === "grid"
+              ? "mt-4 grid grid-cols-2 gap-2.5 md:grid-cols-3 md:gap-3 lg:grid-cols-4"
+              : "mt-4 space-y-2"
+          }
+        >
+          {hits.map((hit) => (
+            <li key={hit.id}>
+              <SourceCard hit={hit} query={q} view={view} />
+            </li>
+          ))}
         </ul>
       )}
     </div>

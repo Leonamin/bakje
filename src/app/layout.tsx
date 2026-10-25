@@ -1,36 +1,31 @@
-import type { Metadata } from "next";
-import Link from "next/link";
+import type { Metadata, Viewport } from "next";
+import { Providers } from "@/components/providers";
+import { BottomNav, TopBar } from "@/components/app-nav";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "아카이브",
-  description: "X, Threads, Reddit 게시글 개인 아카이브",
+  title: "아카이브 — 개인 게시글 보관소",
+  description: "X, Threads, Reddit 게시글을 원문째 보관하고 다시 찾는 개인 아카이브",
+};
+
+export const viewport: Viewport = {
+  themeColor: "#141922",
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="ko">
       <body>
-        <header className="border-b hairline">
-          <div className="mx-auto flex max-w-5xl items-center justify-between px-5 py-4">
-            <Link href="/" className="flex items-baseline gap-2.5">
-              <span className="text-[15px] font-semibold tracking-tight">아카이브</span>
-              <span className="meta">personal post archive</span>
-            </Link>
-            <nav className="flex items-center gap-4 text-[13px] text-[var(--color-dim)]">
-              <Link href="/" className="hover:text-[var(--color-ink)]">
-                라이브러리
-              </Link>
-              <Link
-                href="/add"
-                className="rounded-md border border-[var(--color-line)] bg-[#171719] px-3 py-1.5 text-[var(--color-ink)] hover:bg-[#202024]"
-              >
-                수집
-              </Link>
-            </nav>
+        <Providers>
+          <div className="app-shell">
+            <TopBar />
+            <main className="app-main">{children}</main>
+            <BottomNav />
           </div>
-        </header>
-        <main className="mx-auto max-w-5xl px-5 py-8">{children}</main>
+        </Providers>
       </body>
     </html>
   );

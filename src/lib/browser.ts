@@ -32,7 +32,13 @@ async function getBrowser(): Promise<Browser> {
   if (state.browser?.isConnected()) return state.browser;
   state.browser = await chromium.launch({
     headless: true,
-    args: ["--disable-blink-features=AutomationControlled"],
+    args: [
+      "--disable-blink-features=AutomationControlled",
+      // Containers have no user namespaces; Chromium's sandbox cannot start.
+      ...(process.env.ARCHIVE_NO_SANDBOX === "1"
+        ? ["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage"]
+        : []),
+    ],
   });
   return state.browser;
 }
