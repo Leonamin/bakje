@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { ChevronRight, CircleAlert, CircleCheck, ClipboardPaste, Clock3, CloudOff, Keyboard, LoaderCircle } from "lucide-react";
+import { ChevronRight, CircleAlert, CircleCheck, ClipboardPaste, Clock3, CloudOff, Keyboard, LoaderCircle, Share } from "lucide-react";
 import { Button } from "@/components/goodcase/basic/button";
 import { Drawer } from "@/components/goodcase/overlays/dialog";
 import { useToast } from "@/components/goodcase/overlays/toast";
@@ -137,6 +137,13 @@ export default function AddPage() {
     <div className="mx-auto max-w-2xl px-5 pb-24 pt-2 md:px-6 md:pb-10 md:pt-10">
       <div className="flex h-16 items-center">
         <h1 className="text-[24px] font-bold tracking-tight">수집</h1>
+        <Link
+          href="/help/shortcut"
+          className="ml-auto inline-flex h-10 items-center gap-1.5 rounded-xl px-3 text-[14px] text-[var(--muted)] hover:text-[var(--ink)]"
+        >
+          <Share size={16} />
+          공유 시트로 저장
+        </Link>
       </div>
 
       {/* Phones: pinned above the tab bar, in thumb reach. Desktop: under the title. */}
