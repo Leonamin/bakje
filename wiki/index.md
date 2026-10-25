@@ -12,10 +12,12 @@ X, Threads, Reddit 게시글을 링크 하나로 내 디스크에 복제하고 �
 
 ## 현재 상태 (2026-10-25)
 
-- MVP 구현 완료: 3개 플랫폼 수집, 작성자 이어쓰기 사슬, 미디어 로컬 복제, 한국어 키워드 검색, 번역·요약 파이프라인.
-- 운영 배포 완료: `/opt/bakje` 릴리스 + Docker Compose, 데이터는 `/var/lib/bakje`.
-- UI 개편 배포 완료(릴리스 `20261025T114214Z`): 수집을 가운데 탭과 "붙여넣고 저장" 버튼으로 올리고, 터미널풍 장식을 걷어내 읽기 중심으로 바꿨다. 지원하지 않는 링크는 `/api/ingest`에서 거절한다. → [결정 010](./decisions/010-capture-first-ui.md)
-- 번역은 실제 API 키로 검증하지 않았다. 목 서버로 배관만 확인했고 운영 환경은 키가 비어 있어 번역을 건너뛴다.
+- MVP 구현 완료: 3개 플랫폼 수집, 작성자 이어쓰기 사슬, 미디어 로컬 복제, 한국어 키워드 검색.
+- 운영 배포: `/opt/bakje` 릴리스 + Docker Compose, 데이터는 `/var/lib/bakje`, tailnet `https://<기기이름>.<tailnet>.ts.net:8888`. 최신 릴리스 `20261025T122749Z`.
+- 수집 우선 UI, 수집 작업 재시도·오프라인 대기열·서비스 워커. → [결정 010](./decisions/010-capture-first-ui.md), [결정 011](./decisions/011-resilient-capture-queue.md)
+- 요청형 번역과 LLM 설정 화면 `/settings`. 운영에는 아직 키가 없어 번역을 쓸 수 없다. → [결정 013](./decisions/013-on-demand-translation-and-llm-settings.md)
+- 바텀 시트 애니메이션·끌어내려 닫기, 이미지 뷰어 쓸어 닫기. → [UI 시스템](./concepts/ui-system.md)
+- iOS 단축어 수집용 API 입력 확장과 도움말 `/help/shortcut`. → [iOS 단축어 수집](./concepts/ios-shortcut.md)
 
 ## 문서 지도
 
@@ -26,16 +28,12 @@ X, Threads, Reddit 게시글을 링크 하나로 내 디스크에 복제하고 �
 
 ## 다음 단계
 
-진행 중(2026-10-25 착수, 세 갈래 동시 진행) → [계획 로그](./logs/2026-10-25-next-work-plan.md)
-
-1. 요청형 번역과 LLM 설정 페이지: "번역하기"를 누를 때만 번역하고, 한국어 우선·원문 보기 토글, 제공자·모델·키 설정 화면. → [결정 013](./decisions/013-on-demand-translation-and-llm-settings.md)
-2. 바텀 시트와 모바일 인터랙션: 진입·퇴장 애니메이션, 끌어내려 닫기(시트·이미지 뷰어), 누름 피드백.
-3. iOS 단축어 수집과 도움말 페이지: 공유 시트 → `/api/ingest`, 접근은 tailnet으로 제한, 단계별 그림 설명.
-
-남은 과제:
-
-- 수집 안정화는 운영 배포(릴리스 `20261025T115726Z`)까지 마쳤다. iPhone 실기기 검증이 남았다. → [결정 011](./decisions/011-resilient-capture-queue.md)
-- 실기기(iPhone) UI 검증: 클립보드 확인 말풍선, 노치·홈 인디케이터 영역, 이미지 뷰어 제스처.
+- `/settings`에 실제 키를 넣고 연결 테스트 → 번역 품질 확인. OpenCode Go 프리셋은 실제 키로 검증 전이다.
+- iPhone 실기기 검증: 단축어(동작 이름·허용 창·공유 메뉴 이름), 시트 끌기 감각(닫힘 기준값), 이미지 뷰어 쓸어 닫기, 클립보드 확인 말풍선, 노치·홈 인디케이터, 홈 화면 앱 오프라인 수집.
+- 단축어 iCloud 공유 링크와 실제 캡처를 받아 도움말 페이지 그림 교체.
+- 이미 번역된 글의 "다시 번역" 버튼(필요해지면).
 - 의미 기반 검색(임베딩): `part.text_original` 청킹으로 붙일 수 있게 텍스트를 보존 중이다.
 - 로그인 세션 기반 북마크 폴링 수집: X는 SSR 경로가 막힐 때의 대안이 된다.
 - Threads 다단 타래 실물 검증, Reddit 차단 빈도 완화.
+
+범위에서 뺀 것: 원문 삭제 감지. → [제품 범위](./concepts/product-scope.md)

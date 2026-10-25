@@ -44,6 +44,17 @@ timestamp: 2026-10-25
   - OpenCode Go의 엔드포인트와 Chat Completions·Responses 지원 여부는 구현할 때 문서로 확인한다.
   - 설정 화면 경로와 진입 위치(상단 메뉴, 라이브러리 등)는 구현할 때 정한다.
 
+## Implementation (2026-10-25)
+
+릴리스 `20261025T122749Z`로 배포했다.
+
+- `POST /api/sources/[id]/translate`가 번역문·요약·번역 제목(`translation.title_ko`, 새 컬럼)을 저장하고 색인을 다시 만든다. 기존 번역이 있으면 덮어쓴다. 실패하면 502와 읽을 수 있는 메시지를 돌려준다.
+- 상세 화면 순서: 작성자·지표 → 제목 → 번역 컨트롤 → 요약 → 본문. 하단 액션 바와 데스크톱 상단 바의 번역/원문 토글은 없앴다.
+- 설정 화면 `/settings`. 모바일은 라이브러리 머리글, 데스크톱은 상단 바의 톱니 아이콘으로 들어간다. 연결 테스트는 저장 전 입력값으로 시험한다. 키는 GET·PUT 응답에 넣지 않고 끝 4자리와 출처(설정/환경 변수)만 보여준다.
+- 400 응답이 `response_format`/`text.format`이나 `temperature`를 언급하면 그 필드를 빼고 한 번 더 요청한다.
+- OpenCode Go 프리셋: `https://opencode.ai/zen/go/v1` + Chat Completions. 외부 문서에 따르면 minimax·qwen 모델은 Anthropic 형식(`/v1/messages`)만 지원해 이 앱에서 쓸 수 없다. 실제 키로는 검증하지 않았다.
+- 번역이 이미 있는 글을 다시 번역하는 버튼은 없다. 필요해지면 추가한다.
+
 ## Status
 
-Proposed
+Accepted

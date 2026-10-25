@@ -8,6 +8,7 @@ okf_version: "0.1"
 
 # Logs
 
+- [2026-10-25-three-tracks-impl.md](./2026-10-25-three-tracks-impl.md) — 요청형 번역·LLM 설정, 바텀 시트 인터랙션, iOS 단축어 구현과 배포
 - [2026-10-25-next-work-plan.md](./2026-10-25-next-work-plan.md) — 요청형 번역·LLM 설정, 바텀 시트 인터랙션, iOS 단축어 3갈래 착수와 삭제 감지 제외
 - [2026-10-25-rename-bakje.md](./2026-10-25-rename-bakje.md) — 서비스 이름 박제로 변경, 운영 경로·식별자 이전과 재배포
 - [2026-10-25-tailnet-port-8888.md](./2026-10-25-tailnet-port-8888.md) — 수집 큐 배포, tailnet 포트 8888로 변경
