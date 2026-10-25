@@ -223,6 +223,90 @@
 .gc-drawer .gc-modal-body {
   flex: 1;
 }
+.gc-drawer-handle {
+  display: none;
+}
+
+/* Enter/exit motion. Radix keeps the node mounted until the exit animation
+   ends; a missing from/to keyframe resolves to the current (possibly
+   finger-dragged) value, so a drag-dismiss continues from where it was let go. */
+.gc-modal-overlay[data-state="open"] {
+  animation: gc-fade-in var(--gc-sheet-duration) ease-out;
+}
+.gc-modal-overlay[data-state="closed"] {
+  animation: gc-fade-out var(--gc-sheet-exit-duration) ease-in forwards;
+}
+.gc-modal[data-state="open"] {
+  animation: gc-modal-in var(--gc-sheet-duration) var(--gc-sheet-easing);
+}
+.gc-modal[data-state="closed"] {
+  animation: gc-modal-out var(--gc-sheet-exit-duration) ease-in forwards;
+}
+.gc-drawer[data-state="open"] {
+  animation-name: gc-drawer-in;
+}
+.gc-drawer[data-state="closed"] {
+  animation-name: gc-drawer-out;
+}
+.gc-modal-overlay {
+  transition: opacity var(--gc-sheet-duration) var(--gc-sheet-easing);
+}
+.gc-drawer {
+  transition: translate var(--gc-sheet-duration) var(--gc-sheet-easing);
+}
+.gc-drawer[data-dragging] {
+  transition: none;
+  user-select: none;
+}
+@keyframes gc-fade-in {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes gc-fade-out {
+  to {
+    opacity: 0;
+  }
+}
+@keyframes gc-modal-in {
+  from {
+    opacity: 0;
+    scale: 0.96;
+  }
+}
+@keyframes gc-modal-out {
+  to {
+    opacity: 0;
+    scale: 0.96;
+  }
+}
+@keyframes gc-drawer-in {
+  from {
+    translate: 100% 0;
+  }
+}
+@keyframes gc-drawer-out {
+  to {
+    translate: 100% 0;
+  }
+}
+@keyframes gc-sheet-in {
+  from {
+    translate: 0 100%;
+  }
+}
+@keyframes gc-sheet-out {
+  to {
+    translate: 0 100%;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .gc-modal-overlay,
+  .gc-modal {
+    animation: none !important;
+    transition: none !important;
+  }
+}
 .gc-accordion {
   border: 1px solid var(--gc-border);
   border-radius: var(--gc-radius);

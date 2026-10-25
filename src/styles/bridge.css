@@ -152,6 +152,41 @@ html {
     border-bottom: 0 !important;
     padding-bottom: env(safe-area-inset-bottom);
   }
+
+  .gc-drawer[data-state="open"] {
+    animation-name: gc-sheet-in;
+  }
+
+  .gc-drawer[data-state="closed"] {
+    animation-name: gc-sheet-out;
+  }
+
+  /* Grab handle plus header are the drag surface; the body joins when scrolled to top. */
+  .gc-drawer-handle {
+    display: block;
+    flex-shrink: 0;
+    height: 20px;
+    touch-action: none;
+  }
+
+  .gc-drawer-handle::before {
+    content: "";
+    display: block;
+    width: 36px;
+    height: 5px;
+    margin: 8px auto 0;
+    border-radius: 3px;
+    background: var(--line-strong);
+  }
+
+  .gc-drawer header {
+    padding-top: 4px;
+    touch-action: none;
+  }
+
+  .gc-drawer header .gc-overlay-close {
+    top: 0;
+  }
 }
 
 .gc-tabs-bottom {
@@ -198,11 +233,28 @@ textarea:focus-visible {
   outline: none;
 }
 
+/* 0..1 while the phone viewer is dragged down to close (see use-viewer-gesture). */
+@property --gc-viewer-drop {
+  syntax: "<number>";
+  inherits: true;
+  initial-value: 0;
+}
+
 /* Phone image viewer: edge-to-edge photo on black, counter and close only.
    Zoom is pinch / double-tap and paging is swipe, so the desktop controls go. */
 @media (max-width: 767px) {
   .gc-viewer-dialog {
     --gc-viewer-background: #000;
+    background: rgb(0 0 0 / calc(1 - var(--gc-viewer-drop)));
+    transition: --gc-viewer-drop 180ms ease-out;
+  }
+
+  .gc-viewer-dialog[data-dropping] {
+    transition: none;
+  }
+
+  .gc-viewer-toolbar {
+    opacity: calc(1 - var(--gc-viewer-drop) * 2);
   }
 
   .gc-viewer {
