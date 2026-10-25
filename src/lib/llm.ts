@@ -88,17 +88,21 @@ export interface TranslateOutput {
   summaryKo: string;
 }
 
-const PROMPT_VERSION = 1;
+const PROMPT_VERSION = 2;
 
 const SYSTEM = [
   "You are a translation engine for a personal reading archive.",
-  "Translate the given social media post into natural, idiomatic Korean.",
+  'The user message is a JSON object {"title": string|null, "parts": string[]}: a social media post, where "parts" are its text segments in reading order.',
+  "Translate the title and every part into natural, idiomatic Korean, then summarize the post.",
   "Rules:",
+  '- "parts" in your answer must have exactly the same number of items as the input, in the same order. Never merge, split, drop or reorder segments. An empty input segment stays "".',
+  "- If a segment is already Korean, or has nothing to translate (only URLs, @handles, code), return it unchanged.",
   "- Keep line breaks, lists and markdown structure.",
-  "- Do not translate code, URLs, @handles, or product names.",
+  "- Do not translate code, URLs, @handles, #hashtags, emoji, or names of products, companies, libraries and people. Keep them in their original spelling.",
   "- Preserve the author's tone and level of formality.",
   "- Never add commentary, notes, or explanations.",
-  "- The summary must be 2-4 short Korean sentences that state what the post is about.",
+  '- "summary" is written in Korean, 2-4 short sentences, and says what the post is about and its main point. Do not just repeat the translation.',
+  "- If the input title is null, return null for the title.",
   'Respond with JSON only: {"title": string|null, "parts": string[], "summary": string}',
 ].join("\n");
 
@@ -211,6 +215,10 @@ export async function translateAndSummarize(input: TranslateInput, cfg: LlmConfi
   if (!parsed) throw new Error("LLM 응답을 JSON으로 읽지 못했습니다.");
 
   const partsKo: string[] = Array.isArray(parsed.parts) ? parsed.parts.map((p: unknown) => String(p ?? "")) : [];
+  // A merged or split segment would shift every later translation onto the wrong original.
+  if (partsKo.length !== input.parts.length) {
+    throw new Error(`LLM이 본문 조각 수를 맞추지 못했습니다. (원문 ${input.parts.length}개, 응답 ${partsKo.length}개) 다시 시도해주세요.`);
+  }
   return {
     titleKo: typeof parsed.title === "string" ? parsed.title : null,
     partsKo,
