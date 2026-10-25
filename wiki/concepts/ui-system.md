@@ -1,7 +1,7 @@
 ---
 type: Concept
 title: "UI 시스템"
-description: "수집 우선 모바일 정보 구조, 타입 스케일, Goodcase 컴포넌트 이식, 색상 토큰"
+description: "수집 우선 모바일 정보 구조, 타입 스케일, CSS 우선순위 함정, Goodcase 컴포넌트 이식, 색상 토큰"
 tags: [ui, mobile, design-system, goodcase, typography]
 timestamp: 2026-10-25
 ---
@@ -87,6 +87,17 @@ Pretendard Variable 하나를 `src/app/fonts/`에 두고 `next/font/local`로 �
 | 11px | 최소값. 배지 숫자에만 |
 
 이 밖의 크기는 쓰지 않는다. Goodcase 토큰도 `--gc-text-sm 12 · base 14 · lg 20 · title 24`로 맞췄다. `html`의 font-size는 16px로 고정해 Tailwind rem 간격이 흔들리지 않게 한다.
+
+### CSS 우선순위 함정 (입력창 14px 사건)
+
+`text-[16px]`를 줬는데도 검색창이 14px이었다. 원인은 **레이어 밖(unlayered) CSS가 Tailwind v4의 레이어 CSS를 항상 이긴다**는 점이다.
+
+- Tailwind 유틸리티는 `@layer utilities` 안에 있다. 그런데 `globals.css`가 가져오는 `global.css`·`basic.css`·`bridge.css` 등 Goodcase 이식 CSS는 레이어가 없다.
+- `global.css`의 `input, textarea, select { font: inherit }`는 선택자 우선순위가 낮아도 레이어 밖이라 `text-[16px]`를 이기고, 입력창이 body의 14px을 상속했다. `.gc-input`은 클래스 선택자라 bridge의 16px이 적용되고 있었다.
+- 같은 이유로 `button { font: inherit }`는 버튼의 `text-[16px]`를, `img { max-width: 100% }`는 `max-w-[260px]`·`mx-auto`를 조용히 덮어쓰고 있다. 클래스 이름만 보고 값을 믿지 말고 **computed style로 확인한다.**
+- 현재 조치: `bridge.css`에서 `input, textarea, select`에 `font-size: 16px`를 직접 지정했다(레이어 밖이라 이 규칙을 유틸리티로 바꿀 수 없다).
+- 더 깔끔한 방법(**미적용**): `@import "../styles/global.css" layer(base);`로 리셋 CSS를 base 레이어에 넣고 16px 규칙도 거기에 둔다. 그러면 유틸리티가 항상 이겨서 "유틸리티가 기본값을 덮는다"는 직관과 맞는다. 6개 화면 1145개 요소의 computed style을 전후 비교하니 차이는 세 곳이었다: `/add` 붙여넣기 버튼 14px→16px(`text-[16px]` 의도대로), 상세 메모 textarea 줄 높이 24→26px, 도움말 캡처 이미지 폭 303→260px(`max-w-[260px]` 의도대로, 페이지 높이 약 560px 감소). 도움말 이미지는 실기기 검수 때 보던 크기와 달라지므로 결정을 받은 뒤 적용한다.
+- Goodcase CSS 전체를 `layer(components)`로 옮기는 안은 `.gc-*`가 유틸리티에 지게 되어 영향 범위가 넓어 보류했다.
 
 ## Goodcase 이식
 
