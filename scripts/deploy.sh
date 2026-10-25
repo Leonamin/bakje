@@ -46,6 +46,7 @@ echo "==> release ${release_id}"
 install -d -m 0755 "$release_dir"
 tar \
   --exclude='.git' \
+  --exclude='.claude' \
   --exclude='.next' \
   --exclude='node_modules' \
   --exclude='data' \
