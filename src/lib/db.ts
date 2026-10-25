@@ -1,0 +1,150 @@
+import Database from "better-sqlite3";
+import fs from "node:fs";
+import path from "node:path";
+
+export const DATA_DIR = process.env.ARCHIVE_DATA_DIR
+  ? path.resolve(process.env.ARCHIVE_DATA_DIR)
+  : path.join(process.cwd(), "data");
+
+export const MEDIA_DIR = path.join(DATA_DIR, "media");
+export const RAW_DIR = path.join(DATA_DIR, "raw");
+export const BROWSER_DIR = path.join(DATA_DIR, "browser");
+
+for (const dir of [DATA_DIR, MEDIA_DIR, RAW_DIR, BROWSER_DIR]) {
+  fs.mkdirSync(dir, { recursive: true });
+}
+
+const SCHEMA = `
+PRAGMA journal_mode = WAL;
+PRAGMA foreign_keys = ON;
+
+CREATE TABLE IF NOT EXISTS source (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  platform TEXT NOT NULL,
+  native_id TEXT NOT NULL,
+  canonical_url TEXT NOT NULL,
+  author_handle TEXT,
+  author_name TEXT,
+  author_avatar TEXT,
+  title TEXT,
+  lang TEXT,
+  status TEXT NOT NULL DEFAULT 'ok',
+  error TEXT,
+  like_count INTEGER,
+  reply_count INTEGER,
+  repost_count INTEGER,
+  view_count INTEGER,
+  posted_at TEXT,
+  first_seen_at TEXT NOT NULL,
+  last_checked_at TEXT,
+  deleted_detected_at TEXT,
+  content_hash TEXT,
+  parser_version INTEGER NOT NULL DEFAULT 1,
+  note TEXT,
+  UNIQUE(platform, native_id)
+);
+
+CREATE TABLE IF NOT EXISTS part (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  source_id INTEGER NOT NULL REFERENCES source(id) ON DELETE CASCADE,
+  ordinal INTEGER NOT NULL,
+  kind TEXT NOT NULL,
+  text_original TEXT NOT NULL,
+  text_ko TEXT,
+  source_url TEXT,
+  posted_at TEXT
+);
+CREATE INDEX IF NOT EXISTS part_source ON part(source_id, ordinal);
+
+CREATE TABLE IF NOT EXISTS media (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  source_id INTEGER NOT NULL REFERENCES source(id) ON DELETE CASCADE,
+  part_id INTEGER REFERENCES part(id) ON DELETE CASCADE,
+  kind TEXT NOT NULL,
+  remote_url TEXT NOT NULL,
+  local_path TEXT,
+  poster_path TEXT,
+  width INTEGER,
+  height INTEGER,
+  duration_ms INTEGER,
+  byte_size INTEGER,
+  status TEXT NOT NULL DEFAULT 'skipped',
+  sha256 TEXT,
+  ordinal INTEGER NOT NULL DEFAULT 0
+);
+CREATE INDEX IF NOT EXISTS media_source ON media(source_id, ordinal);
+
+CREATE TABLE IF NOT EXISTS media_blob (
+  sha256 TEXT PRIMARY KEY,
+  local_path TEXT NOT NULL,
+  fail_count INTEGER NOT NULL DEFAULT 0
+);
+
+CREATE TABLE IF NOT EXISTS translation (
+  source_id INTEGER PRIMARY KEY REFERENCES source(id) ON DELETE CASCADE,
+  target_lang TEXT NOT NULL,
+  summary_ko TEXT,
+  model TEXT,
+  prompt_version INTEGER NOT NULL DEFAULT 1,
+  created_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS tag (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name TEXT NOT NULL UNIQUE
+);
+
+CREATE TABLE IF NOT EXISTS source_tag (
+  source_id INTEGER NOT NULL REFERENCES source(id) ON DELETE CASCADE,
+  tag_id INTEGER NOT NULL REFERENCES tag(id) ON DELETE CASCADE,
+  PRIMARY KEY (source_id, tag_id)
+);
+
+CREATE TABLE IF NOT EXISTS snapshot (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  source_id INTEGER NOT NULL REFERENCES source(id) ON DELETE CASCADE,
+  fetched_at TEXT NOT NULL,
+  http_status INTEGER,
+  content_type TEXT,
+  body_path TEXT,
+  parser_version INTEGER NOT NULL DEFAULT 1
+);
+
+CREATE TABLE IF NOT EXISTS job (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  input_url TEXT NOT NULL,
+  platform TEXT,
+  source_id INTEGER,
+  state TEXT NOT NULL DEFAULT 'pending',
+  message TEXT,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS search_doc (
+  source_id INTEGER PRIMARY KEY,
+  title TEXT NOT NULL DEFAULT '',
+  body TEXT NOT NULL DEFAULT '',
+  body_ko TEXT NOT NULL DEFAULT '',
+  summary TEXT NOT NULL DEFAULT '',
+  author TEXT NOT NULL DEFAULT '',
+  tags TEXT NOT NULL DEFAULT ''
+);
+
+CREATE VIRTUAL TABLE IF NOT EXISTS search_fts USING fts5(
+  title, body, body_ko, summary, author, tags,
+  tokenize = 'trigram'
+);
+`;
+
+let instance: Database.Database | null = null;
+
+export function db(): Database.Database {
+  if (instance) return instance;
+  const file = path.join(DATA_DIR, "archive.db");
+  const conn = new Database(file);
+  conn.exec(SCHEMA);
+  instance = conn;
+  return conn;
+}
+

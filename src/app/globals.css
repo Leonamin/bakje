@@ -1,0 +1,119 @@
+@import "tailwindcss";
+
+@theme {
+  --color-paper: #0c0c0d;
+  --color-raise: #131315;
+  --color-line: #26262a;
+  --color-ink: #ece9e4;
+  --color-dim: #8b8781;
+  --color-accent: #d8a25c;
+  --font-sans: "Pretendard", "Apple SD Gothic Neo", "Noto Sans KR", ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-mono: "SF Mono", ui-monospace, "JetBrains Mono", Menlo, monospace;
+}
+
+html {
+  color-scheme: dark;
+}
+
+body {
+  background: var(--color-paper);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  letter-spacing: -0.011em;
+}
+
+::selection {
+  background: color-mix(in srgb, var(--color-accent) 35%, transparent);
+}
+
+a {
+  text-underline-offset: 3px;
+}
+
+.card {
+  background: var(--color-raise);
+  border: 1px solid var(--color-line);
+}
+
+.hairline {
+  border-color: var(--color-line);
+}
+
+.post-text {
+  white-space: pre-wrap;
+  word-break: break-word;
+  line-height: 1.75;
+}
+
+.post-text a {
+  color: var(--color-accent);
+  text-decoration: underline;
+}
+
+.meta {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-dim);
+}
+
+.prose-block + .prose-block {
+  margin-top: 1.5rem;
+}
+
+input,
+textarea,
+select {
+  background: #0a0a0b;
+  border: 1px solid var(--color-line);
+  color: var(--color-ink);
+  border-radius: 6px;
+  padding: 0.5rem 0.7rem;
+  font-size: 0.875rem;
+  outline: none;
+}
+
+input:focus,
+textarea:focus,
+select:focus {
+  border-color: color-mix(in srgb, var(--color-accent) 60%, var(--color-line));
+}
+
+button {
+  cursor: pointer;
+}
+
+.btn {
+  border: 1px solid var(--color-line);
+  background: #171719;
+  padding: 0.45rem 0.85rem;
+  border-radius: 6px;
+  font-size: 0.8125rem;
+  transition: background 120ms ease, border-color 120ms ease;
+}
+
+.btn:hover {
+  background: #1e1e21;
+  border-color: #3a3a40;
+}
+
+.btn-accent {
+  background: var(--color-accent);
+  color: #17120a;
+  border-color: var(--color-accent);
+  font-weight: 600;
+}
+
+.btn-accent:hover {
+  background: #e6b374;
+}
+
+.tag {
+  font-size: 11px;
+  padding: 2px 7px;
+  border-radius: 999px;
+  border: 1px solid var(--color-line);
+  color: var(--color-dim);
+}
