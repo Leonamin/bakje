@@ -194,7 +194,9 @@ curl -s http://127.0.0.1:3020/api/health
 ### 접속
 
 - 호스트 로컬: `http://127.0.0.1:3020`
-- tailnet: `https://<기기이름>.<tailnet>.ts.net:8444` (`tailscale serve`로 프록시)
+- tailnet: `https://<기기이름>.<tailnet>.ts.net:8888` (`tailscale serve --bg --https=8888 http://127.0.0.1:3020`)
+
+앱에는 로그인·인증이 없다. 그래서 인터넷에 공개하지 않고 **tailnet 전용**으로만 노출한다. 컨테이너 포트는 `127.0.0.1`에만 바인딩되어 같은 LAN에서도 직접 접근할 수 없고, `tailscale serve`(funnel 아님)로 내 tailnet 기기에서만 HTTPS로 연다. tailnet을 다른 사람과 공유하면 그 사람도 열 수 있으므로, 공유한다면 Tailscale ACL로 이 포트를 막거나 앱에 인증을 붙여야 한다.
 
 ### 백업
 

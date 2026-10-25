@@ -8,6 +8,7 @@ okf_version: "0.1"
 
 # Logs
 
+- [2026-10-25-tailnet-port-8888.md](./2026-10-25-tailnet-port-8888.md) — 수집 큐 배포, tailnet 포트 8888로 변경
 - [2026-10-25-resilient-capture-impl.md](./2026-10-25-resilient-capture-impl.md) — 수집 재시도·오프라인 대기열·서비스 워커 구현
 - [2026-10-25-resilient-capture-plan.md](./2026-10-25-resilient-capture-plan.md) — 수집 재시도·오프라인 대기열 계획 기록
 - [2026-10-25-capture-first-ui.md](./2026-10-25-capture-first-ui.md) — 수집 우선 UI 개편, 수집 API 입력 검증, 재배포
