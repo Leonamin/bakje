@@ -14,7 +14,7 @@ export const LLM_PROVIDERS = {
   openai: { label: "OpenAI", baseUrl: "https://api.openai.com/v1", apiFormat: "chat" },
   openrouter: { label: "OpenRouter", baseUrl: "https://openrouter.ai/api/v1", apiFormat: "chat" },
   // Only the chat-completions models of OpenCode Go work here; its /v1/messages models (minimax, qwen) do not.
-  "opencode-go": { label: "OpenCode Go", baseUrl: "https://opencode.ai/zen/go/v1", apiFormat: "chat" },
+  "opencode-go": { label: "OpenCode Go", baseUrl: "https://opencode.ai/inference/go/openai/v1", apiFormat: "chat" },
   custom: { label: "직접 입력", baseUrl: "", apiFormat: "chat" },
 } as const satisfies Record<string, { label: string; baseUrl: string; apiFormat: ApiFormat }>;
 
@@ -176,7 +176,12 @@ async function callLlm(cfg: LlmConfig, user: string): Promise<string> {
     try {
       const res = await fetch(url, {
         method: "POST",
-        headers: { "content-type": "application/json", authorization: `Bearer ${cfg.apiKey}` },
+        headers: {
+          "content-type": "application/json",
+          authorization: `Bearer ${cfg.apiKey}`,
+          // OpenCode rejects requests without a session id (400 MissingSessionID).
+          ...(new URL(url).hostname.endsWith("opencode.ai") && { "x-opencode-session": crypto.randomUUID() }),
+        },
         body: JSON.stringify(body),
         signal: controller.signal,
       });
