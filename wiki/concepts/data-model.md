@@ -31,7 +31,7 @@ data/  (운영: /var/lib/post-archive)
 | `translation` | 게시글 단위 요약·모델·프롬프트 버전 |
 | `tag`, `source_tag` | 사용자 분류 |
 | `snapshot` | 원본 스냅샷 이력(경로·시각·파서 버전) |
-| `job` | 수집 작업 큐 상태. 재시작 후 복구용 |
+| `job` | 수집 작업 큐 상태. 재시작 후 복구, 재시도 횟수(`attempts`)·다음 시도 시각(`next_attempt_at`). → [수집 작업 큐](./capture-queue.md) |
 | `search_doc`, `search_fts` | 검색 원문과 trigram 인덱스 |
 
 ## 설계상 중요한 선택

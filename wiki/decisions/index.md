@@ -18,4 +18,4 @@ okf_version: "0.1"
 - [008-colorhunt-palette.md](./008-colorhunt-palette.md) — ColorHunt Popular #23 팔레트
 - [009-docker-release-deploy.md](./009-docker-release-deploy.md) — /opt 릴리스 + 심볼릭 링크 배포
 - [010-capture-first-ui.md](./010-capture-first-ui.md) — 수집 우선 UI와 장식 제거, 타입 스케일 고정
-- [011-resilient-capture-queue.md](./011-resilient-capture-queue.md) — 수집 작업 재시도와 오프라인 대기열 (Proposed)
+- [011-resilient-capture-queue.md](./011-resilient-capture-queue.md) — 수집 작업 재시도와 오프라인 대기열

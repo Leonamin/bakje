@@ -26,7 +26,7 @@ Python(FastAPI + BeautifulSoup)도 검토했지만, 어차피 브라우저 자�
 ## Consequences
 
 - 파서의 추출 결과 타입을 그대로 DB 저장까지 끌고 갈 수 있다.
-- Next 서버 프로세스가 장시간 파싱·다운로드를 수행한다. 인프로세스 큐로 처리하고, 재시작 시 `job` 테이블에서 복구한다.
+- Next 서버 프로세스가 장시간 파싱·다운로드를 수행한다. 인프로세스 큐로 처리하고, 재시작 시 `job` 테이블에서 복구한다(서버 시작 시 `instrumentation.ts`가 큐를 시작한다. → [수집 작업 큐](../concepts/capture-queue.md)).
 - Playwright를 서버 런타임에서 쓰기 위해 `serverExternalPackages` 설정이 필요하다.
 - 빌드 산출물과 네이티브 모듈(better-sqlite3)을 같은 이미지에서 컴파일해야 한다.
 
