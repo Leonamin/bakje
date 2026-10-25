@@ -23,7 +23,9 @@ OPENAI_API_KEY=sk-...
 OPENAI_MODEL=gpt-4o-mini
 ```
 
-키가 없어도 수집·검색·열람은 전부 동작한다. 비한국어 게시글의 번역·요약만 생략된다.
+번역 설정은 앱의 **설정** 화면(`/settings`)에서도 바꿀 수 있다. 제공자(OpenAI·OpenRouter·OpenCode Go·직접 입력), 모델 ID, API 키, API 형식(Chat Completions·Responses)을 저장하면 SQLite에 들어가고 env 값보다 우선한다. 키는 저장 후 끝 4자리만 보여준다. 운영 환경의 env 파일은 `/etc/bakje/bakje.env`다.
+
+키가 없어도 수집·검색·열람은 전부 동작한다. 번역은 게시글 화면에서 **번역하기**를 누를 때만 만든다.
 
 데이터는 `./data`에 쌓인다 (`ARCHIVE_DATA_DIR`로 변경 가능).
 
@@ -43,8 +45,8 @@ data/
 1. 링크를 넣으면 플랫폼을 판별하고 공유 링크를 실제 게시글로 해소한다.
 2. 게시글을 가져와 **본문 + 작성자의 이어쓰기 사슬**을 파싱한다.
 3. 미디어를 내려받고 영상은 ffmpeg으로 포스터 프레임을 만든다.
-4. 한국어가 아니면 번역문과 요약을 만든다. 원문은 그대로 보존한다.
-5. 본문·번역·요약·작성자·태그를 trigram FTS5에 색인한다.
+4. 본문·작성자·태그를 trigram FTS5에 색인한다.
+5. 한국어가 아닌 글은 읽을 때 **번역하기**를 누르면 번역문과 요약을 만들고 색인에 더한다. 원문은 그대로 보존한다.
 
 ### 댓글 수집 규칙
 
@@ -78,7 +80,7 @@ X는 2026년 현재 `x.com/i/status/<id>`를 일반 브라우저 UA로 요청하
 - 3글자 이상: FTS5 trigram (부분 문자열 일치)
 - 2글자 이하: `LIKE` 스캔 (trigram의 최소 길이 제약)
 
-번역문과 원문을 함께 색인하므로 한국어로 검색해도 해외 게시글이 잡힌다.
+번역한 글은 번역문과 원문을 함께 색인하므로 한국어로 검색해도 잡힌다. 번역하지 않은 해외 글은 원문 키워드로만 찾을 수 있다.
 
 ---
 
@@ -94,7 +96,8 @@ npm run gc                 # 참조되지 않는 미디어 정리 + 사라진 �
 API 키 없이 번역 경로를 확인하려면 목 서버를 띄우고 주소를 바꾼다.
 
 ```bash
-npm run mock-llm           # http://127.0.0.1:4141/v1
+npm run mock-llm           # http://127.0.0.1:4141/v1 (/chat/completions, /responses)
+MOCK_LLM_REJECT_JSON=1 npm run mock-llm   # JSON 모드를 거부하는 제공자 흉내
 OPENAI_BASE_URL=http://127.0.0.1:4141/v1 OPENAI_API_KEY=test OPENAI_MODEL=mock npm run dev
 ```
 

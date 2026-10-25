@@ -7,8 +7,8 @@ import { resolveRedditShare, fetchReddit, parseReddit } from "./adapters/reddit"
 import { fetchThreads, parseThreads, resolveThreadsShare } from "./adapters/threads";
 import { fetchX, fetchXSyndication, parseX, parseXSyndication } from "./adapters/x";
 import { archiveMedia } from "./media";
-import { detectLang, needsTranslation } from "./lang";
-import { llmConfig, translateAndSummarize } from "./llm";
+import { detectLang } from "./lang";
+import { LLM_PROMPT_VERSION, llmConfig, translateAndSummarize } from "./llm";
 import type { ParsedPost, Platform, SourceStatus } from "./types";
 
 const PARSER_VERSION = 1;
@@ -58,7 +58,8 @@ function rebuildSearch(sourceId: number): void {
     .filter((p) => p.text_ko)
     .map((p) => p.text_ko)
     .join("\n\n");
-  const title = source.title ?? "";
+  // The Korean title is indexed for recall only; the page shows it through the translation toggle.
+  const title = [source.title, tr?.title_ko].filter(Boolean).join(" ");
   const summary = tr?.summary_ko ?? "";
   const author = [source.author_handle, source.author_name].filter(Boolean).join(" ");
 
@@ -77,50 +78,39 @@ function rebuildSearch(sourceId: number): void {
     .run(sourceId, title, body, bodyKo, summary, author, tags);
 }
 
-async function translateSource(sourceId: number, parsed: ParsedPost, lang: string): Promise<void> {
+/** Translates a stored source on request and replaces any earlier translation. Throws a readable message on failure. */
+export async function translateSource(sourceId: number): Promise<void> {
   const conn = db();
-  const existing = conn.prepare("SELECT created_at FROM translation WHERE source_id = ?").get(sourceId);
-  if (existing) return;
+  const source = conn.prepare("SELECT id, title FROM source WHERE id = ?").get(sourceId) as { id: number; title: string | null } | undefined;
+  if (!source) throw new Error("게시글을 찾지 못했습니다.");
 
   const cfg = llmConfig();
-  if (!cfg) return;
+  if (!cfg) throw new Error("번역 설정이 없습니다. 설정에서 API 키를 넣어주세요.");
 
-  const texts = parsed.parts.map((p) => p.text);
-  if (!texts.some((t) => t.trim())) return;
+  const parts = conn.prepare("SELECT id, text_original FROM part WHERE source_id = ? ORDER BY ordinal").all(sourceId) as {
+    id: number;
+    text_original: string;
+  }[];
+  if (!parts.some((p) => p.text_original.trim())) throw new Error("번역할 본문이 없습니다.");
 
-  try {
-    const out = await translateAndSummarize({ title: parsed.title, parts: texts }, cfg);
-    if (!out) return;
+  const out = await translateAndSummarize({ title: source.title, parts: parts.map((p) => p.text_original) }, cfg);
+  if (!out.partsKo.some((t) => t.trim())) throw new Error("LLM이 번역문을 돌려주지 않았습니다.");
 
-    const parts = conn.prepare("SELECT id FROM part WHERE source_id = ? ORDER BY ordinal").all(sourceId) as { id: number }[];
+  conn.transaction(() => {
     parts.forEach((row, i) => {
-      const ko = out.partsKo[i];
-      if (typeof ko === "string" && ko.trim()) {
-        conn.prepare("UPDATE part SET text_ko = ? WHERE id = ?").run(ko.trim(), row.id);
-      }
+      const ko = out.partsKo[i]?.trim();
+      conn.prepare("UPDATE part SET text_ko = ? WHERE id = ?").run(ko || null, row.id);
     });
-
     conn
       .prepare(
-        `INSERT INTO translation (source_id, target_lang, summary_ko, model, prompt_version, created_at)
-         VALUES (?, 'ko', ?, ?, 1, ?)
-         ON CONFLICT(source_id) DO UPDATE SET summary_ko=excluded.summary_ko, model=excluded.model, created_at=excluded.created_at`,
+        `INSERT INTO translation (source_id, target_lang, title_ko, summary_ko, model, prompt_version, created_at)
+         VALUES (?, 'ko', ?, ?, ?, ?, ?)
+         ON CONFLICT(source_id) DO UPDATE SET title_ko=excluded.title_ko, summary_ko=excluded.summary_ko,
+           model=excluded.model, prompt_version=excluded.prompt_version, created_at=excluded.created_at`,
       )
-      .run(sourceId, out.summaryKo, cfg.model, nowIso());
-
-    if (out.titleKo && parsed.title) {
-      // Keep the original title; the Korean one is only used for search recall.
-      conn.prepare("UPDATE search_doc SET title = title || ' ' || ? WHERE source_id = ?").run(out.titleKo, sourceId);
-      const doc = conn.prepare("SELECT * FROM search_doc WHERE source_id = ?").get(sourceId) as any;
-      conn.prepare("DELETE FROM search_fts WHERE rowid = ?").run(sourceId);
-      conn
-        .prepare("INSERT INTO search_fts (rowid, title, body, body_ko, summary, author, tags) VALUES (?, ?, ?, ?, ?, ?, ?)")
-        .run(sourceId, doc.title, doc.body, doc.body_ko, doc.summary, doc.author, doc.tags);
-    }
-  } catch (err) {
-    // Translation is additive: a failed call must not lose the archive itself.
-    console.warn("[translate] failed", sourceId, (err as Error).message);
-  }
+      .run(sourceId, source.title ? out.titleKo : null, out.summaryKo, cfg.model, LLM_PROMPT_VERSION, nowIso());
+  })();
+  rebuildSearch(sourceId);
 }
 
 async function persist(
@@ -246,13 +236,8 @@ async function persist(
       .run(sourceId, nowIso(), 200, "text/html", rawPath, PARSER_VERSION);
   }
 
+  // Translation runs only when the reader asks for it (/api/sources/[id]/translate).
   rebuildSearch(sourceId);
-
-  const hasKo = (conn.prepare("SELECT COUNT(*) AS n FROM part WHERE source_id = ? AND text_ko IS NOT NULL").get(sourceId) as { n: number }).n;
-  if (!hasKo && needsTranslation(lang, parsed.parts.map((p) => p.text).join("\n"))) {
-    await translateSource(sourceId, parsed, lang);
-    rebuildSearch(sourceId);
-  }
 
   return sourceId;
 }

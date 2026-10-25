@@ -89,6 +89,11 @@ CREATE TABLE IF NOT EXISTS translation (
   created_at TEXT NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS setting (
+  key TEXT PRIMARY KEY,
+  value TEXT NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS tag (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   name TEXT NOT NULL UNIQUE
@@ -150,6 +155,8 @@ export function db(): Database.Database {
   const jobColumns = new Set((conn.prepare("PRAGMA table_info(job)").all() as { name: string }[]).map((c) => c.name));
   if (!jobColumns.has("attempts")) conn.exec("ALTER TABLE job ADD COLUMN attempts INTEGER NOT NULL DEFAULT 0");
   if (!jobColumns.has("next_attempt_at")) conn.exec("ALTER TABLE job ADD COLUMN next_attempt_at TEXT");
+  const trColumns = new Set((conn.prepare("PRAGMA table_info(translation)").all() as { name: string }[]).map((c) => c.name));
+  if (!trColumns.has("title_ko")) conn.exec("ALTER TABLE translation ADD COLUMN title_ko TEXT");
   instance = conn;
   return conn;
 }
