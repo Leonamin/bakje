@@ -1,7 +1,8 @@
 import fs from "node:fs";
 import path from "node:path";
 import { Readable } from "node:stream";
-import { MEDIA_DIR } from "@/lib/db";
+import sharp from "sharp";
+import { DATA_DIR, MEDIA_DIR } from "@/lib/db";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -17,6 +18,25 @@ const TYPES: Record<string, string> = {
   mov: "video/quicktime",
 };
 
+const THUMB_DIR = path.join(DATA_DIR, "thumbs");
+const THUMB_WIDTHS = new Set([320, 640, 960]);
+const IMMUTABLE = "public, max-age=31536000, immutable";
+
+/** Resized webp, made on first request and kept on disk. Returns null if the source cannot be decoded. */
+async function thumbnail(rel: string, abs: string, width: number): Promise<string | null> {
+  const out = path.join(THUMB_DIR, String(width), `${rel.replace(/[\\/]/g, "_")}.webp`);
+  if (fs.existsSync(out)) return out;
+  try {
+    fs.mkdirSync(path.dirname(out), { recursive: true });
+    const tmp = `${out}.${process.pid}.${Date.now()}.tmp`;
+    await sharp(abs).rotate().resize({ width, withoutEnlargement: true }).webp({ quality: 78 }).toFile(tmp);
+    fs.renameSync(tmp, out);
+    return out;
+  } catch {
+    return null;
+  }
+}
+
 export async function GET(req: Request, ctx: { params: Promise<{ path: string[] }> }) {
   const { path: segments } = await ctx.params;
   const rel = segments.join("/");
@@ -25,6 +45,16 @@ export async function GET(req: Request, ctx: { params: Promise<{ path: string[] 
   // Serve only files that live inside the media directory.
   if (!abs.startsWith(MEDIA_DIR + path.sep) || !fs.existsSync(abs)) {
     return new Response("not found", { status: 404 });
+  }
+
+  const w = Number(new URL(req.url).searchParams.get("w"));
+  if (THUMB_WIDTHS.has(w)) {
+    const thumb = await thumbnail(rel, abs, w);
+    if (thumb) {
+      return new Response(new Uint8Array(fs.readFileSync(thumb)), {
+        headers: { "content-type": "image/webp", "cache-control": IMMUTABLE },
+      });
+    }
   }
 
   const stat = fs.statSync(abs);
@@ -48,7 +78,7 @@ export async function GET(req: Request, ctx: { params: Promise<{ path: string[] 
           "content-length": String(end - start + 1),
           "content-range": `bytes ${start}-${end}/${stat.size}`,
           "accept-ranges": "bytes",
-          "cache-control": "public, max-age=31536000, immutable",
+          "cache-control": IMMUTABLE,
         },
       });
     }
@@ -60,7 +90,7 @@ export async function GET(req: Request, ctx: { params: Promise<{ path: string[] 
       "content-type": type,
       "content-length": String(stat.size),
       "accept-ranges": "bytes",
-      "cache-control": "public, max-age=31536000, immutable",
+      "cache-control": IMMUTABLE,
     },
   });
 }

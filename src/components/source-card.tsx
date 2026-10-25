@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Play } from "lucide-react";
 import type { SearchHit } from "@/lib/search";
-import { formatDate, mediaUrl, platformName } from "@/lib/format";
+import { formatDate, platformName, thumbUrl } from "@/lib/format";
 
 const PLATFORM_TONE: Record<string, string> = {
   x: "#9fb3c8",
@@ -62,7 +62,7 @@ function Thumb({ hit, src, className }: { hit: SearchHit; src: string; className
     // Posts are mostly portrait photos of people; bias the crop toward the top.
     <div className={`media-tile [&_img]:object-[50%_25%] ${className}`}>
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={src} alt="" loading="lazy" />
+      <img src={src} alt="" loading="lazy" decoding="async" />
       {hasVideo ? (
         <span className="absolute bottom-2 right-2 flex h-7 w-7 items-center justify-center rounded-full bg-black/60 text-white">
           <Play size={14} fill="currentColor" />
@@ -80,7 +80,7 @@ function Thumb({ hit, src, className }: { hit: SearchHit; src: string; className
  * a thumbnail spans the full card width.
  */
 export function SourceCard({ hit, query, view }: { hit: SearchHit; query?: string; view: "grid" | "list" | "feed" }) {
-  const thumb = mediaUrl(hit.thumb);
+  const thumb = thumbUrl(hit.thumb, view === "feed" ? 960 : view === "list" ? 320 : 640);
   const text = hit.title || hit.snippet;
 
   if (view === "feed") {
@@ -108,7 +108,7 @@ export function SourceCard({ hit, query, view }: { hit: SearchHit; query?: strin
         {thumb ? (
           <div className="media-tile h-16 w-16 shrink-0 rounded-xl">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={thumb} alt="" loading="lazy" />
+            <img src={thumb} alt="" loading="lazy" decoding="async" />
           </div>
         ) : null}
         <div className="min-w-0 flex-1">

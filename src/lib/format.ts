@@ -66,3 +66,9 @@ export function mediaUrl(p: string | null): string | null {
   if (!p) return null;
   return `/api/media/${p}`;
 }
+
+/** Resized copy for cards (see the media route); animated GIFs and anything else keep the original. */
+export function thumbUrl(p: string | null, width: 320 | 640 | 960): string | null {
+  if (!p) return null;
+  return /\.(jpe?g|png|webp)$/i.test(p) ? `/api/media/${p}?w=${width}` : mediaUrl(p);
+}
