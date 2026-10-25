@@ -5,8 +5,8 @@
  * or a parser bug is fixed, the archive can be rebuilt without touching the
  * network — including for posts that no longer exist.
  *
- *   npm run reparse            # every source
- *   npm run reparse -- 12 15   # selected source ids
+ *   pnpm reparse            # every source
+ *   pnpm reparse -- 12 15   # selected source ids
  */
 import fs from "node:fs";
 import path from "node:path";

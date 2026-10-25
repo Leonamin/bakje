@@ -5,7 +5,7 @@
  * Serves both /chat/completions and /responses.
  *
  *   node scripts/mock-llm.mjs
- *   OPENAI_BASE_URL=http://127.0.0.1:4141/v1 OPENAI_API_KEY=test OPENAI_MODEL=mock npm run dev
+ *   OPENAI_BASE_URL=http://127.0.0.1:4141/v1 OPENAI_API_KEY=test OPENAI_MODEL=mock pnpm dev
  *
  * MOCK_LLM_REJECT_JSON=1 answers 400 to requests that ask for JSON mode, like
  * providers that do not support it.

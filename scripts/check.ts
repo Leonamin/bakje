@@ -3,7 +3,7 @@
  * reports whether the current parser still produces a usable result. Run it
  * when a platform redesign is rumoured, before trusting the archive.
  *
- *   npm run check
+ *   pnpm check
  */
 import { db } from "../src/lib/db";
 import { closeBrowser } from "../src/lib/browser";

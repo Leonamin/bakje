@@ -1,7 +1,7 @@
 /**
  * Self-check for the ingest body reader (iOS Shortcut and app inputs).
  *
- *   npx tsx scripts/test-extract.ts
+ *   pnpm exec tsx scripts/test-extract.ts
  */
 import assert from "node:assert/strict";
 import { extractCandidates } from "../src/lib/canonical";

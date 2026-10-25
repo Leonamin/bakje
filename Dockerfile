@@ -7,13 +7,13 @@ WORKDIR /app
 RUN apt-get update \
  && apt-get install -y --no-install-recommends python3 make g++ \
  && rm -rf /var/lib/apt/lists/*
-COPY package.json package-lock.json ./
-RUN npm ci --no-audit --no-fund
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+RUN corepack enable && pnpm install --frozen-lockfile
 
 FROM deps AS builder
 ENV NEXT_TELEMETRY_DISABLED=1
 COPY . .
-RUN npm run build
+RUN pnpm build
 
 FROM mcr.microsoft.com/playwright:v1.64.1-noble AS runner
 WORKDIR /app
@@ -32,4 +32,4 @@ COPY --from=builder /app/next.config.ts ./next.config.ts
 
 USER 1000:1000
 EXPOSE 3000
-CMD ["npx", "next", "start", "-p", "3000"]
+CMD ["node_modules/.bin/next", "start", "-p", "3000"]

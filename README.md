@@ -9,10 +9,10 @@ X, Threads, Reddit 게시글을 링크 하나로 내 디스크에 복제하고, 
 ## 실행
 
 ```bash
-npm install
-npx playwright install chromium   # 이미 있으면 생략
+pnpm install
+pnpm exec playwright install chromium   # 이미 있으면 생략
 cp .env.example .env.local        # 번역용 OpenAI 호환 키 입력 (선택)
-npm run dev                       # http://localhost:3000
+pnpm dev                       # http://localhost:3000
 ```
 
 `.env.local`:
@@ -87,18 +87,18 @@ X는 2026년 현재 `x.com/i/status/<id>`를 일반 브라우저 UA로 요청하
 ## 운영
 
 ```bash
-npm run check              # 플랫폼별 최신 1건을 실제로 다시 긁어 파서 상태 확인
-npm run reparse            # 저장된 스냅샷만으로 전체 재파싱 (네트워크 없음)
-npm run reparse -- 12 15   # 특정 게시글만
-npm run gc                 # 참조되지 않는 미디어 정리 + 사라진 포스터 복구
+pnpm check              # 플랫폼별 최신 1건을 실제로 다시 긁어 파서 상태 확인
+pnpm reparse            # 저장된 스냅샷만으로 전체 재파싱 (네트워크 없음)
+pnpm reparse -- 12 15   # 특정 게시글만
+pnpm gc                 # 참조되지 않는 미디어 정리 + 사라진 포스터 복구
 ```
 
 API 키 없이 번역 경로를 확인하려면 목 서버를 띄우고 주소를 바꾼다.
 
 ```bash
-npm run mock-llm           # http://127.0.0.1:4141/v1 (/chat/completions, /responses)
-MOCK_LLM_REJECT_JSON=1 npm run mock-llm   # JSON 모드를 거부하는 제공자 흉내
-OPENAI_BASE_URL=http://127.0.0.1:4141/v1 OPENAI_API_KEY=test OPENAI_MODEL=mock npm run dev
+pnpm mock-llm           # http://127.0.0.1:4141/v1 (/chat/completions, /responses)
+MOCK_LLM_REJECT_JSON=1 pnpm mock-llm   # JSON 모드를 거부하는 제공자 흉내
+OPENAI_BASE_URL=http://127.0.0.1:4141/v1 OPENAI_API_KEY=test OPENAI_MODEL=mock pnpm dev
 ```
 
 **`reparse`가 이 구조의 핵심이다.** 파서를 고치거나 플랫폼 마크업이 바뀌면, 이미 저장된 원본 HTML로 다시 파싱한다. 이미 삭제된 글도 살릴 수 있다. 파서 버전은 `source.parser_version`에 남는다.

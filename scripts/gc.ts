@@ -2,7 +2,7 @@
  * Removes media files that no archived post references any more, plus stale
  * temp files left behind by interrupted downloads.
  *
- *   npm run gc
+ *   pnpm gc
  */
 import fs from "node:fs";
 import path from "node:path";
