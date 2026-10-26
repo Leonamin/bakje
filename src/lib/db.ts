@@ -181,3 +181,42 @@ export function db(): Database.Database {
   return conn;
 }
 
+
+function dirBytes(dir: string): number {
+  let total = 0;
+  if (!fs.existsSync(dir)) return 0;
+  for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
+    const p = path.join(dir, e.name);
+    try {
+      total += e.isDirectory() ? dirBytes(p) : fs.statSync(p).size;
+    } catch {
+      /* 읽는 도중 지워진 임시 파일 */
+    }
+  }
+  return total;
+}
+
+/** 박제가 차지하는 용량(폴더별)과 저장소가 놓인 디스크의 여유 공간. */
+export function storageUsage() {
+  const dbBytes = ["archive.db", "archive.db-wal", "archive.db-shm"].reduce((n, f) => {
+    try {
+      return n + fs.statSync(path.join(DATA_DIR, f)).size;
+    } catch {
+      return n;
+    }
+  }, 0);
+  const parts = [
+    { label: "미디어(사진·영상)", bytes: dirBytes(MEDIA_DIR) },
+    { label: "원본 HTML 스냅샷", bytes: dirBytes(RAW_DIR) },
+    { label: "데이터베이스", bytes: dbBytes },
+    { label: "썸네일 캐시", bytes: dirBytes(path.join(DATA_DIR, "thumbs")) },
+    { label: "브라우저 프로필", bytes: dirBytes(BROWSER_DIR) },
+  ];
+  const disk = fs.statfsSync(DATA_DIR);
+  return {
+    parts,
+    total: parts.reduce((n, p) => n + p.bytes, 0),
+    free: disk.bavail * disk.bsize,
+    diskTotal: disk.blocks * disk.bsize,
+  };
+}

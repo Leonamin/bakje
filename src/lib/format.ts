@@ -72,3 +72,13 @@ export function thumbUrl(p: string | null, width: 320 | 640 | 960): string | nul
   if (!p) return null;
   return /\.(jpe?g|png|webp)$/i.test(p) ? `/api/media/${p}?w=${width}` : mediaUrl(p);
 }
+
+export function formatBytes(n: number): string {
+  const units = ["B", "KB", "MB", "GB", "TB"];
+  let i = 0;
+  while (n >= 1024 && i < units.length - 1) {
+    n /= 1024;
+    i++;
+  }
+  return `${i === 0 ? n : n.toFixed(n >= 100 ? 0 : 1)} ${units[i]}`;
+}

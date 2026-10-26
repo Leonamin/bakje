@@ -1,4 +1,6 @@
 import { LLM_PROVIDERS, keyInfo, llmSettings } from "@/lib/llm";
+import { storageUsage } from "@/lib/db";
+import { formatBytes } from "@/lib/format";
 import { xCookieInfo } from "@/lib/x-auth";
 import { XSettingsForm } from "@/components/x-settings-form";
 import { LlmSettingsForm } from "@/components/llm-settings-form";
@@ -7,6 +9,7 @@ export const dynamic = "force-dynamic";
 
 export default function SettingsPage() {
   const { apiKey: _key, ...settings } = llmSettings();
+  const usage = storageUsage();
   const providers = Object.entries(LLM_PROVIDERS).map(([id, p]) => ({ id, ...p }));
 
   return (
@@ -33,6 +36,23 @@ export default function SettingsPage() {
           연령 제한 게시글을 가져올 때만 씁니다. 반드시 전용 계정의 쿠키를 넣고, 그 계정에서 민감한 콘텐츠 표시를 켜두세요.
         </p>
         <XSettingsForm initial={xCookieInfo()} />
+      </section>
+
+      <section aria-labelledby="storage-heading" className="mt-12">
+        <h2 id="storage-heading" className="text-[16px] font-semibold">
+          저장 공간
+        </h2>
+        <p className="label mt-1 mb-5">
+          박제 {formatBytes(usage.total)} 사용 · 디스크 여유 {formatBytes(usage.free)} / 전체 {formatBytes(usage.diskTotal)}
+        </p>
+        <dl className="divide-y divide-[var(--line)] text-[15px]">
+          {usage.parts.map((p) => (
+            <div key={p.label} className="flex justify-between py-2">
+              <dt>{p.label}</dt>
+              <dd className="tabular-nums">{formatBytes(p.bytes)}</dd>
+            </div>
+          ))}
+        </dl>
       </section>
     </div>
   );
