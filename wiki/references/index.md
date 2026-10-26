@@ -10,3 +10,4 @@ okf_version: "0.1"
 
 - [platform-sources.md](./platform-sources.md) — X·Threads·Reddit에서 실제로 데이터를 얻는 경로
 - [design-references.md](./design-references.md) — Pinterest·Reeder·Raindrop·Readwise·ColorHunt
+- [logo-sketches.md](./logo-sketches.md) — 로고 시안 12종과 SVG 원본, 채택·폐기 이유

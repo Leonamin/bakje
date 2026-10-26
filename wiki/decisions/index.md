@@ -22,3 +22,4 @@ okf_version: "0.1"
 - [012-service-name-bakje.md](./012-service-name-bakje.md) — 서비스 이름 박제와 운영 경로·식별자 이전
 - [013-on-demand-translation-and-llm-settings.md](./013-on-demand-translation-and-llm-settings.md) — 요청형 번역과 LLM 설정 페이지
 - [014-semantic-search-embedder-sidecar.md](./014-semantic-search-embedder-sidecar.md) — 임베딩 사이드카와 키워드+벡터 하이브리드 검색
+- [015-logo-fossil-spiral.md](./015-logo-fossil-spiral.md) — 미니멀 방향, 화석 나선 로고 확정과 OpenGraph 보류
