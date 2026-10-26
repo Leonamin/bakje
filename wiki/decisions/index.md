@@ -24,3 +24,4 @@ okf_version: "0.1"
 - [014-semantic-search-embedder-sidecar.md](./014-semantic-search-embedder-sidecar.md) — 임베딩 사이드카와 키워드+벡터 하이브리드 검색
 - [015-logo-fossil-spiral.md](./015-logo-fossil-spiral.md) — 미니멀 방향, 화석 나선 로고 확정과 OpenGraph 보류
 - [016-hide-posts.md](./016-hide-posts.md) — 휴지통 대신 hidden_at 숨김, 서버 액션으로 목록 캐시 무효화
+- [017-x-age-restricted-cookie.md](./017-x-age-restricted-cookie.md) — 연령 제한 X 게시글만 전용 계정 쿠키+Playwright로 수집

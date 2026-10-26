@@ -8,6 +8,7 @@ okf_version: "0.1"
 
 # Logs
 
+- [2026-10-26-x-age-restricted-cookie.md](./2026-10-26-x-age-restricted-cookie.md) — 연령 제한 X 게시글 실패 원인 규명, 안내 문구, 전용 계정 쿠키 수집 구현·배포
 - [2026-10-26-summary-card-and-ask-ai.md](./2026-10-26-summary-card-and-ask-ai.md) — 요약카드 상시 표시·접기, AI 질문 프롬프트 복사
 - [2026-10-26-hide-posts.md](./2026-10-26-hide-posts.md) — 게시글 숨김 구현과 목록 캐시 무효화 버그 수정
 - [2026-10-26-logo-fossil-spiral.md](./2026-10-26-logo-fossil-spiral.md) — 로고 시안 탐색, 화석 나선 확정, 아이콘·헤더·스피너 반영, 배포와 위키 정정

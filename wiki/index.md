@@ -13,7 +13,7 @@ X, Threads, Reddit 게시글을 링크 하나로 내 디스크에 복제하고 �
 ## 현재 상태 (2026-10-25)
 
 - MVP 구현 완료: 3개 플랫폼 수집, 작성자 이어쓰기 사슬, 미디어 로컬 복제, 한국어 키워드 검색.
-- 운영 배포: `/opt/bakje` 릴리스 + Docker Compose, 데이터는 `/var/lib/bakje`, tailnet `https://<기기이름>.<tailnet>.ts.net:8888`. 최신 릴리스 `20261026T060330Z`.
+- 운영 배포: `/opt/bakje` 릴리스 + Docker Compose, 데이터는 `/var/lib/bakje`, tailnet `https://<기기이름>.<tailnet>.ts.net:8888`. 최신 릴리스 `20261026T072114Z`.
 - 수집 우선 UI, 수집 작업 재시도·오프라인 대기열·서비스 워커. → [결정 010](./decisions/010-capture-first-ui.md), [결정 011](./decisions/011-resilient-capture-queue.md)
 - 로고는 크림색 화석 나선 단색 마크(미니멀). 시안은 [로고 시안 모음](./references/logo-sketches.md). → [결정 015](./decisions/015-logo-fossil-spiral.md)
 - 요청형 번역과 LLM 설정 화면 `/settings`. 실제 키로 번역을 실사용해 확인했다(2026-10-26). → [결정 013](./decisions/013-on-demand-translation-and-llm-settings.md)
@@ -21,6 +21,7 @@ X, Threads, Reddit 게시글을 링크 하나로 내 디스크에 복제하고 �
 - iOS 단축어 수집용 API 입력 확장과 도움말 `/help/shortcut`(iOS 27 실기기 캡처, 동작 확인). → [iOS 단축어 수집](./concepts/ios-shortcut.md)
 - 이미 저장된 링크를 다시 붙여넣으면 수집 화면에서 다시 가져오기를 승인·거부한다. → [수집 작업 큐](./concepts/capture-queue.md)
 - 패키지 매니저는 pnpm(`pnpm-lock.yaml`, `pnpm-workspace.yaml`의 `allowBuilds`). npm 락 파일은 쓰지 않는다.
+- 연령 제한 X 게시글: 로그아웃 수집이 막혀, 설정 화면의 전용 계정 쿠키(`auth_token`·`ct0`)로만 가져온다. → [결정 017](./decisions/017-x-age-restricted-cookie.md)
 - 게시글 숨김: `source.hidden_at`으로 목록·검색에서 제외, 정리 패널에서 숨기기/해제, 필터 시트에서 숨긴 글 보기. → [결정 016](./decisions/016-hide-posts.md)
 - 라이브러리·수집 머리글의 새로고침 버튼(홈 화면 웹앱용). → [UI 시스템](./concepts/ui-system.md)
 

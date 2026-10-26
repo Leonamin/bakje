@@ -18,6 +18,7 @@ timestamp: 2026-10-25
 - 없는 것: 없음에 가깝다. 로그인·API 키·브라우저가 모두 불필요하다.
 - 폴백: 페이로드가 없으면 `cdn.syndication.twimg.com/tweet-result`로 단일 글만 저장하고 `partial`로 표시한다.
 - **Article(장문 뷰어)**: TweetDetail에는 제목·미리보기뿐이다. 본문은 *그 Article 트윗 자신의 페이지* SSR 스크립트의 `articleDocument.contentKey`(블록 목록 `[id, type, text]`)와 `highlights`(코드 블록)에 있다. 인용된 Article이면 그 트윗 페이지를 한 번 더 가져온다(`pipeline.ts`). 인라인 이미지·표지는 저장하지 않는다. 헤드리스 브라우저로는 x.com이 빈 페이지를 주므로 fetch로만 가져온다.
+- **연령 제한 게시글**: 로그아웃에서는 본문 대신 `BlurredMediaTombstone`이 와서 가져올 수 없다. 설정 화면에 등록한 전용 계정의 `auth_token`·`ct0`로 Playwright를 열어 `TweetDetail` 응답을 가로채 `parseX`로 파싱한다(`src/lib/x-auth.ts`). 쿠키가 없거나 만료·잠금·정지면 사유를 구분해 안내한다. 이 경로는 Article 본문을 가져오지 않는다. → [결정 017](../decisions/017-x-age-restricted-cookie.md)
 - 리스크: X가 SSR 구조를 바꾸면 즉시 깨진다. → [결정 004](../decisions/004-x-logged-out-ssr.md)
 
 ## Threads — 하이드레이션 후 Relay JSON
