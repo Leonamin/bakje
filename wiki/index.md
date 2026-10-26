@@ -13,7 +13,7 @@ X, Threads, Reddit 게시글을 링크 하나로 내 디스크에 복제하고 �
 ## 현재 상태 (2026-10-25)
 
 - MVP 구현 완료: 3개 플랫폼 수집, 작성자 이어쓰기 사슬, 미디어 로컬 복제, 한국어 키워드 검색.
-- 운영 배포: `/opt/bakje` 릴리스 + Docker Compose, 데이터는 `/var/lib/bakje`, tailnet `https://<기기이름>.<tailnet>.ts.net:8888`. 최신 릴리스 `20261025T154002Z`.
+- 운영 배포: `/opt/bakje` 릴리스 + Docker Compose, 데이터는 `/var/lib/bakje`, tailnet `https://<기기이름>.<tailnet>.ts.net:8888`. 최신 릴리스 `20261026T031110Z`.
 - 수집 우선 UI, 수집 작업 재시도·오프라인 대기열·서비스 워커. → [결정 010](./decisions/010-capture-first-ui.md), [결정 011](./decisions/011-resilient-capture-queue.md)
 - 로고는 크림색 화석 나선 단색 마크(미니멀). 시안은 [로고 시안 모음](./references/logo-sketches.md). → [결정 015](./decisions/015-logo-fossil-spiral.md)
 - 요청형 번역과 LLM 설정 화면 `/settings`. 실제 키로 번역을 실사용해 확인했다(2026-10-26). → [결정 013](./decisions/013-on-demand-translation-and-llm-settings.md)
@@ -32,7 +32,7 @@ X, Threads, Reddit 게시글을 링크 하나로 내 디스크에 복제하고 �
 
 ## 다음 단계
 
-- 의미 기반 검색(임베딩): 글·이미지 임베딩과 하이브리드 검색 구현 완료, 운영 배포 전. → [결정 014](./decisions/014-semantic-search-embedder-sidecar.md). 남은 일: 배포, 영상 여러 프레임 임베딩, 임계값 조정. 아래는 사전 실험 기록이다.
+- 의미 기반 검색(임베딩): 글·이미지 임베딩과 하이브리드 검색 구현 완료, 운영 배포 완료(2026-10-26, 릴리스 `20261026T024037Z`부터). → [결정 014](./decisions/014-semantic-search-embedder-sidecar.md). 남은 일: 영상 여러 프레임 임베딩, 임계값 조정. 아래는 사전 실험 기록이다.
    이 PC(CPU 16코어, 램 26GB, NVIDIA GPU 없음)에서 `google/embeddinggemma-2`(텍스트 백본 270M, 768차원·MRL 256까지, 입력 8192토큰, Apache 2.0)를 CPU로 돌려 하이브리드(키워드+벡터) 검색을 붙이는 안을 실험 중이다. 2026-10-26 실험: 운영 DB 20건(한·영·일·중 혼합)에 한국어 질의 10개를 던져 top1 10/10 적중, 임베딩은 CPU fp32로 문서당 약 1.6초(2000자 잘라 256차원, 워밍업 포함). 표본이 작아 일반화는 미검증, ONNX/Node 실행 가능 여부도 미검증. 실행에는 `sentence-transformers`+`pillow`+`torchvision`가 필요했다. `part.text_original` 청킹으로 붙일 수 있게 텍스트를 보존 중이다.
 - 단축어 iCloud 공유 링크를 `/help/shortcut` 페이지에 반영하고, 도움말 7~8단계 그림(아직 SVG)을 실기기 캡처로 바꾸기.
 - Threads 다단 타래 실물 검증, Reddit 차단 빈도 완화.
