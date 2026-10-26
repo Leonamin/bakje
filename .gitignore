@@ -7,3 +7,5 @@ data/
 next-env.d.ts
 tsconfig.tsbuildinfo
 .claude/
+__pycache__/
+*.pyc

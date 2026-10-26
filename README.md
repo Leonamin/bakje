@@ -4,13 +4,24 @@ X, Threads, Reddit 게시글을 링크 하나로 내 디스크에 복제하고, 
 
 북마크의 원래 문제는 **원문이 사라진다**는 것이다. 이 도구는 본문·작성자 이어쓰기·미디어·원본 HTML 스냅샷을 전부 로컬에 남기므로, 원문이 삭제되어도 계속 읽을 수 있다.
 
+**주요 기능**
+
+- 링크 하나로 본문·타래·미디어·원본 HTML 스냅샷을 로컬에 저장 (X · Threads · Reddit)
+- 한국어 키워드 검색(FTS5 trigram) + 의미 검색(임베딩, 텍스트·이미지) 하이브리드
+- 해외 글 온디맨드 번역·요약 (OpenAI 호환 API)
+- 모바일 중심 UI, 수집 큐(오프라인 대기), iOS 단축어 공유 시트 수집
+- 파서를 고치면 저장된 스냅샷으로 전체 재파싱
+
+> 인증이 없는 **단일 사용자용 개인 도구**입니다. 인터넷에 직접 노출하지 말고 Tailscale 같은 사설 네트워크 뒤에서만 쓰세요.
+
 ---
 
 ## 실행
 
 ```bash
+# Node.js 24, pnpm, ffmpeg(영상 포스터용) 필요
 pnpm install
-pnpm exec playwright install chromium   # 이미 있으면 생략
+pnpm exec playwright install chromium   # Threads·Reddit 수집용
 cp .env.example .env.local        # 번역용 OpenAI 호환 키 입력 (선택)
 pnpm dev                       # http://localhost:3000
 ```
@@ -73,7 +84,7 @@ X는 2026년 현재 `x.com/i/status/<id>`를 일반 브라우저 UA로 요청하
 
 ## 검색
 
-키워드 검색만 구현되어 있다. 임베딩 검색은 이후 단계다.
+키워드 검색과 의미 검색을 RRF로 합친다. 의미 검색은 `embedder/` 사이드카(`google/embeddinggemma-2`, CPU)가 글과 이미지를 같은 벡터 공간에 임베딩해 처리한다. `EMBEDDER_URL`이 없거나 사이드카가 응답하지 않으면 키워드 검색만 동작한다. `pnpm dev`로 로컬 실행할 때는 사이드카 없이 키워드 검색만 쓰는 것이 기본이다.
 
 한국어는 조사가 붙으면 토큰이 달라져 기본 FTS5로는 `북마크`로 `북마크를`을 찾지 못한다. 그래서 `trigram` 토크나이저를 쓴다.
 
@@ -138,16 +149,14 @@ src/lib/llm.ts       OpenAI 호환 번역·요약 (JSON 모드, 실패 시 수�
 
 ## 다음
 
-- 의미 기반 검색 (임베딩은 `part.text_original` 청킹만 얹으면 된다)
 - 로그인 세션으로 북마크 폴링 자동 수집
-- 브라우저 공유 시트/익스텐션
-- 삭제 감지 스케줄러 (지수 백오프)
+- 브라우저 익스텐션
 
 ---
 
 ## 운영 배포
 
-호스트의 다른 서비스(puri, nanuri)와 같은 릴리스 방식이다.
+단일 호스트에서 Docker Compose로 돌리는 릴리스 방식이다. 로컬 실행만 쓴다면 이 절은 건너뛰어도 된다.
 
 ```
 /opt/bakje/
@@ -170,7 +179,7 @@ sudo ARCHIVE_UID=$(id -u) ARCHIVE_GID=$(id -g) ./scripts/prepare-host.sh
 sudo vi /etc/bakje/bakje.env     # OPENAI_API_KEY 입력
 ```
 
-sudo가 없는 환경(이 호스트)에서는 Docker로 같은 상태를 만든다.
+sudo가 없는 환경에서는 Docker로 같은 상태를 만든다.
 
 ```bash
 docker run --rm -v /opt:/opt -v /var/lib:/var/lib -v /etc:/etc alpine sh -c '
@@ -214,3 +223,13 @@ SQLite는 WAL 모드이므로 서비스 중 백업하려면 `sqlite3 /var/lib/ba
 ```bash
 ./scripts/prune-releases.sh --keep 2
 ```
+
+---
+
+## 문서
+
+설계 결정과 작업 기록은 [`wiki/`](wiki/index.md)에 있다 (한국어). 디자인 토큰은 [`DESIGN.md`](DESIGN.md).
+
+## 라이선스
+
+[MIT](LICENSE)

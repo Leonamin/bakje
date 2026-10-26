@@ -1,12 +1,13 @@
 import type { Metadata } from "next";
+import { headers } from "next/headers";
 import Link from "next/link";
 import { ChevronLeft, ChevronRight, CircleAlert, Info } from "lucide-react";
 import { CopyField } from "@/components/copy-field";
 
 export const metadata: Metadata = { title: "공유 시트로 저장하기 — 박제" };
 
-// The tailnet address from wiki/concepts/operations.md. `?format=text` makes the reply a plain sentence.
-const ENDPOINT = "https://<기기이름>.<tailnet>.ts.net:8888/api/ingest?format=text";
+// The address is taken from the request, so it shows whatever host this instance is opened on.
+// `?format=text` makes the reply a plain sentence.
 
 /* ---------- Illustrations ----------
  * Simplified drawings of the Shortcuts screens, not screenshots. To use a real capture,
@@ -60,7 +61,7 @@ interface Step {
   capture?: string;
 }
 
-const STEPS: Step[] = [
+const makeSteps = (endpoint: string, host: string): Step[] => [
   {
     title: "새 단축어 만들기",
     capture: "/help/shortcut-all.webp",
@@ -112,7 +113,7 @@ const STEPS: Step[] = [
       <>
         <b>URL 콘텐츠 가져오기</b> 제목의 파란 <b>URL</b> 칸에 아래 주소를 붙여넣고, 오른쪽 <b>⌄</b>를 눌러 펼칩니다.
         <span className="mt-3 block">
-          <CopyField value={ENDPOINT} label="박제 수집 주소" />
+          <CopyField value={endpoint} label="박제 수집 주소" />
         </span>
         <ul className="mt-3 list-disc space-y-1 pl-5">
           <li>
@@ -172,7 +173,7 @@ const STEPS: Step[] = [
     title: "처음 한 번은 허용하기",
     body: (
       <>
-        처음 실행하면 “‘박제하기’ 단축어가 <기기이름>…에 접근하도록 허용하겠습니까?” 같은 확인 창이 뜹니다.{" "}
+        처음 실행하면 “‘박제하기’ 단축어가 {host}에 접근하도록 허용하겠습니까?” 같은 확인 창이 뜹니다.{" "}
         <b>항상 허용</b>을 누르면 다음부터는 묻지 않습니다. 그다음 위에서 결과 알림이 내려옵니다.
       </>
     ),
@@ -191,7 +192,7 @@ const STEPS: Step[] = [
           접근을 허용하겠습니까?
         </text>
         <text x="130" y="186" fill={C.muted} fontSize="10" textAnchor="middle">
-          <기기이름>.<tailnet>.ts.net
+          {host}
         </text>
         <line x1="30" y1="204" x2="230" y2="204" stroke={C.line} />
         <text x="130" y="222" fill={C.muted} fontSize="12" textAnchor="middle">
@@ -271,7 +272,11 @@ const TROUBLES: { q: string; a: React.ReactNode }[] = [
   },
 ];
 
-export default function ShortcutHelpPage() {
+export default async function ShortcutHelpPage() {
+  const h = await headers();
+  const hostWithPort = h.get("host") ?? "localhost:3000";
+  const endpoint = `${h.get("x-forwarded-proto") ?? "https"}://${hostWithPort}/api/ingest?format=text`;
+  const STEPS = makeSteps(endpoint, hostWithPort.split(":")[0]);
   return (
     <div className="mx-auto max-w-3xl px-5 pb-16 pt-2 md:px-6 md:pt-10">
       <Link href="/add" className="-ml-2 inline-flex h-10 items-center gap-1 rounded-lg px-2 text-[14px] text-[var(--muted)] hover:text-[var(--ink)]">
