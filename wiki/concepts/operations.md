@@ -57,14 +57,26 @@ sudo가 있으면 `sudo ARCHIVE_UID=$(id -u) ./scripts/prepare-host.sh`.
 
 이 호스트는 sudo가 막혀 있어(no_new_privileges) Docker로 디렉터리를 만들고 소유권만 1000으로 바꿨다. 배포 스크립트는 root가 아니라 서비스 사용자로 실행한다.
 
-## 백업
+## 백업 (자동, 2026-10-26)
 
-```bash
-sqlite3 /var/lib/bakje/archive.db ".backup /tmp/archive.db"
-tar czf backup.tar.gz -C /var/lib bakje
+서비스 사용자 crontab이 매일 실행한다.
+
+```
+30 3 * * * /opt/bakje/current/scripts/backup.sh        (UTC 03:30)
+0 4 * * *  /opt/bakje/current/scripts/check-parsers.sh (UTC 04:00)
 ```
 
-SQLite는 WAL 모드이므로 실행 중에는 `.backup`을 쓴다.
+- `scripts/backup.sh`: 호스트에 sqlite3가 없어서 web 컨테이너 안에서 better-sqlite3 온라인 백업 API로 DB 사본을 만든다. 사본은 `journal_mode=DELETE`로 바꾸고 `integrity_check`를 통과해야 저장한다. 결과는 `~/bakje-backup/db/archive-<UTC>.db.gz`(최근 14개), `media`·`raw`·`browser`는 `~/bakje-backup/files/`에 rsync로 추가만 한다(`--delete` 없음). `thumbs`·`models`는 다시 만들 수 있어 뺀다.
+- `~/backups`는 root 소유라 쓰지 못한다. 그래서 `~/bakje-backup`을 쓴다.
+- **아직 같은 디스크다.** 디스크 고장에 대비하려면 `BAKJE_BACKUP_DEST`를 다른 기기(NAS·USB) 마운트로 바꾼다.
+- 복원: `zcat archive-<UTC>.db.gz > archive.db`, `files/*`를 데이터 디렉터리에 복사. 2026-10-26에 복원본으로 `pnpm reparse -- --check`를 돌려 확인했다.
+
+## 파서 점검과 알림
+
+- `/api/health/parsers`: 플랫폼별 최신 글을 다시 가져와 파싱한다. 하나라도 실패하면 503. 수십 초 걸리므로 컨테이너 헬스체크에 넣지 않는다.
+- `scripts/check-parsers.sh`가 이 경로를 호출하고, 실패하면 `scripts/alert.sh`로 알린다.
+- `scripts/alert.sh`: `BAKJE_ALERT_WEBHOOK`(Discord·Slack 웹훅)이 있으면 보낸다. 없으면 로그(`~/bakje-backup/*.log`)에만 남는다. crontab 위에 `BAKJE_ALERT_WEBHOOK=...` 줄을 넣어 켠다.
+- 파서 회귀 확인: `pnpm reparse -- --check`. 저장된 파트를 기대값으로 보고 스냅샷 재파싱 결과와 비교만 한다(쓰기 없음). 남의 게시글이라 스냅샷은 git에 넣지 않으므로 로컬·운영 데이터로 돌린다.
 
 ## 확인된 것
 
