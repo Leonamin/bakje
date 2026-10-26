@@ -54,13 +54,13 @@ export default async function LibraryPage({
             {isFiltered ? "조건에 맞는 게시글이 없습니다." : "아직 저장한 게시글이 없습니다."}
           </p>
           {isFiltered ? (
-            <Link href="/" className="mt-4 inline-flex h-11 items-center rounded-xl border border-[var(--line-strong)] px-4 text-[14px]">
+            <Link href="/" className="gc-button gc-button-secondary mt-4">
               필터 초기화
             </Link>
           ) : (
             <Link
               href="/add"
-              className="mt-4 inline-flex h-11 items-center gap-2 rounded-xl bg-[var(--accent)] px-4 text-[14px] font-semibold text-[var(--gc-on-accent)]"
+              className="gc-button gc-button-primary mt-4"
             >
               <Plus size={18} strokeWidth={2.2} />
               첫 게시글 저장

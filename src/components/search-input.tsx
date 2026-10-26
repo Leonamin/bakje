@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Search, X } from "lucide-react";
+import { IconButton } from "@/components/goodcase/basic/button";
 
 export function SearchInput({ initialQuery }: { initialQuery: string }) {
   const router = useRouter();
@@ -49,18 +50,17 @@ export function SearchInput({ initialQuery }: { initialQuery: string }) {
         className="h-12 w-full rounded-xl border border-[var(--line)] bg-[var(--surface)] pl-11 pr-12 text-[16px] text-[var(--ink)] outline-none focus:border-[var(--line-strong)]"
       />
       {value ? (
-        <button
-          type="button"
+        <IconButton
+          label="검색어 지우기"
           onClick={() => {
             setValue("");
             submit("");
             ref.current?.focus();
           }}
-          aria-label="검색어 지우기"
-          className="absolute right-1 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-lg text-[var(--muted)]"
+          className="absolute right-1 top-1/2 -translate-y-1/2"
         >
           <X size={20} />
-        </button>
+        </IconButton>
       ) : null}
       {isPending ? <span className="label absolute -bottom-6 left-1">검색 중…</span> : null}
     </form>

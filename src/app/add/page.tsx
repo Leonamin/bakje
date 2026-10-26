@@ -156,7 +156,7 @@ export default function AddPage() {
         <h1 className="text-[24px] font-bold tracking-tight">수집</h1>
         <Link
           href="/help/shortcut"
-          className="ml-auto mr-1 inline-flex h-10 items-center gap-1.5 rounded-xl px-3 text-[14px] text-[var(--muted)] hover:text-[var(--ink)]"
+          className="press ml-auto mr-1 inline-flex h-10 items-center gap-1.5 rounded-xl px-3 text-[14px] text-[var(--muted)] hover:text-[var(--ink)]"
         >
           <Share size={16} />
           공유 시트로 저장
@@ -166,23 +166,13 @@ export default function AddPage() {
 
       {/* Phones: pinned above the tab bar, in thumb reach. Desktop: under the title. */}
       <div className="fixed inset-x-0 bottom-[calc(64px+env(safe-area-inset-bottom))] z-30 flex gap-2 bg-gradient-to-b from-transparent to-[var(--accent-bg)] to-25% px-4 pb-4 pt-3 md:static md:mb-8 md:bg-none md:p-0">
-        <button
-          type="button"
-          onClick={openSheet}
-          aria-label="직접 입력"
-          className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl border border-[var(--line-strong)] bg-[var(--surface)] text-[var(--ink)]"
-        >
+        <Button variant="secondary" aria-label="직접 입력" onClick={openSheet} className="!h-14 !w-14 shrink-0 !rounded-2xl !p-0">
           <Keyboard size={22} strokeWidth={1.8} />
-        </button>
-        <button
-          type="button"
-          onClick={pasteAndSave}
-          disabled={submitting}
-          className="flex h-14 flex-1 items-center justify-center gap-2 rounded-2xl bg-[var(--accent)] text-[16px] font-semibold text-[var(--gc-on-accent)] disabled:opacity-60"
-        >
+        </Button>
+        <Button onClick={pasteAndSave} disabled={submitting} className="!h-14 flex-1 !rounded-2xl !text-[16px]">
           {submitting ? <Logo size={24} className="animate-spin [animation-duration:1.6s]" /> : <ClipboardPaste size={22} strokeWidth={2} />}
           붙여넣고 저장
-        </button>
+        </Button>
       </div>
 
       <section>
@@ -248,20 +238,12 @@ export default function AddPage() {
                   )}
                   {asking ? (
                     <div className="flex gap-2 pb-3 pl-8">
-                      <button
-                        type="button"
-                        onClick={() => answerDuplicate(job, true)}
-                        className="h-10 flex-1 rounded-xl bg-[var(--accent)] text-[14px] font-semibold text-[var(--gc-on-accent)]"
-                      >
+                      <Button className="flex-1" onClick={() => answerDuplicate(job, true)}>
                         다시 가져오기
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => answerDuplicate(job, false)}
-                        className="h-10 flex-1 rounded-xl border border-[var(--line-strong)] text-[14px] text-[var(--ink)]"
-                      >
+                      </Button>
+                      <Button variant="secondary" className="flex-1" onClick={() => answerDuplicate(job, false)}>
                         그대로 두기
-                      </button>
+                      </Button>
                     </div>
                   ) : null}
                 </li>

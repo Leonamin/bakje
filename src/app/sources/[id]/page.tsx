@@ -39,7 +39,7 @@ export default async function SourcePage({ params }: { params: Promise<{ id: str
       href={source.canonical_url}
       target="_blank"
       rel="noreferrer"
-      className="flex h-12 flex-1 items-center justify-center gap-2 rounded-xl bg-[var(--accent)] px-4 text-[14px] font-semibold text-[var(--gc-on-accent)] md:h-10 md:flex-none"
+      className="gc-button gc-button-primary flex-1 md:flex-none"
     >
       <ExternalLink size={18} />
       원문 열기

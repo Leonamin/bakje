@@ -123,6 +123,14 @@ html {
   color: color-mix(in srgb, var(--muted) 75%, transparent);
 }
 
+/* Button wraps its children in a span; lay out icon + label on one line. */
+.gc-button-content {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--gc-space-2);
+}
+
 .gc-button-primary {
   background: var(--accent);
   color: var(--gc-on-accent);
@@ -204,13 +212,36 @@ html {
   color: var(--ink);
 }
 
-a {
-  color: inherit;
+/* Unlayered rules beat every Tailwind utility (they live in @layer utilities),
+   so a bare `a { color: inherit }` turned text-[var(--gc-on-accent)] on accent
+   links into pale ink. Keep element defaults in the base layer. */
+@layer base {
+  a {
+    color: inherit;
+  }
+
+  /* Tailwind preflight is loaded first; restore what Goodcase relies on. */
+  button {
+    cursor: pointer;
+  }
 }
 
-/* Tailwind preflight is loaded first; restore what Goodcase relies on. */
-button {
-  cursor: pointer;
+/* Press feedback for nav chrome and toggles that are not Button/IconButton/.chip. */
+@layer components {
+  .press {
+    scale: 1;
+    transition: scale var(--gc-press-duration) var(--gc-press-easing);
+  }
+
+  .press:active:not(:disabled) {
+    scale: var(--gc-press-scale);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .press:active {
+      scale: 1;
+    }
+  }
 }
 
 /* Toasts drop from the top so they never cover the thumb-zone buttons. */

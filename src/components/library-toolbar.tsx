@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Check, LayoutGrid, List, Search, SlidersHorizontal, X } from "lucide-react";
 import { Drawer } from "@/components/goodcase/overlays/dialog";
-import { Button } from "@/components/goodcase/basic/button";
+import { Button, IconButton } from "@/components/goodcase/basic/button";
 import { TextField } from "@/components/goodcase/basic/text-field";
 
 const PLATFORMS = [
@@ -96,17 +96,16 @@ export function LibraryToolbar({
           className="h-12 w-full rounded-xl border border-[var(--line)] bg-[var(--surface)] pl-11 pr-12 text-[16px] text-[var(--ink)] outline-none placeholder:text-[color-mix(in_srgb,var(--muted)_75%,transparent)] focus:border-[var(--line-strong)]"
         />
         {query ? (
-          <button
-            type="button"
+          <IconButton
+            label="검색어 지우기"
             onClick={() => {
               setQuery("");
               push({ q: "" });
             }}
-            aria-label="검색어 지우기"
-            className="absolute right-1 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-lg text-[var(--muted)] hover:text-[var(--ink)]"
+            className="absolute right-1 top-1/2 -translate-y-1/2"
           >
             <X size={20} />
-          </button>
+          </IconButton>
         ) : null}
       </form>
 
@@ -150,35 +149,27 @@ export function LibraryToolbar({
         ) : null}
 
         <div className="ml-auto flex shrink-0 items-center">
-          <button
-            type="button"
-            onClick={() => setSheetOpen(true)}
-            aria-label="필터"
-            className="relative flex h-11 w-11 items-center justify-center rounded-xl text-[var(--muted)] hover:text-[var(--ink)]"
-          >
+          <IconButton label="필터" onClick={() => setSheetOpen(true)} className="relative">
             <SlidersHorizontal size={20} strokeWidth={1.8} />
             {activeFilterCount > 0 ? (
               <span className="absolute right-1 top-1 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-[var(--accent)] px-1 text-[11px] font-semibold text-[var(--gc-on-accent)]">
                 {activeFilterCount}
               </span>
             ) : null}
-          </button>
+          </IconButton>
           <div className="flex">
             {(["grid", "list"] as const).map((v) => {
               const Icon = v === "grid" ? LayoutGrid : List;
               return (
-                <button
+                <IconButton
                   key={v}
-                  type="button"
+                  label={v === "grid" ? "그리드 보기" : "리스트 보기"}
                   onClick={() => push({ view: v })}
-                  aria-label={v === "grid" ? "그리드 보기" : "리스트 보기"}
                   aria-pressed={view === v}
-                  className={`flex h-11 w-11 items-center justify-center rounded-xl ${
-                    view === v ? "text-[var(--ink)]" : "text-[var(--muted)]"
-                  }`}
+                  className={view === v ? "!text-[var(--ink)]" : ""}
                 >
                   <Icon size={20} strokeWidth={1.8} />
-                </button>
+                </IconButton>
               );
             })}
           </div>

@@ -138,7 +138,7 @@ export function LlmSettingsForm({ initial, providers }: { initial: PublicSetting
               type="button"
               aria-pressed={apiFormat === o.id}
               onClick={() => setApiFormat(o.id)}
-              className={`h-12 flex-1 px-3 text-[14px] transition-colors ${
+              className={`press h-12 flex-1 px-3 text-[14px] transition-colors ${
                 apiFormat === o.id
                   ? "bg-[color-mix(in_srgb,var(--accent)_16%,transparent)] text-[var(--accent-strong)]"
                   : "text-[var(--muted)]"

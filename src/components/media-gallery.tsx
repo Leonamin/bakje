@@ -37,7 +37,7 @@ export function MediaGallery({ media }: { media: MediaRow[] }) {
                 setIndex(i);
                 setOpen(true);
               }}
-              className={`media-tile group relative ${images.length === 1 ? "max-h-[560px]" : "aspect-[3/4]"}`}
+              className={`press media-tile group relative ${images.length === 1 ? "max-h-[560px]" : "aspect-[3/4]"}`}
               aria-label={`이미지 ${i + 1} 크게 보기`}
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}

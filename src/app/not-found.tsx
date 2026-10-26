@@ -10,7 +10,7 @@ export default function NotFound() {
       </p>
       <Link
         href="/"
-        className="mt-5 inline-flex h-11 items-center rounded-xl border border-[var(--line-strong)] px-4 text-[14px]"
+        className="gc-button gc-button-secondary mt-5"
       >
         라이브러리로
       </Link>

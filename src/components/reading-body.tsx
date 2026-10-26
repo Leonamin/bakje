@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AlertCircle, ChevronDown, ChevronUp, ExternalLink, Languages, RotateCw, Settings } from "lucide-react";
+import { Button, IconButton } from "@/components/goodcase/basic/button";
 import { Spinner } from "@/components/goodcase/basic/spinner";
 import type { MediaRow, PartRow } from "@/lib/types";
 import { MediaGallery } from "./media-gallery";
@@ -50,7 +51,7 @@ function TranslationControl({
   const router = useRouter();
   const [state, setState] = useState<TranslateState>({ kind: "idle" });
   const linkClass =
-    "inline-flex h-11 items-center gap-1.5 text-[14px] font-semibold text-[var(--accent-strong)] disabled:text-[var(--muted)]";
+    "press inline-flex h-11 items-center gap-1.5 text-[14px] font-semibold text-[var(--accent-strong)] disabled:text-[var(--muted)]";
 
   async function translate() {
     setState({ kind: "loading" });
@@ -257,22 +258,20 @@ export function ReadingBody({
                         href={part.source_url}
                         target="_blank"
                         rel="noreferrer"
-                        className="flex h-9 items-center gap-1.5 rounded-xl border border-[var(--line-strong)] px-3 text-[14px] font-semibold"
+                        className="gc-button gc-button-secondary"
                       >
                         <ExternalLink size={16} />
                         원문
                       </a>
                     ) : null}
                     {foldable ? (
-                      <button
-                        type="button"
+                      <IconButton
+                        label={folded ? `${labels[i]} 펼치기` : `${labels[i]} 접기`}
                         onClick={() => toggle(part.id)}
                         aria-expanded={!folded}
-                        aria-label={folded ? `${labels[i]} 펼치기` : `${labels[i]} 접기`}
-                        className="flex h-11 w-11 items-center justify-center rounded-xl text-[var(--muted)]"
                       >
                         {folded ? <ChevronDown size={20} /> : <ChevronUp size={20} />}
-                      </button>
+                      </IconButton>
                     ) : null}
                   </header>
                   <div className={`relative px-4 pt-4 ${folded ? "max-h-80 overflow-hidden" : "pb-4"}`}>
@@ -283,14 +282,10 @@ export function ReadingBody({
                   </div>
                   {folded ? (
                     <div className="px-4 pb-4">
-                      <button
-                        type="button"
-                        onClick={() => toggle(part.id)}
-                        className="flex h-12 w-full items-center justify-center gap-1.5 rounded-xl border border-[var(--line-strong)] text-[14px] font-semibold"
-                      >
+                      <Button variant="secondary" onClick={() => toggle(part.id)} className="w-full">
                         전체 펼치기
                         <ChevronDown size={16} />
-                      </button>
+                      </Button>
                     </div>
                   ) : null}
                 </>

@@ -90,7 +90,7 @@ export function SourceOrganizer({
                 type="button"
                 aria-label={`${tag} 태그 삭제`}
                 onClick={() => setTags(tags.filter((t) => t !== tag))}
-                className="flex h-7 w-7 items-center justify-center text-[var(--muted)] hover:text-[var(--danger)]"
+                className="press flex h-7 w-7 items-center justify-center text-[var(--muted)] hover:text-[var(--danger)]"
               >
                 <X size={14} />
               </button>
@@ -111,14 +111,10 @@ export function SourceOrganizer({
             placeholder="태그 입력 후 Enter"
             className="h-11 min-w-0 flex-1 rounded-xl border border-[var(--line)] bg-[#11161e] px-3 text-[16px] text-[var(--ink)] outline-none focus:border-[var(--line-strong)]"
           />
-          <button
-            type="button"
-            onClick={addTag}
-            className="flex h-11 shrink-0 items-center gap-1.5 rounded-xl border border-[var(--line-strong)] px-3 text-[14px] text-[var(--ink)]"
-          >
+          <Button variant="secondary" onClick={addTag} className="shrink-0">
             <Tag size={16} />
             추가
-          </button>
+          </Button>
         </div>
       </section>
 
@@ -166,14 +162,10 @@ export function SourceOrganizer({
 
   return (
     <>
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        className="flex h-12 shrink-0 items-center gap-2 rounded-xl border border-[var(--line-strong)] px-4 text-[14px] font-semibold text-[var(--ink)] md:h-10"
-      >
+      <Button variant="secondary" onClick={() => setOpen(true)} className="shrink-0">
         <Tag size={18} />
         정리
-      </button>
+      </Button>
       <Drawer
         isOpen={open}
         onOpenChange={setOpen}

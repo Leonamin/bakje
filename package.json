@@ -11,6 +11,7 @@
     "typecheck": "tsc --noEmit",
     "reparse": "tsx scripts/reparse.ts",
     "check": "tsx scripts/check.ts",
+    "lint:ui": "tsx scripts/lint-ui.ts",
     "gc": "tsx scripts/gc.ts",
     "mock-llm": "node scripts/mock-llm.mjs"
   },

@@ -28,7 +28,7 @@ export function TopBar() {
                 key={item.href}
                 href={item.href}
                 aria-current={active ? "page" : undefined}
-                className={`flex h-10 items-center gap-2 rounded-xl px-3 text-[14px] transition-colors ${
+                className={`press flex h-10 items-center gap-2 rounded-xl px-3 text-[14px] transition-colors ${
                   item.capture
                     ? "bg-[var(--accent)] font-semibold text-[var(--gc-on-accent)]"
                     : active
@@ -46,7 +46,7 @@ export function TopBar() {
           href="/settings"
           aria-label="설정"
           aria-current={pathname.startsWith("/settings") ? "page" : undefined}
-          className="-ml-4 flex h-10 w-10 items-center justify-center rounded-xl text-[var(--muted)] hover:text-[var(--ink)] aria-[current=page]:text-[var(--ink)]"
+          className="press -ml-4 flex h-10 w-10 items-center justify-center rounded-xl text-[var(--muted)] hover:text-[var(--ink)] aria-[current=page]:text-[var(--ink)]"
         >
           <Settings size={18} strokeWidth={1.8} />
         </Link>
@@ -70,7 +70,7 @@ export function BottomNav() {
                 href={item.href}
                 data-active={active}
                 data-capture={item.capture ?? false}
-                className="bottom-nav-item"
+                className="bottom-nav-item press"
                 aria-current={active ? "page" : undefined}
               >
                 {item.capture ? (

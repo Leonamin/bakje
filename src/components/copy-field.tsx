@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Check, Copy } from "lucide-react";
+import { IconButton } from "@/components/goodcase/basic/button";
 
 /** A value the user has to type into another app, with a one-tap copy. */
 export function CopyField({ value, label }: { value: string; label: string }) {
@@ -22,14 +23,9 @@ export function CopyField({ value, label }: { value: string; label: string }) {
       <code className="min-w-0 flex-1 select-all break-all font-mono text-[12px] leading-relaxed text-[var(--accent-strong)]">
         {value}
       </code>
-      <button
-        type="button"
-        onClick={copy}
-        aria-label={`${label} 복사`}
-        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-[var(--muted)] hover:text-[var(--ink)]"
-      >
+      <IconButton label={`${label} 복사`} onClick={copy}>
         {copied ? <Check size={18} className="text-[var(--accent)]" /> : <Copy size={18} />}
-      </button>
+      </IconButton>
     </div>
   );
 }
