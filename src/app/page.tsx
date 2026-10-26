@@ -4,6 +4,7 @@ import { Archive, Plus, Settings } from "lucide-react";
 import { searchHybrid, topTags } from "@/lib/search";
 import { LibraryToolbar } from "@/components/library-toolbar";
 import { RefreshButton } from "@/components/refresh-button";
+import { SwipeHide } from "@/components/swipe-hide";
 import { SourceCard } from "@/components/source-card";
 
 export const dynamic = "force-dynamic";
@@ -76,11 +77,14 @@ export default async function LibraryPage({
               : "mt-2 space-y-2"
           }
         >
-          {hits.map((hit) => (
-            <li key={hit.id}>
-              <SourceCard hit={hit} query={q} view={view} debug={get("debug") === "1"} />
-            </li>
-          ))}
+          {hits.map((hit) => {
+            const card = <SourceCard hit={hit} query={q} view={view} debug={get("debug") === "1"} />;
+            return (
+              <li key={hit.id}>
+                {hidden ? card : <SwipeHide id={hit.id}>{card}</SwipeHide>}
+              </li>
+            );
+          })}
         </ul>
       )}
     </div>
