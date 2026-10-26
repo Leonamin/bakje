@@ -3,7 +3,7 @@ type: Concept
 title: "플랫폼 어댑터"
 description: "X·Threads·Reddit에서 게시글을 가져오는 실제 경로와 실패 모드"
 tags: [adapter, x, threads, reddit, parsing]
-timestamp: 2026-10-25
+timestamp: 2026-10-26
 ---
 
 # 플랫폼 어댑터
@@ -17,7 +17,7 @@ timestamp: 2026-10-25
 - 얻는 것: 본문(long note_tweet 포함), 작성자, 답글 타래, 부모, 인용, 좋아요·조회수, 미디어 variants
 - 없는 것: 없음에 가깝다. 로그인·API 키·브라우저가 모두 불필요하다.
 - 폴백: 페이로드가 없으면 `cdn.syndication.twimg.com/tweet-result`로 단일 글만 저장하고 `partial`로 표시한다.
-- **Article(장문 뷰어)**: TweetDetail에는 제목·미리보기뿐이다. 본문은 *그 Article 트윗 자신의 페이지* SSR 스크립트의 `articleDocument.contentKey`(블록 목록 `[id, type, text]`)와 `highlights`(코드 블록)에 있다. 인용된 Article이면 그 트윗 페이지를 한 번 더 가져온다(`pipeline.ts`). 인라인 이미지·표지는 저장하지 않는다. 헤드리스 브라우저로는 x.com이 빈 페이지를 주므로 fetch로만 가져온다.
+- **Article(장문 뷰어)**: TweetDetail에는 제목·미리보기뿐이다. 본문은 *그 Article 트윗 자신의 페이지* SSR 스크립트의 `articleDocument.contentKey`(블록 목록 `[id, type, text]`)와 `highlights`(코드 블록)에 있다. 인용된 Article이면 그 트윗 페이지를 한 번 더 가져온다(`pipeline.ts`). 본문 속 이미지·영상은 같은 페이지의 별도 응답 `ArticleByTweetId`(`article.article_results.result.media_entities`)에 있고, `extractArticleMedia`가 읽어 Article 파트의 미디어로 저장한다(2026-10-26). 표지 이미지는 저장하지 않는다. 미디어는 본문 안 위치가 아니라 파트 끝에 붙는다. 헤드리스 브라우저로는 x.com이 빈 페이지를 주므로 fetch로만 가져온다.
 - **연령 제한 게시글**: 로그아웃에서는 본문 대신 `BlurredMediaTombstone`이 와서 가져올 수 없다. 설정 화면에 등록한 전용 계정의 `auth_token`·`ct0`로 Playwright를 열어 `TweetDetail` 응답을 가로채 `parseX`로 파싱한다(`src/lib/x-auth.ts`). 쿠키가 없거나 만료·잠금·정지면 사유를 구분해 안내한다. 이 경로는 Article 본문을 가져오지 않는다. → [결정 017](../decisions/017-x-age-restricted-cookie.md)
 - 리스크: X가 SSR 구조를 바꾸면 즉시 깨진다. → [결정 004](../decisions/004-x-logged-out-ssr.md)
 

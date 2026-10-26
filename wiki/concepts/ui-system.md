@@ -3,7 +3,7 @@ type: Concept
 title: "UI 시스템"
 description: "수집 우선 모바일 정보 구조, 타입 스케일, CSS 우선순위 함정, Goodcase 컴포넌트 이식, 색상 토큰"
 tags: [ui, mobile, design-system, goodcase, typography]
-timestamp: 2026-10-25
+timestamp: 2026-10-26
 ---
 
 # UI 시스템
@@ -30,7 +30,7 @@ timestamp: 2026-10-25
 | `/search` | 전용 검색. 결과 카드는 썸네일을 카드 폭에 꽉 찬 16:9로 보여주고, 썸네일이 없으면 본문 3줄을 보여준다. 검색어가 없을 때는 태그 칩만 둔다. |
 | `/add` | 수집. 하단 고정 `[직접 입력] [붙여넣고 저장]`과 최근 작업 목록. |
 | `/sources/[id]` | 읽기. 하단 액션 바, 파트 인덱스 바, 파트 카드, 번역 컨트롤, 이미지 뷰어, 정리 시트. |
-| `/settings` | LLM 번역 설정. 라이브러리 머리글(모바일)·상단 바(데스크톱)의 톱니 아이콘. |
+| `/settings` | LLM 번역 설정, X 쿠키, 저장 공간 사용량. 라이브러리 머리글(모바일)·상단 바(데스크톱)의 톱니 아이콘. |
 | `/help/shortcut` | iOS 단축어 만들기 안내. → [iOS 단축어 수집](./ios-shortcut.md) |
 
 ### 새로고침 버튼

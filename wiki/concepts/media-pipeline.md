@@ -3,7 +3,7 @@ type: Concept
 title: "미디어 파이프라인"
 description: "30MB 상한, sha256 중복 제거, HLS/CMAF 처리, 포스터, 카드 썸네일 캐시와 정리"
 tags: [media, video, hls, ffmpeg]
-timestamp: 2026-10-25
+timestamp: 2026-10-26
 ---
 
 # 미디어 파이프라인
@@ -21,11 +21,16 @@ timestamp: 2026-10-25
 
 ## 영상
 
-- X: `video_info.variants`에서 최고 bitrate mp4 선택
+- X: `video_info.variants`에서 **2.5Mbps 이하 중 가장 높은** bitrate mp4를 고른다(없으면 가장 낮은 것). Article 영상은 최고 화질이 10Mbps라 30MB를 거의 항상 넘기 때문이다. 영상 길이를 모르므로 비트레이트 상한으로 대신하는 임시 방법이다. Article의 변형은 키가 `bit_rate`(밑줄)다.
+- X 다운로드는 `x.com` referer가 필요하다. `video.twimg.com`은 그 밖의 referer(예: 구글)에 403을 준다(`media.ts` `download()`). 이 수정 전에는 X 영상이 `failed`로 남았을 수 있다. 일반 X 영상 트윗에서의 재현은 **미검증**이다(로컬에 X 영상 기록이 없었다).
 - Reddit: `shreddit-player`의 `src`가 **HLS 매니페스트**다. 세그먼트가 한 CMAF 파일의 바이트 범위라 파일 단위로 받아 ffmpeg으로 오디오와 합친다.
 - Threads: `video_versions` 최대 해상도
 
 이 환경의 정적 ffmpeg 빌드는 네트워크 입력에서 세그폴트가 난다. 그래서 **다운로드는 Node가 하고 ffmpeg은 로컬 mux·포스터 생성에만** 쓴다.
+
+## 표시
+
+`.media-tile`은 이미지·영상 모두 `object-fit: cover`였다. 영상 타일은 폭 100%·최대 높이 520px이라 세로 영상(9:16)의 위아래가 잘렸다. 영상만 `contain`으로 바꿨다(`globals.css`). 카드 썸네일(`img`)은 격자를 위해 계속 자른다.
 
 ## 포스터
 
@@ -45,6 +50,10 @@ timestamp: 2026-10-25
 - `media`/`media_blob`이 참조하지 않는 파일 삭제
 - 중단된 다운로드의 `.tmp-*` 삭제
 - 포스터가 없거나 사라진 영상·gif의 포스터 재생성
+
+## 저장 공간 표시
+
+설정 화면에 박제가 쓰는 용량을 폴더별(미디어, 원본 HTML, DB, 썸네일, 브라우저 프로필)로 보이고, 디스크 여유와 전체 용량을 함께 보인다(`storageUsage()` in `db.ts`, 요청 때마다 디렉터리를 순회). 폴더가 없으면 0으로 센다. 파일이 아주 많아졌을 때의 응답 시간은 **미검증**이다.
 
 ## 알려진 한계
 

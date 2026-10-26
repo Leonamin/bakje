@@ -8,6 +8,7 @@ okf_version: "0.1"
 
 # Logs
 
+- [2026-10-26-article-media-and-storage.md](./2026-10-26-article-media-and-storage.md) — X Article 영상·이미지 박제, twimg 403 수정, 세로 영상 잘림 수정, 저장 공간 표시
 - [2026-10-26-x-age-restricted-cookie.md](./2026-10-26-x-age-restricted-cookie.md) — 연령 제한 X 게시글 실패 원인 규명, 안내 문구, 전용 계정 쿠키 수집 구현·배포
 - [2026-10-26-summary-card-and-ask-ai.md](./2026-10-26-summary-card-and-ask-ai.md) — 요약카드 상시 표시·접기, AI 질문 프롬프트 복사
 - [2026-10-26-hide-posts.md](./2026-10-26-hide-posts.md) — 게시글 숨김 구현과 목록 캐시 무효화 버그 수정
