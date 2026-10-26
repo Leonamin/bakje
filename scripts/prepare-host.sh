@@ -17,6 +17,7 @@ gid="${ARCHIVE_GID:-1000}"
 install -d -m 0755 -o "$uid" -g "$gid" /opt/bakje
 install -d -m 0755 -o "$uid" -g "$gid" /opt/bakje/releases
 install -d -m 0750 -o "$uid" -g "$gid" /var/lib/bakje
+install -d -m 0750 -o "$uid" -g "$gid" /var/lib/bakje/models
 install -d -m 0750 -o "$uid" -g "$gid" /etc/bakje
 
 env_file=/etc/bakje/bakje.env

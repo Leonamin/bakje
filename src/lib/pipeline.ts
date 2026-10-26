@@ -8,6 +8,7 @@ import { fetchThreads, parseThreads, resolveThreadsShare } from "./adapters/thre
 import { articleTweetIds, extractArticle, fetchX, fetchXSyndication, parseX, parseXSyndication } from "./adapters/x";
 import { archiveMedia } from "./media";
 import { detectLang } from "./lang";
+import { markStale } from "./embed";
 import { LLM_PROMPT_VERSION, llmConfig, translateAndSummarize } from "./llm";
 import type { ParsedPost, Platform, SourceStatus } from "./types";
 
@@ -76,6 +77,7 @@ function rebuildSearch(sourceId: number): void {
   conn
     .prepare("INSERT INTO search_fts (rowid, title, body, body_ko, summary, author, tags) VALUES (?, ?, ?, ?, ?, ?, ?)")
     .run(sourceId, title, body, bodyKo, summary, author, tags);
+  markStale(sourceId);
 }
 
 /** Translates a stored source on request and replaces any earlier translation. Throws a readable message on failure. */

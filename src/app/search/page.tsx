@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { SearchX } from "lucide-react";
-import { searchSources, topTags } from "@/lib/search";
+import { searchHybrid, topTags } from "@/lib/search";
 import { SearchInput } from "@/components/search-input";
 import { SourceCard } from "@/components/source-card";
 
@@ -14,7 +14,7 @@ export default async function SearchPage({
   const sp = await searchParams;
   const q = typeof sp.q === "string" ? sp.q.trim() : "";
   const tags = topTags(12);
-  const { hits, total } = q ? searchSources({ q, limit: 50 }) : { hits: [], total: 0 };
+  const { hits, total } = q ? await searchHybrid({ q, limit: 50 }) : { hits: [], total: 0 };
 
   return (
     <div className="mx-auto max-w-3xl px-5 pb-10 pt-2 md:px-6 md:pt-8">

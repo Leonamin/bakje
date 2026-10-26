@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Suspense } from "react";
 import { Archive, Plus, Settings } from "lucide-react";
-import { searchSources, topTags } from "@/lib/search";
+import { searchHybrid, topTags } from "@/lib/search";
 import { LibraryToolbar } from "@/components/library-toolbar";
 import { RefreshButton } from "@/components/refresh-button";
 import { SourceCard } from "@/components/source-card";
@@ -22,7 +22,7 @@ export default async function LibraryPage({
   const tag = get("tag");
   const view = get("view") === "list" ? "list" : "grid";
 
-  const { hits, total } = searchSources({ q, platform, media, sort, tag, limit: 60 });
+  const { hits, total } = await searchHybrid({ q, platform, media, sort, tag, limit: 60 });
   const tags = topTags(10);
 
   const isFiltered = Boolean(q || platform || media || tag || sort);

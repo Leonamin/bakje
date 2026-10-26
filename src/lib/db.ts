@@ -138,6 +138,24 @@ CREATE TABLE IF NOT EXISTS search_doc (
   tags TEXT NOT NULL DEFAULT ''
 );
 
+-- Semantic search: one L2-normalised float32 vector per text chunk. A source with no embed_state row is stale.
+CREATE TABLE IF NOT EXISTS embedding (
+  source_id INTEGER NOT NULL REFERENCES source(id) ON DELETE CASCADE,
+  chunk INTEGER NOT NULL,
+  vec BLOB NOT NULL,
+  PRIMARY KEY (source_id, chunk)
+);
+
+CREATE TABLE IF NOT EXISTS embed_state (
+  source_id INTEGER PRIMARY KEY REFERENCES source(id) ON DELETE CASCADE
+);
+
+-- One vector per image (the poster frame for gif/video). An empty vec marks a file that cannot be embedded.
+CREATE TABLE IF NOT EXISTS media_embedding (
+  media_id INTEGER PRIMARY KEY REFERENCES media(id) ON DELETE CASCADE,
+  vec BLOB NOT NULL
+);
+
 CREATE VIRTUAL TABLE IF NOT EXISTS search_fts USING fts5(
   title, body, body_ko, summary, author, tags,
   tokenize = 'trigram'

@@ -17,6 +17,7 @@ services:
     environment:
       ARCHIVE_DATA_DIR: /data
       ARCHIVE_NO_SANDBOX: "1"
+      EMBEDDER_URL: http://embedder:8000
       HOME: /tmp
     volumes:
       - /var/lib/bakje:/data
@@ -41,4 +42,29 @@ services:
       timeout: 5s
       retries: 5
       start_period: 30s
+    logging: *default-logging
+
+  # Semantic-search embeddings. Holds the model resident (~3.6GB RAM) and is
+  # reachable only from the web service over the compose network.
+  embedder:
+    build: ./embedder
+    image: bakje-embedder:latest
+    environment:
+      EMBED_THREADS: "8"
+    volumes:
+      - ${ARCHIVE_DATA_DIR:-/var/lib/bakje}/models:/models
+    restart: unless-stopped
+    read_only: true
+    tmpfs:
+      - /tmp:size=256m,mode=1777
+    security_opt: ["no-new-privileges:true"]
+    cap_drop: ["ALL"]
+    mem_limit: 6g
+    healthcheck:
+      test:
+        ["CMD", "python", "-c", "import urllib.request,sys;sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/health').status==200 else 1)"]
+      interval: 20s
+      timeout: 5s
+      retries: 5
+      start_period: 120s
     logging: *default-logging

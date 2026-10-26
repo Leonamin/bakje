@@ -1,4 +1,5 @@
 import { db } from "./db";
+import { embedderEnabled, rrf, semanticIds } from "./embed";
 import type { MediaRow, PartRow, SourceRow } from "./types";
 
 export interface SearchParams {
@@ -54,17 +55,7 @@ function makeSnippet(text: string, q: string): string {
   return `${start > 0 ? "…" : ""}${clean.slice(start, end)}${end < clean.length ? "…" : ""}`;
 }
 
-/**
- * Korean keyword search. FTS5's trigram tokenizer gives substring matching,
- * which is what makes "북마크" find "북마크를". Queries shorter than three
- * characters cannot use it and fall back to a scan.
- */
-export function searchSources(params: SearchParams): { hits: SearchHit[]; total: number } {
-  const conn = db();
-  const limit = Math.min(params.limit ?? 30, 100);
-  const offset = params.offset ?? 0;
-  const q = (params.q ?? "").trim();
-
+function buildFilters(params: SearchParams): { filterSql: string; args: unknown[] } {
   const filters: string[] = [];
   const args: unknown[] = [];
 
@@ -96,6 +87,21 @@ export function searchSources(params: SearchParams): { hits: SearchHit[]; total:
   }
 
   const filterSql = filters.length ? `AND ${filters.join(" AND ")}` : "";
+  return { filterSql, args };
+}
+
+/**
+ * Korean keyword search. FTS5's trigram tokenizer gives substring matching,
+ * which is what makes "북마크" find "북마크를". Queries shorter than three
+ * characters cannot use it and fall back to a scan.
+ */
+export function searchSources(params: SearchParams): { hits: SearchHit[]; total: number } {
+  const conn = db();
+  const limit = Math.min(params.limit ?? 30, 100);
+  const offset = params.offset ?? 0;
+  const q = (params.q ?? "").trim();
+
+  const { filterSql, args } = buildFilters(params);
   const sortSql =
     params.sort === "posted"
       ? "s.posted_at DESC"
@@ -162,6 +168,45 @@ export function searchSources(params: SearchParams): { hits: SearchHit[]; total:
   ).n;
 
   return { hits: rows.map((r) => hydrate(r, q)), total };
+}
+
+/** Cosine floor for a semantic hit; unrelated pairs scored 0.62-0.67 and related ones 0.71+ in a 20-post trial. */
+const SEMANTIC_MIN = 0.7;
+const SEMANTIC_LIMIT = 30;
+const KEYWORD_LIMIT = 200;
+
+/**
+ * Keyword search fused with embedding similarity (reciprocal rank fusion), so a Korean query also
+ * finds posts that never contain the word. Without a query, with the sidecar off, or when it is
+ * unreachable this is exactly `searchSources`. Filters apply to the fused set.
+ */
+export async function searchHybrid(params: SearchParams): Promise<{ hits: SearchHit[]; total: number }> {
+  const q = (params.q ?? "").trim();
+  if (!q || !embedderEnabled) return searchSources(params);
+  const semantic = await semanticIds(q, SEMANTIC_MIN, SEMANTIC_LIMIT);
+  if (!semantic.length) return searchSources(params);
+
+  const keyword = searchSources({ ...params, limit: KEYWORD_LIMIT, offset: 0, sort: "relevance" }).hits.map((h) => h.id);
+  const fused = rrf([keyword, semantic]);
+
+  // Semantic-only ids bypassed the SQL filters, so run the whole fused set through them.
+  const { filterSql, args } = buildFilters(params);
+  const conn = db();
+  const rows = conn
+    .prepare(`SELECT s.* FROM source s WHERE s.id IN (${fused.map(() => "?").join(",")}) ${filterSql}`)
+    .all(...fused, ...args) as SourceRow[];
+  const order = new Map(fused.map((id, i) => [id, i]));
+  const byTime = (r: SourceRow) => (params.sort === "posted" ? r.posted_at : r.first_seen_at) ?? "";
+  rows.sort(
+    params.sort === "recent" || params.sort === "posted"
+      ? (a, b) => byTime(b).localeCompare(byTime(a))
+      : (a, b) => order.get(a.id)! - order.get(b.id)!,
+  );
+
+  const offset = params.offset ?? 0;
+  const limit = Math.min(params.limit ?? 30, 100);
+  const hits = rows.slice(offset, offset + limit).map((r) => hydrate(r, q));
+  return { hits, total: rows.length };
 }
 
 function hydrate(row: SourceRow, q: string): SearchHit {

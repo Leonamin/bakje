@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { searchSources } from "@/lib/search";
+import { searchHybrid } from "@/lib/search";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -7,7 +7,7 @@ export const dynamic = "force-dynamic";
 export async function GET(req: Request) {
   const url = new URL(req.url);
   const p = url.searchParams;
-  const result = searchSources({
+  const result = await searchHybrid({
     q: p.get("q") ?? undefined,
     platform: p.get("platform") ?? undefined,
     author: p.get("author") ?? undefined,

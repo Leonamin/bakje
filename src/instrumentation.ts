@@ -3,5 +3,7 @@ export async function register() {
   if (process.env.NEXT_RUNTIME === "nodejs") {
     const { startQueue } = await import("./lib/queue");
     startQueue();
+    const { startEmbedSweep } = await import("./lib/embed");
+    startEmbedSweep();
   }
 }
