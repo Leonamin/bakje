@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getSource } from "@/lib/search";
+import { rebuildSearch } from "@/lib/pipeline";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -20,6 +21,7 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
 
   if (typeof body?.note === "string") {
     conn.prepare("UPDATE source SET note = ? WHERE id = ?").run(body.note.slice(0, 4000), sourceId);
+    rebuildSearch(sourceId); // reindexes FTS and marks the embedding stale
   }
 
   if (Array.isArray(body?.tags)) {

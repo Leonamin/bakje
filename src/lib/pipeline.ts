@@ -39,7 +39,7 @@ function contentHash(parsed: ParsedPost): string {
   return crypto.createHash("sha256").update(payload).digest("hex").slice(0, 32);
 }
 
-function rebuildSearch(sourceId: number): void {
+export function rebuildSearch(sourceId: number): void {
   const conn = db();
   const source = conn.prepare("SELECT * FROM source WHERE id = ?").get(sourceId) as any;
   if (!source) return;
@@ -61,7 +61,8 @@ function rebuildSearch(sourceId: number): void {
     .join("\n\n");
   // The Korean title is indexed for recall only; the page shows it through the translation toggle.
   const title = [source.title, tr?.title_ko].filter(Boolean).join(" ");
-  const summary = tr?.summary_ko ?? "";
+  // ponytail: the note rides in the summary column to avoid an FTS schema migration; split it out if the two need separate ranking.
+  const summary = [tr?.summary_ko, source.note].filter(Boolean).join("\n\n");
   const author = [source.author_handle, source.author_name].filter(Boolean).join(" ");
 
   conn
