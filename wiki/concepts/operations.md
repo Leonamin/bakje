@@ -51,6 +51,16 @@ better-sqlite3는 네이티브 바인딩이라 이미지 빌드 시 `python3 mak
 
 같은 호스트의 다른 serve 항목(443, 8443)은 다른 서비스 것이므로 포트를 바꿀 때 건드리지 않는다. 확인은 `tailscale serve status`.
 
+## MCP 엔드포인트 (2026-10-26)
+
+`POST /mcp`(Streamable HTTP, 상태 없음)로 검색을 MCP 도구로 연다. 도구는 `search_archive`·`get_post`·`list_tags`. 숨긴 글은 `get_post`에서도 "not found"다.
+
+- 주소: 기존 tailnet 주소의 `/mcp`, 즉 `https://<기기이름>.<tailnet>.ts.net:8888/mcp`. `tailscale serve`는 바꾸지 않았다. 8888이 이미 UI 전체를 같은 tailnet에 열고 있어 `/mcp`만 따로 열어도 보안 이득이 없다.
+- 인증: `/etc/bakje/bakje.env`의 `MCP_TOKEN`과 `Authorization: Bearer` 값이 같아야 한다. 변수가 없으면 엔드포인트가 꺼진다(401). 값을 바꾸면 컨테이너를 다시 만들어야 한다.
+- 클라이언트 등록: `claude mcp add --transport http bakje <주소> --header "Authorization: Bearer <토큰>"`
+- 클라우드 세션(claude.ai/code 웹)은 tailnet에 못 들어가므로 쓸 수 없다. tailnet 기기의 Claude Code·Desktop에서 쓴다.
+- 코드: `src/app/mcp/route.ts`. 검색은 `searchHybrid`를 그대로 쓴다.
+
 ## 최초 준비
 
 sudo가 있으면 `sudo ARCHIVE_UID=$(id -u) ./scripts/prepare-host.sh`.
