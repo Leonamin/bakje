@@ -16,6 +16,7 @@
     "mock-llm": "node scripts/mock-llm.mjs"
   },
   "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.32.2",
     "better-sqlite3": "^13.0.3",
     "lucide-react": "^0.468.0",
     "next": "15.5.28",
