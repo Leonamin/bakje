@@ -3,10 +3,11 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { AlertCircle, ChevronDown, ChevronUp, ExternalLink, Languages, RotateCw, Settings } from "lucide-react";
+import { AlertCircle, Check, ChevronDown, ChevronUp, ExternalLink, Languages, MessageSquareText, RotateCw, Settings } from "lucide-react";
 import { Button, IconButton } from "@/components/goodcase/basic/button";
 import { Spinner } from "@/components/goodcase/basic/spinner";
 import type { MediaRow, PartRow } from "@/lib/types";
+import { buildAskPrompt } from "@/lib/ask-prompt";
 import { MediaGallery } from "./media-gallery";
 
 /** Parts longer than this start folded. The main post never folds. */
@@ -120,6 +121,69 @@ function TranslationControl({
   );
 }
 
+const SUMMARY_KEY = "bakje:summary-open";
+
+/** Summary shown whenever it exists. The folded state is shared by every post. */
+function SummaryCard({ text }: { text: string }) {
+  const [open, setOpen] = useState(true);
+
+  useEffect(() => {
+    try {
+      if (localStorage.getItem(SUMMARY_KEY) === "0") setOpen(false);
+    } catch {
+      // Storage can be blocked; stay open.
+    }
+  }, []);
+
+  function toggle() {
+    const next = !open;
+    setOpen(next);
+    try {
+      localStorage.setItem(SUMMARY_KEY, next ? "1" : "0");
+    } catch {
+      // Not persisted; still works for this visit.
+    }
+  }
+
+  return (
+    <section className="mb-6 rounded-2xl bg-[var(--surface)] px-4">
+      <h2 className="m-0">
+        <button type="button" onClick={toggle} aria-expanded={open} className="press label flex h-11 w-full items-center justify-between">
+          요약
+          {open ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+        </button>
+      </h2>
+      {open ? <p className="whitespace-pre-wrap pb-4 text-[14px] leading-relaxed text-[var(--ink)]">{text}</p> : null}
+    </section>
+  );
+}
+
+/** Copies a ready-made prompt so the post can be pasted into ChatGPT, Claude, etc. */
+function AskButton({ getPrompt }: { getPrompt: () => string }) {
+  const [copied, setCopied] = useState(false);
+
+  async function copy() {
+    try {
+      await navigator.clipboard.writeText(getPrompt());
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // Clipboard refused (non-secure context); nothing to fall back to.
+    }
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={copy}
+      className="press inline-flex h-11 items-center gap-1.5 text-[14px] font-semibold text-[var(--accent-strong)]"
+    >
+      {copied ? <Check size={16} /> : <MessageSquareText size={16} />}
+      {copied ? "복사됨 — AI에 붙여넣기" : "AI에게 질문"}
+    </button>
+  );
+}
+
 export function ReadingBody({
   sourceId,
   title,
@@ -128,8 +192,13 @@ export function ReadingBody({
   parts,
   media,
   actions,
+  url,
+  author,
 }: {
   sourceId: number;
+  /** Canonical URL and author, only used to build the "ask AI" prompt. */
+  url: string;
+  author: string | null;
   title: string | null;
   translation: { title_ko: string | null; summary_ko: string | null } | null;
   /** The post is not Korean, so offering a translation makes sense. */
@@ -179,23 +248,32 @@ export function ReadingBody({
         <h1 className="mb-1 text-[20px] font-bold leading-snug tracking-tight md:text-[24px]">{shownTitle}</h1>
       ) : null}
 
-      {hasTranslation || translatable ? (
-        <div className="mb-4">
+      <div className="mb-4 flex flex-wrap items-center gap-x-5">
+        {hasTranslation || translatable ? (
           <TranslationControl
             sourceId={sourceId}
             hasTranslation={hasTranslation}
             showOriginal={showOriginal}
             onShowOriginal={setShowOriginal}
           />
-        </div>
-      ) : null}
+        ) : null}
+        <AskButton
+          getPrompt={() =>
+            buildAskPrompt({
+              url,
+              title: shownTitle,
+              author,
+              summary: translation?.summary_ko ?? null,
+              parts: parts.map((part, i) => ({
+                label: labels[i],
+                text: showOriginal || !part.text_ko ? part.text_original : part.text_ko,
+              })),
+            })
+          }
+        />
+      </div>
 
-      {translated && translation?.summary_ko ? (
-        <section className="mb-6 rounded-2xl bg-[var(--surface)] p-4">
-          <h2 className="label mb-2">요약</h2>
-          <p className="whitespace-pre-wrap text-[14px] leading-relaxed text-[var(--ink)]">{translation.summary_ko}</p>
-        </section>
-      ) : null}
+      {translation?.summary_ko ? <SummaryCard text={translation.summary_ko} /> : null}
 
       {showIndex ? (
         <nav

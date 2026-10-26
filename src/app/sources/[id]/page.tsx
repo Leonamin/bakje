@@ -111,6 +111,8 @@ export default async function SourcePage({ params }: { params: Promise<{ id: str
           <div className="min-w-0">
             <ReadingBody
               sourceId={source.id}
+              url={source.canonical_url}
+              author={source.author_name ?? source.author_handle}
               title={source.title}
               translation={translation}
               translatable={needsTranslation(source.lang, parts.map((p) => p.text_original).join("\n"))}
