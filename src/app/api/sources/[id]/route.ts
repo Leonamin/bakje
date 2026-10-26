@@ -22,12 +22,6 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
     conn.prepare("UPDATE source SET note = ? WHERE id = ?").run(body.note.slice(0, 4000), sourceId);
   }
 
-  if (typeof body?.hidden === "boolean") {
-    conn
-      .prepare("UPDATE source SET hidden_at = ? WHERE id = ?")
-      .run(body.hidden ? new Date().toISOString() : null, sourceId);
-  }
-
   if (Array.isArray(body?.tags)) {
     const names = (body.tags as unknown[])
       .map((t) => String(t).trim().slice(0, 40))

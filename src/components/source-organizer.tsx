@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Eye, EyeOff, RefreshCw, Tag, X } from "lucide-react";
+import { setSourceHidden } from "@/app/actions";
 import { Drawer } from "@/components/goodcase/overlays/dialog";
 import { Button } from "@/components/goodcase/basic/button";
 import { useToast } from "@/components/goodcase/overlays/toast";
@@ -79,25 +80,20 @@ export function SourceOrganizer({
   }
 
   async function setHidden(next: boolean) {
-    const res = await fetch(`/api/sources/${sourceId}`, {
-      method: "PATCH",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ hidden: next }),
-    });
-    if (!res.ok) {
+    try {
+      await setSourceHidden(sourceId, next);
+    } catch {
       notify({ title: "처리하지 못했습니다", tone: "error" });
       return;
     }
     if (next) {
       notify({ title: "글을 숨겼습니다", action: { label: "되돌리기", onClick: () => setHidden(false) } });
       setOpen(false);
-      // refresh() drops the router cache so the list we return to is refetched; back() keeps its filters and scroll.
-      router.refresh();
+      // The action revalidated the router cache, so the list we go back to is refetched with its filters and scroll.
       if (window.history.length > 1) router.back();
       else router.push("/");
     } else {
       notify({ title: "숨김을 해제했습니다", tone: "success" });
-      router.refresh();
     }
   }
 
