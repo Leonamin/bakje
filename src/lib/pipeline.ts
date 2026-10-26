@@ -6,12 +6,12 @@ import { parseUrl, type Canonical } from "./canonical";
 import { resolveRedditShare, fetchReddit, parseReddit } from "./adapters/reddit";
 import { fetchThreads, parseThreads, resolveThreadsShare } from "./adapters/threads";
 import { X_AUTH_MESSAGE, fetchXLoggedIn, xCookies } from "./x-auth";
-import { articleTweetIds, extractArticle, fetchX, fetchXSyndication, isAgeRestricted, parseX, parseXSyndication } from "./adapters/x";
+import { articleTweetIds, extractArticle, extractArticleMedia, fetchX, fetchXSyndication, isAgeRestricted, parseX, parseXSyndication } from "./adapters/x";
 import { archiveMedia } from "./media";
 import { detectLang } from "./lang";
 import { markStale } from "./embed";
 import { LLM_PROMPT_VERSION, llmConfig, translateAndSummarize } from "./llm";
-import type { ParsedPost, Platform, SourceStatus } from "./types";
+import type { MediaRef, ParsedPost, Platform, SourceStatus } from "./types";
 
 const PARSER_VERSION = 1;
 
@@ -283,13 +283,16 @@ export async function runFetch(
     }
     // Article 본문은 그 트윗 자신의 페이지에만 있어서, 인용된 Article은 한 번 더 가져온다.
     const articles = new Map<string, string>();
+    const articleMedia = new Map<string, MediaRef[]>();
     if (raw.payload) {
       for (const id of articleTweetIds(raw.payload, nativeId)) {
-        const text = extractArticle(id === nativeId ? raw.html : (await fetchX(id)).html);
+        const html = id === nativeId ? raw.html : (await fetchX(id)).html;
+        const text = extractArticle(html);
         if (text) articles.set(id, text);
+        articleMedia.set(id, extractArticleMedia(html));
       }
     }
-    let parsed = raw.payload ? parseX(raw.payload, nativeId, articles) : null;
+    let parsed = raw.payload ? parseX(raw.payload, nativeId, articles, articleMedia) : null;
     let partial = false;
     if (!parsed && raw.payload && isAgeRestricted(raw.payload)) {
       const cookies = xCookies();

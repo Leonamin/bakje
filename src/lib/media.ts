@@ -331,7 +331,8 @@ async function download(url: string, kind: MediaRef["kind"]): Promise<StoredBlob
   let res: Response;
   try {
     res = await fetch(url, {
-      headers: { "user-agent": UA, accept: "*/*", referer: "https://www.google.com/" },
+      // video.twimg.com은 x.com이 아닌 referer에 403을 준다.
+      headers: { "user-agent": UA, accept: "*/*", referer: /\.twimg\.com\//.test(url) ? "https://x.com/" : "https://www.google.com/" },
       redirect: "follow",
     });
   } catch {

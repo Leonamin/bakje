@@ -22,6 +22,11 @@ function readJsString(src: string, quoteIdx: number): { body: string; end: numbe
   return null;
 }
 
+/** X의 JS 직렬화는 `<`를 `\x3C`처럼 내보내는데 JSON에는 \x 이스케이프가 없다. */
+function decodeLiteral(body: string): string {
+  return JSON.parse(`"${body.replace(/\\(?:x([0-9A-Fa-f]{2})|[\s\S])/g, (m, h) => (h ? `\\u00${h}` : m))}"`);
+}
+
 /**
  * X's logged-out status page server-renders the full TweetDetail GraphQL
  * response inside a streamed script. Pulling that out gives us the focal post,
@@ -38,9 +43,7 @@ export function extractTweetDetail(html: string): any | null {
     const lit = readJsString(html, at + 6);
     if (!lit) continue;
     try {
-      // X의 JS 직렬화는 `<`를 `\x3C`처럼 내보내는데 JSON에는 \x 이스케이프가 없다.
-      const body = lit.body.replace(/\\(?:x([0-9A-Fa-f]{2})|[\s\S])/g, (m, h) => (h ? `\\u00${h}` : m));
-      const text = JSON.parse(`"${body}"`);
+      const text = decodeLiteral(lit.body);
       if (!text.trimStart().startsWith("{")) continue;
       const parsed = JSON.parse(text);
       if (!parsed?.data) continue;
@@ -87,6 +90,8 @@ function pickText(node: any): string {
   return "";
 }
 
+const MAX_VIDEO_BITRATE = 2_500_000;
+
 function bestVideoUrl(media: any): string | null {
   const variants: any[] =
     media?.video_info?.variants ??
@@ -96,8 +101,11 @@ function bestVideoUrl(media: any): string | null {
     [];
   const mp4 = variants
     .filter((v) => typeof v?.url === "string" && (v.content_type === "video/mp4" || /\.mp4($|\?)/.test(v.url)))
-    .sort((a, b) => (b.bitrate ?? 0) - (a.bitrate ?? 0));
-  return mp4[0]?.url ?? null;
+    .map((v) => ({ url: v.url as string, rate: (v.bitrate ?? v.bit_rate ?? 0) as number }))
+    .sort((a, b) => b.rate - a.rate);
+  // 30MB 한도 때문에 Article 영상의 10Mbps 변형은 거의 항상 too_large가 된다.
+  // ponytail: 길이를 모르므로 비트레이트 상한으로 대신한다. 길이 기반 선택은 필요할 때.
+  return (mp4.find((v) => v.rate <= MAX_VIDEO_BITRATE) ?? mp4[mp4.length - 1])?.url ?? null;
 }
 
 function mediaOf(node: any): MediaRef[] {
@@ -263,20 +271,59 @@ export function extractArticle(html: string): string | null {
     .join("\n\n");
 }
 
+/** Article 안의 이미지·영상. 본문과 달리 `ArticleByTweetId` 응답에만 실려 있다. */
+export function extractArticleMedia(html: string): MediaRef[] {
+  const at = html.indexOf('name:"ArticleByTweetId"');
+  const v = at < 0 ? -1 : html.indexOf('value:"', at);
+  const lit = v < 0 ? null : readJsString(html, v + 6);
+  if (!lit) return [];
+  let list: any[] = [];
+  try {
+    list = JSON.parse(decodeLiteral(lit.body))?.data?.tweet_result_by_rest_id?.result?.article?.article_results?.result?.media_entities ?? [];
+  } catch {
+    return [];
+  }
+  const out: MediaRef[] = [];
+  list.forEach((m, i) => {
+    const info = m?.media_info;
+    if (info?.__typename === "ApiImage" && info.original_img_url) {
+      out.push({ kind: "image", remoteUrl: info.original_img_url, width: info.original_img_width ?? null, height: info.original_img_height ?? null, ordinal: i });
+    } else if (info?.variants) {
+      const url = bestVideoUrl(info);
+      if (url) {
+        out.push({
+          kind: info.__typename === "ApiGif" ? "gif" : "video",
+          remoteUrl: url,
+          width: info.preview_image?.original_img_width ?? null,
+          height: info.preview_image?.original_img_height ?? null,
+          ordinal: i,
+        });
+      }
+    }
+  });
+  return out;
+}
+
 /** 본문을 따로 가져와야 하는 Article 트윗 id (원글 자신, 인용 글). */
 export function articleTweetIds(payload: any, nativeId: string): string[] {
   const focal = collectNodes(payload).get(nativeId);
   return [focal, focal?.quoted].filter((n) => n?.articleTitle).map((n) => n!.id);
 }
 
-function partFrom(node: TweetNode, kind: ParsedPart["kind"], canonicalUrl: string, articles?: Map<string, string>): ParsedPart {
+function partFrom(
+  node: TweetNode,
+  kind: ParsedPart["kind"],
+  canonicalUrl: string,
+  articles?: Map<string, string>,
+  articleMedia?: Map<string, MediaRef[]>,
+): ParsedPart {
   const article = articles?.get(node.id);
   return {
     kind,
     text: article ? `# ${node.articleTitle}\n\n${article}` : cleanText(node.text, node),
     sourceUrl: `https://x.com/${node.author ?? "i"}/status/${node.id}`,
     postedAt: node.createdAt,
-    media: node.media,
+    media: [...node.media, ...(articleMedia?.get(node.id) ?? [])],
   };
 }
 
@@ -285,7 +332,12 @@ export function isAgeRestricted(payload: any): boolean {
   return JSON.stringify(payload ?? null).includes('"BlurredMediaTombstone"');
 }
 
-export function parseX(payload: any, nativeId: string, articles?: Map<string, string>): ParsedPost | null {
+export function parseX(
+  payload: any,
+  nativeId: string,
+  articles?: Map<string, string>,
+  articleMedia?: Map<string, MediaRef[]>,
+): ParsedPost | null {
   const nodes = collectNodes(payload);
   const focal = nodes.get(nativeId);
   if (!focal) return null;
@@ -298,7 +350,7 @@ export function parseX(payload: any, nativeId: string, articles?: Map<string, st
     if (parent && parent.author !== focal.author) parts.push(partFrom(parent, "parent_context", focal.id));
   }
 
-  parts.push(partFrom(focal, "main", focal.id, articles));
+  parts.push(partFrom(focal, "main", focal.id, articles, articleMedia));
 
   // Continuation chain: only posts by the same author answering their own post.
   const chain: TweetNode[] = [];
@@ -316,7 +368,7 @@ export function parseX(payload: any, nativeId: string, articles?: Map<string, st
   chain.sort((a, b) => (a.createdAt ?? "").localeCompare(b.createdAt ?? ""));
   for (const n of chain) parts.push(partFrom(n, "continuation", n.id));
 
-  if (focal.quoted) parts.push(partFrom(focal.quoted, "quoted", focal.id, articles));
+  if (focal.quoted) parts.push(partFrom(focal.quoted, "quoted", focal.id, articles, articleMedia));
 
   return {
     platform: "x",
