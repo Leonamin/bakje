@@ -38,7 +38,9 @@ export function extractTweetDetail(html: string): any | null {
     const lit = readJsString(html, at + 6);
     if (!lit) continue;
     try {
-      const text = JSON.parse(`"${lit.body}"`);
+      // X의 JS 직렬화는 `<`를 `\x3C`처럼 내보내는데 JSON에는 \x 이스케이프가 없다.
+      const body = lit.body.replace(/\\(?:x([0-9A-Fa-f]{2})|[\s\S])/g, (m, h) => (h ? `\\u00${h}` : m));
+      const text = JSON.parse(`"${body}"`);
       if (!text.trimStart().startsWith("{")) continue;
       const parsed = JSON.parse(text);
       if (!parsed?.data) continue;
