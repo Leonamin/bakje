@@ -208,15 +208,6 @@ a {
   color: inherit;
 }
 
-input,
-textarea,
-select {
-  font-family: inherit;
-  /* global.css (unlayered) resets `font: inherit`, which beats Tailwind's layered text-[16px] and
-     left fields at the body's 14px. Below 16px iOS zooms the page on focus. */
-  font-size: 16px;
-}
-
 /* Tailwind preflight is loaded first; restore what Goodcase relies on. */
 button {
   cursor: pointer;

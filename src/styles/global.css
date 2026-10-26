@@ -16,6 +16,12 @@ textarea,
 select {
   font: inherit;
 }
+input,
+textarea,
+select {
+  /* Below 16px iOS zooms the page on focus. */
+  font-size: 16px;
+}
 button,
 a,
 input,
