@@ -91,7 +91,10 @@ export function SourceOrganizer({
     if (next) {
       notify({ title: "글을 숨겼습니다", action: { label: "되돌리기", onClick: () => setHidden(false) } });
       setOpen(false);
-      router.push("/");
+      // refresh() drops the router cache so the list we return to is refetched; back() keeps its filters and scroll.
+      router.refresh();
+      if (window.history.length > 1) router.back();
+      else router.push("/");
     } else {
       notify({ title: "숨김을 해제했습니다", tone: "success" });
       router.refresh();
