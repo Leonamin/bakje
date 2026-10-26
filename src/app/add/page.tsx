@@ -116,6 +116,17 @@ export default function AddPage() {
     }
   }
 
+  async function retry(job: Job) {
+    setJobs((list) => list.map((j) => (j.id === job.id ? { ...j, state: "pending", message: "다시 시도 대기", next_attempt_at: null } : j)));
+    const res = await fetch(`/api/jobs/${job.id}`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ retry: true }),
+    }).catch(() => null);
+    if (!res?.ok) notify({ title: "다시 시도하지 못했습니다", tone: "error" });
+    await poll();
+  }
+
   async function answerDuplicate(job: Job, refetch: boolean) {
     // Optimistic: the row leaves the "duplicate" state at once so the buttons cannot be pressed twice.
     setJobs((list) => list.map((j) => (j.id === job.id ? { ...j, state: refetch ? "running" : "done", message: refetch ? "다시 가져오는 중" : "다시 가져오지 않았습니다." } : j)));
@@ -236,6 +247,13 @@ export default function AddPage() {
                   ) : (
                     <div className="flex min-h-16 items-center gap-3 py-2">{row}</div>
                   )}
+                  {job.state === "failed" ? (
+                    <div className="pb-3 pl-8">
+                      <Button variant="secondary" className="w-full" onClick={() => retry(job)}>
+                        다시 시도
+                      </Button>
+                    </div>
+                  ) : null}
                   {asking ? (
                     <div className="flex gap-2 pb-3 pl-8">
                       <Button className="flex-1" onClick={() => answerDuplicate(job, true)}>

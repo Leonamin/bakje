@@ -163,6 +163,16 @@ export async function recheckSource(sourceId: number): Promise<{ ok: boolean; me
   return { ok: true, message: "최신 상태로 갱신했습니다." };
 }
 
+/** Puts a failed job back in the queue with a fresh attempt count (the 5 tries are used up). */
+export function retryJob(jobId: number): { ok: boolean; message: string } {
+  const res = db()
+    .prepare("UPDATE job SET state='pending', attempts=0, message='다시 시도 대기', next_attempt_at=NULL, updated_at=? WHERE id=? AND state='failed'")
+    .run(new Date().toISOString(), jobId);
+  if (res.changes === 0) return { ok: false, message: "다시 시도할 수 있는 실패 작업이 아닙니다." };
+  enqueueJob(jobId);
+  return { ok: true, message: "다시 시도합니다." };
+}
+
 /** Answer to a "duplicate" job: re-fetch the saved post (approve) or leave it as is (decline). */
 export async function resolveDuplicate(jobId: number, refetch: boolean): Promise<{ ok: boolean; message: string }> {
   const job = db().prepare("SELECT * FROM job WHERE id = ?").get(jobId) as IngestJob | undefined;
