@@ -8,6 +8,7 @@ okf_version: "0.1"
 
 # Logs
 
+- [2026-10-26-roadmap-cleanup.md](./2026-10-26-roadmap-cleanup.md) — 완료·보류 항목 반영, 의미 검색 검토 시작
 - [2026-10-25-css-cascade-and-thumbnails.md](./2026-10-25-css-cascade-and-thumbnails.md) — 입력창 14px 상속 원인(레이어 밖 CSS), 카드 썸네일 webp, 뒤로가기 깜빡임
 - [2026-10-25-duplicate-refetch-and-pnpm.md](./2026-10-25-duplicate-refetch-and-pnpm.md) — 중복 링크 재수집 승인·거부, npm에서 pnpm으로 전환
 - [2026-10-25-refresh-button-and-ios27-help.md](./2026-10-25-refresh-button-and-ios27-help.md) — 새로고침 버튼 추가, iOS 27 실기기 캡처로 단축어 도움말 재작성
