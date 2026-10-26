@@ -5,6 +5,7 @@ import { RAW_DIR, db } from "./db";
 import { parseUrl, type Canonical } from "./canonical";
 import { resolveRedditShare, fetchReddit, parseReddit } from "./adapters/reddit";
 import { fetchThreads, parseThreads, resolveThreadsShare } from "./adapters/threads";
+import { X_AUTH_MESSAGE, fetchXLoggedIn, xCookies } from "./x-auth";
 import { articleTweetIds, extractArticle, fetchX, fetchXSyndication, isAgeRestricted, parseX, parseXSyndication } from "./adapters/x";
 import { archiveMedia } from "./media";
 import { detectLang } from "./lang";
@@ -291,7 +292,17 @@ export async function runFetch(
     let parsed = raw.payload ? parseX(raw.payload, nativeId, articles) : null;
     let partial = false;
     if (!parsed && raw.payload && isAgeRestricted(raw.payload)) {
-      return { parsed: null, html: raw.html, error: "연령 제한 게시글이라 로그인 없이는 가져올 수 없습니다." };
+      const cookies = xCookies();
+      if (!cookies) {
+        return { parsed: null, html: raw.html, error: "연령 제한 게시글입니다. 설정에서 X 로그인 쿠키를 등록하면 가져올 수 있습니다." };
+      }
+      const login = await fetchXLoggedIn(nativeId, cookies);
+      // 로그인 경로는 Article 본문을 따로 가져오지 않는다. ponytail: 필요해지면 articleTweetIds로 추가
+      parsed = login.payload ? parseX(login.payload, nativeId) : null;
+      if (!parsed) {
+        return { parsed: null, html: login.html, error: X_AUTH_MESSAGE[login.failure ?? "unknown"] };
+      }
+      return { parsed, html: login.html };
     }
     if (!parsed) {
       const synd = await fetchXSyndication(nativeId);
