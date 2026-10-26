@@ -221,3 +221,8 @@ body {
   height: 100%;
   object-fit: cover;
 }
+
+/* 영상은 세로형도 잘리지 않게 전체를 보여준다. 남는 곳은 타일의 검은 배경이다. */
+.media-tile video {
+  object-fit: contain;
+}
