@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { Logo } from "@/components/logo";
 import { LibraryBig, Plus, Search, Settings } from "lucide-react";
 
 const ITEMS = [
@@ -15,7 +16,8 @@ export function TopBar() {
   return (
     <header className="sticky top-0 z-40 hidden border-b border-[var(--line)] bg-[color-mix(in_srgb,var(--accent-bg)_92%,transparent)] backdrop-blur-md md:block">
       <div className="mx-auto flex h-14 max-w-6xl items-center gap-6 px-6">
-        <Link href="/" className="text-[16px] font-semibold tracking-tight">
+        <Link href="/" className="flex items-center gap-2 text-[16px] font-semibold tracking-tight">
+          <Logo size={24} />
           박제
         </Link>
         <nav className="ml-auto flex items-center gap-1">

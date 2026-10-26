@@ -2,10 +2,11 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { ChevronRight, CircleAlert, CircleCheck, CopyCheck, ClipboardPaste, Clock3, CloudOff, Keyboard, LoaderCircle, Share } from "lucide-react";
+import { ChevronRight, CircleAlert, CircleCheck, CopyCheck, ClipboardPaste, Clock3, CloudOff, Keyboard, Share } from "lucide-react";
 import { Button } from "@/components/goodcase/basic/button";
 import { Drawer } from "@/components/goodcase/overlays/dialog";
 import { useToast } from "@/components/goodcase/overlays/toast";
+import { Logo } from "@/components/logo";
 import { RefreshButton } from "@/components/refresh-button";
 import { addToOutbox, isNetworkError, OUTBOX_EVENT, readOutbox, type OutboxItem } from "@/lib/outbox";
 
@@ -179,7 +180,7 @@ export default function AddPage() {
           disabled={submitting}
           className="flex h-14 flex-1 items-center justify-center gap-2 rounded-2xl bg-[var(--accent)] text-[16px] font-semibold text-[var(--gc-on-accent)] disabled:opacity-60"
         >
-          {submitting ? <LoaderCircle size={22} className="animate-spin" /> : <ClipboardPaste size={22} strokeWidth={2} />}
+          {submitting ? <Logo size={24} className="animate-spin [animation-duration:1.6s]" /> : <ClipboardPaste size={22} strokeWidth={2} />}
           붙여넣고 저장
         </button>
       </div>
@@ -215,7 +216,7 @@ export default function AddPage() {
                   {waiting ? (
                     <Clock3 size={20} className="shrink-0 text-[var(--warn)]" />
                   ) : busy ? (
-                    <LoaderCircle size={20} className="shrink-0 animate-spin text-[var(--muted)]" />
+                    <Logo size={22} className="shrink-0 animate-spin text-[var(--muted)] [animation-duration:1.6s]" />
                   ) : asking ? (
                     <CopyCheck size={20} className="shrink-0 text-[var(--warn)]" />
                   ) : job.state === "failed" ? (
