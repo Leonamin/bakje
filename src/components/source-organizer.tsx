@@ -94,6 +94,8 @@ export function SourceOrganizer({
       else router.push("/");
     } else {
       notify({ title: "숨김을 해제했습니다", tone: "success" });
+      // Undo runs from a toast after this page is gone, so refresh whatever page is showing now.
+      router.refresh();
     }
   }
 
