@@ -5,7 +5,7 @@ import { RAW_DIR, db } from "./db";
 import { parseUrl, type Canonical } from "./canonical";
 import { resolveRedditShare, fetchReddit, parseReddit } from "./adapters/reddit";
 import { fetchThreads, parseThreads, resolveThreadsShare } from "./adapters/threads";
-import { articleTweetIds, extractArticle, fetchX, fetchXSyndication, parseX, parseXSyndication } from "./adapters/x";
+import { articleTweetIds, extractArticle, fetchX, fetchXSyndication, isAgeRestricted, parseX, parseXSyndication } from "./adapters/x";
 import { archiveMedia } from "./media";
 import { detectLang } from "./lang";
 import { markStale } from "./embed";
@@ -290,6 +290,9 @@ export async function runFetch(
     }
     let parsed = raw.payload ? parseX(raw.payload, nativeId, articles) : null;
     let partial = false;
+    if (!parsed && raw.payload && isAgeRestricted(raw.payload)) {
+      return { parsed: null, html: raw.html, error: "연령 제한 게시글이라 로그인 없이는 가져올 수 없습니다." };
+    }
     if (!parsed) {
       const synd = await fetchXSyndication(nativeId);
       parsed = synd ? parseXSyndication(synd, nativeId) : null;

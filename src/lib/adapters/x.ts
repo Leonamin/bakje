@@ -280,6 +280,11 @@ function partFrom(node: TweetNode, kind: ParsedPart["kind"], canonicalUrl: strin
   };
 }
 
+/** 로그인 없이는 볼 수 없는 연령 제한 게시글이면 true. X는 본문 대신 BlurredMediaTombstone을 준다. */
+export function isAgeRestricted(payload: any): boolean {
+  return JSON.stringify(payload ?? null).includes('"BlurredMediaTombstone"');
+}
+
 export function parseX(payload: any, nativeId: string, articles?: Map<string, string>): ParsedPost | null {
   const nodes = collectNodes(payload);
   const focal = nodes.get(nativeId);
