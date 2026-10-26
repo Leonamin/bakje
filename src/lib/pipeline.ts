@@ -302,7 +302,8 @@ export async function runFetch(
       if (!parsed) {
         return { parsed: null, html: login.html, error: X_AUTH_MESSAGE[login.failure ?? "unknown"] };
       }
-      return { parsed, html: login.html };
+      // 로그인 경로의 페이로드는 네트워크 응답이라 HTML에 없다. 재파싱용으로 함께 남긴다.
+      return { parsed, html: login.html, extract: login.payload };
     }
     if (!parsed) {
       const synd = await fetchXSyndication(nativeId);
