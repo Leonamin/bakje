@@ -48,16 +48,17 @@ export function LibraryToolbar({
       media: params.get("media") ?? "",
       sort: params.get("sort") ?? "",
       tag: params.get("tag") ?? "",
+      hidden: params.get("hidden") ?? "",
     }),
     [params],
   );
 
   useEffect(() => setQuery(current.q), [current.q]);
 
-  const [draft, setDraft] = useState({ media: current.media, sort: current.sort, tag: current.tag });
+  const [draft, setDraft] = useState({ media: current.media, sort: current.sort, tag: current.tag, hidden: current.hidden });
   useEffect(() => {
-    setDraft({ media: current.media, sort: current.sort, tag: current.tag });
-  }, [current.media, current.sort, current.tag]);
+    setDraft({ media: current.media, sort: current.sort, tag: current.tag, hidden: current.hidden });
+  }, [current.media, current.sort, current.tag, current.hidden]);
 
   function push(next: Partial<typeof current> & { view?: string }) {
     const sp = new URLSearchParams(params.toString());
@@ -70,7 +71,7 @@ export function LibraryToolbar({
   }
 
   const activeFilterCount =
-    (current.media ? 1 : 0) + (current.sort ? 1 : 0) + (current.tag ? 1 : 0);
+    (current.media ? 1 : 0) + (current.sort ? 1 : 0) + (current.tag ? 1 : 0) + (current.hidden ? 1 : 0);
 
   return (
     <>
@@ -141,6 +142,12 @@ export function LibraryToolbar({
         <span className={`label numeric ${isPending ? "opacity-50" : ""}`}>
           {total}건{current.q ? ` · “${current.q}”` : ""}
         </span>
+        {current.hidden ? (
+          <button type="button" className="chip !h-8 !text-[12px]" data-active="true" onClick={() => push({ hidden: "" })}>
+            숨긴 글
+            <X size={14} />
+          </button>
+        ) : null}
         {current.tag ? (
           <button type="button" className="chip !h-8 !text-[12px]" data-active="true" onClick={() => push({ tag: "" })}>
             #{current.tag}
@@ -186,8 +193,8 @@ export function LibraryToolbar({
               variant="secondary"
               className="flex-1"
               onClick={() => {
-                setDraft({ media: "", sort: "", tag: "" });
-                push({ media: "", sort: "", tag: "" });
+                setDraft({ media: "", sort: "", tag: "", hidden: "" });
+                push({ media: "", sort: "", tag: "", hidden: "" });
                 setSheetOpen(false);
               }}
             >
@@ -196,7 +203,7 @@ export function LibraryToolbar({
             <Button
               className="flex-1"
               onClick={() => {
-                push({ media: draft.media, sort: draft.sort, tag: draft.tag });
+                push({ media: draft.media, sort: draft.sort, tag: draft.tag, hidden: draft.hidden });
                 setSheetOpen(false);
               }}
             >
@@ -262,6 +269,18 @@ export function LibraryToolbar({
             <p className="label">태그가 아직 없습니다. 게시글 상세의 정리에서 추가할 수 있습니다.</p>
           )}
 
+          <fieldset>
+            <legend className="label mb-2">숨김</legend>
+            <button
+              type="button"
+              className="chip"
+              data-active={draft.hidden === "1"}
+              onClick={() => setDraft({ ...draft, hidden: draft.hidden === "1" ? "" : "1" })}
+            >
+              {draft.hidden === "1" ? <Check size={14} /> : null}
+              숨긴 글만 보기
+            </button>
+          </fieldset>
         </div>
       </Drawer>
     </>

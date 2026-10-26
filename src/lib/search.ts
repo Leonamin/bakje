@@ -10,6 +10,8 @@ export interface SearchParams {
   media?: "image" | "video" | "any";
   status?: string;
   lang?: string;
+  /** Show only hidden posts; by default hidden posts are left out everywhere. */
+  hidden?: boolean;
   sort?: "relevance" | "recent" | "posted";
   limit?: number;
   offset?: number;
@@ -60,7 +62,7 @@ function makeSnippet(text: string, q: string): string {
 }
 
 function buildFilters(params: SearchParams): { filterSql: string; args: unknown[] } {
-  const filters: string[] = [];
+  const filters: string[] = [params.hidden ? "s.hidden_at IS NOT NULL" : "s.hidden_at IS NULL"];
   const args: unknown[] = [];
 
   if (params.platform) {
@@ -90,7 +92,7 @@ function buildFilters(params: SearchParams): { filterSql: string; args: unknown[
     args.push(params.media === "image" ? "image" : "video");
   }
 
-  const filterSql = filters.length ? `AND ${filters.join(" AND ")}` : "";
+  const filterSql = `AND ${filters.join(" AND ")}`;
   return { filterSql, args };
 }
 
@@ -288,7 +290,8 @@ export function topTags(limit = 12): { name: string; count: number }[] {
   return db()
     .prepare(
       `SELECT t.name AS name, COUNT(*) AS count
-       FROM tag t JOIN source_tag st ON st.tag_id = t.id
+       FROM tag t JOIN source_tag st ON st.tag_id = t.id JOIN source s ON s.id = st.source_id
+       WHERE s.hidden_at IS NULL
        GROUP BY t.id ORDER BY count DESC, t.name ASC LIMIT ?`,
     )
     .all(limit) as { name: string; count: number }[];

@@ -32,7 +32,7 @@ export default async function SourcePage({ params }: { params: Promise<{ id: str
   const status = STATUS[source.status];
 
   const organizer = (
-    <SourceOrganizer sourceId={source.id} tags={tags} note={source.note} lastCheckedAt={source.last_checked_at} />
+    <SourceOrganizer sourceId={source.id} tags={tags} note={source.note} lastCheckedAt={source.last_checked_at} hidden={!!source.hidden_at} />
   );
   const openOriginal = (
     <a
@@ -67,6 +67,11 @@ export default async function SourcePage({ params }: { params: Promise<{ id: str
       </div>
 
       <div className="px-5 pb-12 pt-3 md:px-6 md:pt-6">
+        {source.hidden_at ? (
+          <div className="mb-5 rounded-xl border border-[var(--line)] bg-[var(--surface)] px-4 py-3 text-[14px] text-[var(--muted)]">
+            숨긴 글입니다. 정리에서 숨김을 해제할 수 있습니다.
+          </div>
+        ) : null}
         {source.status === "deleted" ? (
           <div className="mb-5 rounded-xl border border-[#4a2a24] bg-[#2c1a18] px-4 py-3 text-[14px] leading-relaxed text-[var(--danger)]">
             원문이 삭제되어 저장된 사본을 보여줍니다
@@ -145,6 +150,7 @@ export default async function SourcePage({ params }: { params: Promise<{ id: str
                   tags={tags}
                   note={source.note}
                   lastCheckedAt={source.last_checked_at}
+                  hidden={!!source.hidden_at}
                   inline
                 />
               </section>

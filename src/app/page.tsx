@@ -20,12 +20,13 @@ export default async function LibraryPage({
   const media = get("media") as "image" | "video" | "any" | undefined;
   const sort = (get("sort") as "relevance" | "recent" | "posted" | undefined) ?? undefined;
   const tag = get("tag");
+  const hidden = get("hidden") === "1";
   const view = get("view") === "list" ? "list" : "grid";
 
-  const { hits, total } = await searchHybrid({ q, platform, media, sort, tag, limit: 60 });
+  const { hits, total } = await searchHybrid({ q, platform, media, sort, tag, hidden, limit: 60 });
   const tags = topTags(10);
 
-  const isFiltered = Boolean(q || platform || media || tag || sort);
+  const isFiltered = Boolean(q || platform || media || tag || sort || hidden);
 
   return (
     <div className="mx-auto max-w-6xl px-5 pb-10 pt-2 md:px-6 md:pt-8">

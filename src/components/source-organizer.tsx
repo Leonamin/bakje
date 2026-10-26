@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { RefreshCw, Tag, X } from "lucide-react";
+import { Eye, EyeOff, RefreshCw, Tag, X } from "lucide-react";
 import { Drawer } from "@/components/goodcase/overlays/dialog";
 import { Button } from "@/components/goodcase/basic/button";
 import { useToast } from "@/components/goodcase/overlays/toast";
@@ -12,12 +12,14 @@ export function SourceOrganizer({
   tags: initialTags,
   note: initialNote,
   lastCheckedAt,
+  hidden,
   inline = false,
 }: {
   sourceId: number;
   tags: string[];
   note: string | null;
   lastCheckedAt: string | null;
+  hidden: boolean;
   inline?: boolean;
 }) {
   const router = useRouter();
@@ -73,6 +75,26 @@ export function SourceOrganizer({
       notify({ title: "재확인에 실패했습니다", tone: "error" });
     } finally {
       setChecking(false);
+    }
+  }
+
+  async function setHidden(next: boolean) {
+    const res = await fetch(`/api/sources/${sourceId}`, {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ hidden: next }),
+    });
+    if (!res.ok) {
+      notify({ title: "처리하지 못했습니다", tone: "error" });
+      return;
+    }
+    if (next) {
+      notify({ title: "글을 숨겼습니다", action: { label: "되돌리기", onClick: () => setHidden(false) } });
+      setOpen(false);
+      router.push("/");
+    } else {
+      notify({ title: "숨김을 해제했습니다", tone: "success" });
+      router.refresh();
     }
   }
 
@@ -143,6 +165,19 @@ export function SourceOrganizer({
           <span className="flex items-center gap-1.5">
             <RefreshCw size={16} />
             확인
+          </span>
+        </Button>
+      </section>
+
+      <section className="flex items-center justify-between border-t border-[var(--line)] pt-4">
+        <div>
+          <p className="text-[14px]">{hidden ? "숨긴 글" : "이 글 숨기기"}</p>
+          <p className="label">{hidden ? "목록과 검색에 다시 나타납니다." : "목록과 검색에서 빠집니다."}</p>
+        </div>
+        <Button variant="secondary" onClick={() => setHidden(!hidden)} className="shrink-0">
+          <span className="flex items-center gap-1.5">
+            {hidden ? <Eye size={16} /> : <EyeOff size={16} />}
+            {hidden ? "숨김 해제" : "숨김"}
           </span>
         </Button>
       </section>

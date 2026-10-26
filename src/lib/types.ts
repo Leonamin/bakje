@@ -74,6 +74,7 @@ export interface SourceRow {
   content_hash: string | null;
   parser_version: number;
   note: string | null;
+  hidden_at: string | null;
 }
 
 export interface PartRow {
