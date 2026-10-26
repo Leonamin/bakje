@@ -23,3 +23,4 @@ okf_version: "0.1"
 - [013-on-demand-translation-and-llm-settings.md](./013-on-demand-translation-and-llm-settings.md) — 요청형 번역과 LLM 설정 페이지
 - [014-semantic-search-embedder-sidecar.md](./014-semantic-search-embedder-sidecar.md) — 임베딩 사이드카와 키워드+벡터 하이브리드 검색
 - [015-logo-fossil-spiral.md](./015-logo-fossil-spiral.md) — 미니멀 방향, 화석 나선 로고 확정과 OpenGraph 보류
+- [016-hide-posts.md](./016-hide-posts.md) — 휴지통 대신 hidden_at 숨김, 서버 액션으로 목록 캐시 무효화

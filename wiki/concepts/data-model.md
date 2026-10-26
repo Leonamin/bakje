@@ -3,7 +3,7 @@ type: Concept
 title: "데이터 모델"
 description: "SQLite 스키마, 파일 레이아웃, 스냅샷과 파서 버전"
 tags: [sqlite, schema, storage]
-timestamp: 2026-10-25
+timestamp: 2026-10-26
 ---
 
 # 데이터 모델
@@ -24,7 +24,7 @@ data/  (운영: /var/lib/bakje)
 
 | 테이블 | 역할 |
 |---|---|
-| `source` | 게시글 1건. 플랫폼·원문 id 유니크, 상태, 지표, 언어, content_hash, parser_version |
+| `source` | 게시글 1건. 플랫폼·원문 id 유니크, 상태, 지표, 언어, content_hash, parser_version, `hidden_at`(숨김 시각, `NULL`이면 보임. → [결정 016](../decisions/016-hide-posts.md)) |
 | `part` | 본문/이어쓰기/맥락/인용 조각. `ordinal` 순서, `text_original`, `text_ko` |
 | `media` | 조각에 붙은 미디어. `status`(ok·too_large·failed)와 원격 URL 보존 |
 | `media_blob` | sha256 단위 중복 제거 인덱스 |
