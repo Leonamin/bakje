@@ -148,23 +148,32 @@ export function markStale(sourceId: number): void {
   if (embedderEnabled) setTimeout(() => void sweep(), 0);
 }
 
+export interface SemanticHit {
+  id: number;
+  score: number;
+  /** What the best-scoring vector was made from. */
+  via: "text" | "image";
+}
+
 /** Sources ordered by best text-chunk or image similarity to the query; empty when the sidecar is off or unreachable. */
-export async function semanticIds(q: string, minScore: number, limit: number): Promise<number[]> {
+export async function semanticHits(q: string, minScore: number, limit: number): Promise<SemanticHit[]> {
   if (!embedderEnabled) return [];
   try {
     const [qv] = await embed([q], "query", 5_000);
-    const best = new Map<number, number>();
+    const best = new Map<number, SemanticHit>();
     const rows = db()
-      .prepare("SELECT source_id, vec FROM embedding UNION ALL SELECT m.source_id, e.vec FROM media_embedding e JOIN media m ON m.id = e.media_id")
-      .iterate() as Iterable<{ source_id: number; vec: Buffer }>;
+      .prepare(
+        "SELECT source_id, vec, 'text' AS via FROM embedding UNION ALL SELECT m.source_id, e.vec, 'image' FROM media_embedding e JOIN media m ON m.id = e.media_id",
+      )
+      .iterate() as Iterable<{ source_id: number; vec: Buffer; via: "text" | "image" }>;
     for (const row of rows) {
       if (!row.vec.length) continue;
       const v = new Float32Array(row.vec.buffer.slice(row.vec.byteOffset, row.vec.byteOffset + row.vec.byteLength));
       let dot = 0;
       for (let i = 0; i < v.length; i++) dot += v[i] * qv[i];
-      if (dot >= minScore && dot > (best.get(row.source_id) ?? -1)) best.set(row.source_id, dot);
+      if (dot >= minScore && dot > (best.get(row.source_id)?.score ?? -1)) best.set(row.source_id, { id: row.source_id, score: dot, via: row.via });
     }
-    return [...best.entries()].sort((a, b) => b[1] - a[1]).slice(0, limit).map(([id]) => id);
+    return [...best.values()].sort((a, b) => b.score - a.score).slice(0, limit);
   } catch (err) {
     console.warn("[embed] query failed, keyword only:", err instanceof Error ? err.message : err);
     return [];

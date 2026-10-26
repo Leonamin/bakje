@@ -18,10 +18,22 @@ function Byline({ hit }: { hit: SearchHit }) {
   );
 }
 
-function Meta({ hit }: { hit: SearchHit }) {
+/** Tells a post found by meaning from one that contains the query; `debug` adds the raw similarity. */
+function MatchBadge({ hit, debug }: { hit: SearchHit; debug?: boolean }) {
+  if (!hit.match && !(debug && hit.score !== undefined)) return null;
+  return (
+    <span className="shrink-0 rounded-md bg-[var(--surface-2,rgba(128,128,128,0.15))] px-1.5 py-0.5 text-[11px] text-[var(--muted)]">
+      {hit.match === "image" ? "이미지와 비슷" : hit.match === "text" ? "내용이 비슷" : null}
+      {debug && hit.score !== undefined ? ` ${hit.score.toFixed(2)}` : null}
+    </span>
+  );
+}
+
+function Meta({ hit, debug }: { hit: SearchHit; debug?: boolean }) {
   return (
     <div className="label flex items-center justify-between gap-2">
       <Byline hit={hit} />
+      <MatchBadge hit={hit} debug={debug} />
       <span className="numeric shrink-0">{formatDate(hit.posted_at).slice(5)}</span>
     </div>
   );
@@ -79,7 +91,7 @@ function Thumb({ hit, src, className }: { hit: SearchHit; src: string; className
  * grid: library tiles. list: compact library rows. feed: search results, where
  * a thumbnail spans the full card width.
  */
-export function SourceCard({ hit, query, view }: { hit: SearchHit; query?: string; view: "grid" | "list" | "feed" }) {
+export function SourceCard({ hit, query, view, debug }: { hit: SearchHit; query?: string; view: "grid" | "list" | "feed"; debug?: boolean }) {
   const thumb = thumbUrl(hit.thumb, view === "feed" ? 960 : view === "list" ? 320 : 640);
   const text = hit.title || hit.snippet;
 
@@ -88,7 +100,7 @@ export function SourceCard({ hit, query, view }: { hit: SearchHit; query?: strin
       <Link href={`/sources/${hit.id}`} className="plate-hover block overflow-hidden rounded-2xl bg-[var(--surface)]">
         {thumb ? <Thumb hit={hit} src={thumb} className="aspect-video w-full" /> : null}
         <div className="px-4 pb-4 pt-3">
-          <Meta hit={hit} />
+          <Meta hit={hit} debug={debug} />
           {!thumb && hit.status !== "ok" ? (
             <div className="mt-1">
               <StatusBadge status={hit.status} />
@@ -112,7 +124,7 @@ export function SourceCard({ hit, query, view }: { hit: SearchHit; query?: strin
           </div>
         ) : null}
         <div className="min-w-0 flex-1">
-          <Meta hit={hit} />
+          <Meta hit={hit} debug={debug} />
           <p className="mt-1 line-clamp-2 text-[14px] leading-normal text-[var(--ink)]">
             <Highlight text={text} q={query} />
           </p>
@@ -127,7 +139,7 @@ export function SourceCard({ hit, query, view }: { hit: SearchHit; query?: strin
       <div className="flex flex-1 flex-col gap-1.5 p-3">
         {thumb ? null : (
           <>
-            <Meta hit={hit} />
+            <Meta hit={hit} debug={debug} />
             <StatusBadge status={hit.status} />
           </>
         )}
@@ -137,7 +149,7 @@ export function SourceCard({ hit, query, view }: { hit: SearchHit; query?: strin
         </p>
         {thumb ? (
           <div className="mt-auto pt-1">
-            <Meta hit={hit} />
+            <Meta hit={hit} debug={debug} />
           </div>
         ) : null}
       </div>

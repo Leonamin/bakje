@@ -49,7 +49,7 @@ export default async function SearchPage({
           <ul className="mt-2 space-y-3">
             {hits.map((hit) => (
               <li key={hit.id}>
-                <SourceCard hit={hit} query={q} view="feed" />
+                <SourceCard hit={hit} query={q} view="feed" debug={sp.debug === "1"} />
               </li>
             ))}
           </ul>

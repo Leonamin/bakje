@@ -77,7 +77,7 @@ export default async function LibraryPage({
         >
           {hits.map((hit) => (
             <li key={hit.id}>
-              <SourceCard hit={hit} query={q} view={view} />
+              <SourceCard hit={hit} query={q} view={view} debug={get("debug") === "1"} />
             </li>
           ))}
         </ul>

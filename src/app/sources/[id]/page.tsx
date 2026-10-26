@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { BackLink } from "@/components/back-link";
 import { ArrowLeft, ExternalLink, Eye, Heart, MessageSquare, Repeat2 } from "lucide-react";
 import { getSource } from "@/lib/search";
 import { ReadingBody } from "@/components/reading-body";
@@ -48,13 +49,9 @@ export default async function SourcePage({ params }: { params: Promise<{ id: str
   return (
     <div className="mx-auto max-w-5xl">
       <div className="sticky-tools flex h-14 items-center gap-1 px-2 md:px-4">
-        <Link
-          href="/"
-          aria-label="라이브러리로"
-          className="flex h-11 w-11 items-center justify-center rounded-xl text-[var(--ink)]"
-        >
+        <BackLink label="뒤로" className="flex h-11 w-11 items-center justify-center rounded-xl text-[var(--ink)]">
           <ArrowLeft size={22} />
-        </Link>
+        </BackLink>
         <span className="text-[14px] font-semibold" style={{ color: PLATFORM_TONE[source.platform] }}>
           {platformName(source.platform)}
         </span>

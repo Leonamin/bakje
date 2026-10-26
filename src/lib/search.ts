@@ -1,5 +1,5 @@
 import { db } from "./db";
-import { embedderEnabled, rrf, semanticIds } from "./embed";
+import { embedderEnabled, rrf, semanticHits } from "./embed";
 import type { MediaRow, PartRow, SourceRow } from "./types";
 
 export interface SearchParams {
@@ -31,6 +31,10 @@ export interface SearchHit {
   thumb: string | null;
   media_count: number;
   part_count: number;
+  /** Set only when the post was found by meaning rather than by the query text. */
+  match?: "text" | "image";
+  /** Cosine similarity, present for any post the semantic search scored. Shown only in debug mode. */
+  score?: number;
 }
 
 function ftsQuery(q: string): string {
@@ -183,11 +187,12 @@ const KEYWORD_LIMIT = 200;
 export async function searchHybrid(params: SearchParams): Promise<{ hits: SearchHit[]; total: number }> {
   const q = (params.q ?? "").trim();
   if (!q || !embedderEnabled) return searchSources(params);
-  const semantic = await semanticIds(q, SEMANTIC_MIN, SEMANTIC_LIMIT);
+  const semantic = await semanticHits(q, SEMANTIC_MIN, SEMANTIC_LIMIT);
   if (!semantic.length) return searchSources(params);
+  const semanticById = new Map(semantic.map((h) => [h.id, h]));
 
   const keyword = searchSources({ ...params, limit: KEYWORD_LIMIT, offset: 0, sort: "relevance" }).hits.map((h) => h.id);
-  const fused = rrf([keyword, semantic]);
+  const fused = rrf([keyword, semantic.map((h) => h.id)]);
 
   // Semantic-only ids bypassed the SQL filters, so run the whole fused set through them.
   const { filterSql, args } = buildFilters(params);
@@ -205,7 +210,14 @@ export async function searchHybrid(params: SearchParams): Promise<{ hits: Search
 
   const offset = params.offset ?? 0;
   const limit = Math.min(params.limit ?? 30, 100);
-  const hits = rows.slice(offset, offset + limit).map((r) => hydrate(r, q));
+  const keywordSet = new Set(keyword);
+  const hits = rows.slice(offset, offset + limit).map((r) => {
+    const hit = hydrate(r, q);
+    const sem = semanticById.get(r.id);
+    if (sem) hit.score = sem.score;
+    if (sem && !keywordSet.has(r.id)) hit.match = sem.via;
+    return hit;
+  });
   return { hits, total: rows.length };
 }
 
