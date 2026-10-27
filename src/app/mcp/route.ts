@@ -9,6 +9,9 @@ import { getSource, searchHybrid, topTags } from "@/lib/search";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+// ponytail: PUBLIC_URL unset = relative paths; the agent must know the host itself
+const origin = () => (process.env.PUBLIC_URL ?? "").replace(/\/$/, "");
+
 const text = (v: unknown) => ({ content: [{ type: "text" as const, text: typeof v === "string" ? v : JSON.stringify(v) }] });
 
 function buildServer() {
@@ -52,7 +55,7 @@ function buildServer() {
     "get_post",
     {
       description: "Read one archived post by id (from search_archive). Returns the Korean translation when present. " +
-        "`media[].path` is relative to the server address, e.g. https://host:8888 + path; append ?w=640 for a smaller image.",
+        "`media[].url` downloads the file (tailnet only, no auth); append ?w=640 for a smaller image.",
       inputSchema: {
         id: z.number().int(),
         max_chars: z.number().int().min(500).max(50000).optional().describe("Body length limit, default 6000"),
@@ -76,7 +79,7 @@ function buildServer() {
         tags: got.tags,
         media: got.media
           .filter((m) => m.status === "ok" && m.local_path)
-          .map((m) => ({ kind: m.kind, path: mediaUrl(m.local_path), width: m.width, height: m.height })),
+          .map((m) => ({ kind: m.kind, url: `${origin()}${mediaUrl(m.local_path)}`, width: m.width, height: m.height })),
         summary_ko: got.translation?.summary_ko ?? null,
         body: body.slice(0, limit),
         truncated: body.length > limit,

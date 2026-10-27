@@ -53,7 +53,7 @@ better-sqlite3는 네이티브 바인딩이라 이미지 빌드 시 `python3 mak
 
 ## MCP 엔드포인트 (2026-10-26)
 
-`POST /mcp`(Streamable HTTP, 상태 없음)로 검색을 MCP 도구로 연다. 도구는 `search_archive`·`get_post`·`list_tags`. 숨긴 글은 `get_post`에서도 "not found"다. `search_archive`는 `media: image|video` 필터와 `media_count`를, `get_post`는 `media[{kind,path,width,height}]`를 준다. `path`는 서버 주소 기준 상대 경로이고 `?w=640`으로 썸네일을 받는다(이미지 바이트를 MCP로 직접 주지는 않는다).
+`POST /mcp`(Streamable HTTP, 상태 없음)로 검색을 MCP 도구로 연다. 도구는 `search_archive`·`get_post`·`list_tags`. 숨긴 글은 `get_post`에서도 "not found"다. `search_archive`는 `media: image|video` 필터와 `media_count`를, `get_post`는 `media[{kind,url,width,height}]`를 준다. `url`은 `PUBLIC_URL`(env, 예 `https://hamsbox.badger-viper.ts.net:8888`)을 앞에 붙인 절대 주소이고, 값이 없으면 상대 경로다. `?w=640`으로 썸네일을 받는다(이미지 바이트를 MCP로 직접 주지는 않는다).
 
 - 주소: 기존 tailnet 주소의 `/mcp`, 즉 `https://<기기이름>.<tailnet>.ts.net:8888/mcp`. `tailscale serve`는 바꾸지 않았다. 8888이 이미 UI 전체를 같은 tailnet에 열고 있어 `/mcp`만 따로 열어도 보안 이득이 없다.
 - 인증: `/etc/bakje/bakje.env`의 `MCP_TOKEN`과 `Authorization: Bearer` 값이 같아야 한다. 변수가 없으면 엔드포인트가 꺼진다(401). 값을 바꾸면 컨테이너를 다시 만들어야 한다.
