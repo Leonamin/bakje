@@ -3,6 +3,7 @@ import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/
 import { timingSafeEqual } from "node:crypto";
 import { z } from "zod";
 import { db } from "@/lib/db";
+import { mediaUrl } from "@/lib/format";
 import { getSource, searchHybrid, topTags } from "@/lib/search";
 
 export const runtime = "nodejs";
@@ -23,11 +24,12 @@ function buildServer() {
         q: z.string().describe("Natural-language query"),
         platform: z.enum(["x", "threads", "reddit"]).optional(),
         tag: z.string().optional(),
+        media: z.enum(["image", "video"]).optional().describe("Only posts that have saved images or videos"),
         limit: z.number().int().min(1).max(20).optional().describe("Default 8"),
       },
     },
-    async ({ q, platform, tag, limit }) => {
-      const { hits, total } = await searchHybrid({ q, platform, tag, limit: limit ?? 8 });
+    async ({ q, platform, tag, media, limit }) => {
+      const { hits, total } = await searchHybrid({ q, platform, tag, media, limit: limit ?? 8 });
       return text({
         total,
         hits: hits.map((h) => ({
@@ -39,6 +41,7 @@ function buildServer() {
           posted_at: h.posted_at,
           summary_ko: h.summary_ko,
           snippet: h.snippet,
+          media_count: h.media_count,
           score: h.score,
         })),
       });
@@ -48,7 +51,8 @@ function buildServer() {
   server.registerTool(
     "get_post",
     {
-      description: "Read one archived post by id (from search_archive). Returns the Korean translation when present.",
+      description: "Read one archived post by id (from search_archive). Returns the Korean translation when present. " +
+        "`media[].path` is relative to the server address, e.g. https://host:8888 + path; append ?w=640 for a smaller image.",
       inputSchema: {
         id: z.number().int(),
         max_chars: z.number().int().min(500).max(50000).optional().describe("Body length limit, default 6000"),
@@ -70,6 +74,9 @@ function buildServer() {
         url: got.source.canonical_url,
         posted_at: got.source.posted_at,
         tags: got.tags,
+        media: got.media
+          .filter((m) => m.status === "ok" && m.local_path)
+          .map((m) => ({ kind: m.kind, path: mediaUrl(m.local_path), width: m.width, height: m.height })),
         summary_ko: got.translation?.summary_ko ?? null,
         body: body.slice(0, limit),
         truncated: body.length > limit,
