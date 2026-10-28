@@ -8,6 +8,7 @@ okf_version: "0.1"
 
 # Logs
 
+- [2026-10-28-detail-image-ratio-related-thumb.md](./2026-10-28-detail-image-ratio-related-thumb.md) — 상세 단일 이미지 높이·비율 제한, 연관 자료 1:1 썸네일
 - [2026-10-28-ui-polish-and-code-review.md](./2026-10-28-ui-polish-and-code-review.md) — 선택 모드·필터 툴바·로딩 표시 개선, 통합 라이브러리 코드 리뷰 반영(검색 쓰기 실패, 폴더 연결 제한), 배포 5회
 
 - [2026-10-28-library-trash-shuffle.md](./2026-10-28-library-trash-shuffle.md) — 다중 선택, 7일 휴지통, 미디어 정리와 검색 결과 셔플

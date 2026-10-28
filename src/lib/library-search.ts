@@ -59,9 +59,15 @@ function filters(p: LibrarySearchParams, not: string[] = []) {
   return { where: sql.join(" AND "), args };
 }
 const JOINS = "FROM library_item i JOIN library_storage st ON st.id=i.storage_id LEFT JOIN source s ON s.id=i.source_id";
+/** First image of an item as a 640px thumbnail URL, or null. */
+export function itemThumb(itemId: number, sourceId?: number | null): string | null {
+  const asset = db().prepare(`SELECT c.asset_id FROM library_component c WHERE c.item_id=? AND c.kind='image' ORDER BY c.ordinal LIMIT 1`).get(itemId) as { asset_id: number } | undefined;
+  if (asset) return `/api/library/assets/${asset.asset_id}?w=640`;
+  sourceId ??= (db().prepare("SELECT source_id FROM library_item WHERE id=?").get(itemId) as { source_id: number | null } | undefined)?.source_id;
+  const legacy = sourceId ? db().prepare("SELECT COALESCE(poster_path,CASE WHEN kind='image' THEN local_path END) AS file FROM media WHERE source_id=? AND status='ok' ORDER BY ordinal LIMIT 1").get(sourceId) as { file: string | null } | undefined : undefined;
+  return thumbUrl(legacy?.file ?? null, 640);
+}
 function hydrate(row: LibraryItem & { storage_name: string; storage_kind: "managed" | "linked"; storage_enabled: number; source_hidden: string | null; source_status: string | null }, q: string): LibraryHit {
-  const asset = db().prepare(`SELECT c.asset_id FROM library_component c WHERE c.item_id=? AND c.kind='image' ORDER BY c.ordinal LIMIT 1`).get(row.id) as { asset_id: number } | undefined;
-  const legacy = row.source_id ? db().prepare("SELECT COALESCE(poster_path,CASE WHEN kind='image' THEN local_path END) AS file FROM media WHERE source_id=? AND status='ok' ORDER BY ordinal LIMIT 1").get(row.source_id) as { file: string | null } | undefined : undefined;
   const statuses = db().prepare(`SELECT state,SUM(n) AS n FROM (
     SELECT j.state,COUNT(*) AS n FROM library_component c CROSS JOIN analysis_job j WHERE c.item_id=? AND j.target_type='component' AND j.target_id=c.id
       AND j.input_hash=c.input_hash AND j.model_key=? GROUP BY j.state
@@ -70,7 +76,7 @@ function hydrate(row: LibraryItem & { storage_name: string; storage_kind: "manag
     ) GROUP BY state`).all(row.id, MODEL_KEY, row.source_id ?? -1, MODEL_KEY, row.source_id ?? -1, MODEL_KEY) as { state: string; n: number }[];
 
   const index = q ? row.body.toLowerCase().indexOf(q.toLowerCase()) : 0;
-  return { ...row, thumb: asset ? `/api/library/assets/${asset.asset_id}?w=640` : thumbUrl(legacy?.file ?? null, 640),
+  return { ...row, thumb: itemThumb(row.id, row.source_id),
     analysis_pending: statuses.filter(s => ["pending", "running"].includes(s.state)).reduce((n, s) => n + s.n, 0),
     analysis_failed: statuses.filter(s => s.state === "failed").reduce((n, s) => n + s.n, 0),
     snippet: row.body.slice(Math.max(0, index - 60), Math.max(0, index - 60) + 220) };
