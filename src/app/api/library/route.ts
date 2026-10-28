@@ -29,7 +29,7 @@ const input = z.discriminatedUnion("action", [
 export async function GET(req: Request) {
   const p = new URL(req.url).searchParams;
   if (p.has("run")) { try { return Response.json(getRun(Number(p.get("run")))); } catch { return Response.json({ error: "작업 없음" }, { status: 404 }); } }
-  if (p.get("search") === "1") return Response.json(await searchLibrary({ q: p.get("q") ?? undefined, storage: Number(p.get("storage")) || undefined, origin: p.get("origin") ?? undefined, collection: p.get("collection") ?? undefined, folder: p.get("folder") ?? undefined, limit: Number(p.get("limit")) || 60, offset: Number(p.get("offset")) || 0 }));
+  if (p.get("search") === "1") return Response.json(await searchLibrary({ q: p.get("q") ?? undefined, storage: Number(p.get("storage")) || undefined, origin: p.get("origin") ?? undefined, collection: p.get("collection") ?? undefined, folder: p.get("folder") ?? undefined, from: p.get("from") ?? undefined, to: p.get("to") ?? undefined, limit: Number(p.get("limit")) || 60, offset: Number(p.get("offset")) || 0 }));
   return Response.json({ storages: storages(), runs: listRuns(), analysis: analysisStatus(), bulk_paused: !!db().prepare("SELECT 1 FROM setting WHERE key='library.bulk_paused' AND value='1'").get() });
 }
 export async function POST(req: Request) {

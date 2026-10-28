@@ -102,8 +102,8 @@ function buildServer() {
   );
 
   server.registerTool("search_library", {
-    description: "Search all catalog items, including linked folders and SNS posts. Origin is independent of physical storage and collections. Results use stable catalog item IDs; use get_library_item to read them.",
-    inputSchema: { q: z.string().optional(), origin: z.string().optional(), storage: z.number().int().positive().optional(), collection: z.string().optional(), folder: z.string().optional(), limit: z.number().int().min(1).max(100).optional(), offset: z.number().int().min(0).optional() },
+    description: "Query syntax: spaces = AND, `|` = OR, leading `-` = NOT (e.g. `cat | dog -black`). from/to = saved date, YYYY-MM-DD inclusive. Search all catalog items, including linked folders and SNS posts. Origin is independent of physical storage and collections. Results use stable catalog item IDs; use get_library_item to read them.",
+    inputSchema: { q: z.string().optional(), origin: z.string().optional(), storage: z.number().int().positive().optional(), collection: z.string().optional(), folder: z.string().optional(), from: z.string().optional(), to: z.string().optional(), limit: z.number().int().min(1).max(100).optional(), offset: z.number().int().min(0).optional() },
   }, async args => {
     const result = await searchLibrary(args);
     return text({ total: result.total, hits: result.hits.map(h => ({ id: h.id, source_id: h.source_id, title: h.title, origin: h.origin, storage_id: h.storage_id, storage_name: h.storage_name, snippet: h.snippet, thumb: h.thumb, score: h.score, match: h.match, match_component: h.match_component })) });
