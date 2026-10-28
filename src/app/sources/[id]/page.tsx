@@ -1,3 +1,5 @@
+import { relatedItems } from "@/lib/related-items";
+import { RelatedItems } from "@/components/related-items";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { BackLink } from "@/components/back-link";
@@ -165,6 +167,7 @@ export default async function SourcePage({ params }: { params: Promise<{ id: str
             </div>
           </aside>
         </div>
+        {catalog ? <RelatedItems items={relatedItems(catalog.item.id)} /> : null}
       </div>
     </div>
   );

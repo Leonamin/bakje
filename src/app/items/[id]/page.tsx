@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { relatedItems } from "@/lib/related-items";
+import { RelatedItems } from "@/components/related-items";
 import { notFound, redirect } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { BackLink } from "@/components/back-link";
@@ -28,6 +30,7 @@ export default async function ItemPage({ params }: { params: Promise<{ id: strin
       {c.relative_path ? <p className="label mt-2 break-all">{c.relative_path}</p> : null}
     </section>)}</div>
     <LibraryOrganizationPanel storageId={storage.id} itemIds={[id]} />
+    <RelatedItems items={relatedItems(id)} />
     <LibraryItemEditor id={id} revision={item.revision} title={item.title} note={item.note} collections={got.collections} hidden={!!item.hidden_at} />
   </article>;
 }
