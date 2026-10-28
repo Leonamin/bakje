@@ -7,7 +7,7 @@ type Snapshot = { item: LibraryItem; components: ComponentRow[]; collections: st
 const now = () => new Date().toISOString();
 function itemForEdit(id: number, revision: number) {
   const got = getLibraryItem(id);
-  if (!got || got.item.source_id || !got.storage.enabled) throw new Error("활성 연결 저장소의 자료를 선택하세요.");
+  if (!got || got.item.deleted_at || got.item.source_id || !got.storage.enabled) throw new Error("활성 연결 저장소의 자료를 선택하세요.");
   assertStorageUnlocked(got.item.storage_id);
   if (got.item.revision !== revision) throw new Error("자료가 변경되었습니다. 새로고침한 뒤 다시 시도하세요.");
   return got;
@@ -88,7 +88,7 @@ export function mergeItems(id: number, revision: number, sources: { id: number; 
   }).immediate();
 }
 function canUndo(after: Snapshot[]) {
-  return after.every(s => (db().prepare("SELECT revision FROM library_item WHERE id=?").get(s.item.id) as { revision: number } | undefined)?.revision === s.item.revision);
+  return after.every(s => (db().prepare("SELECT revision FROM library_item WHERE id=? AND deleted_at IS NULL").get(s.item.id) as { revision: number } | undefined)?.revision === s.item.revision);
 }
 export function structureHistory(id: number) {
   const rows = db().prepare(`SELECT h.* FROM library_change h JOIN library_change_item hi ON hi.change_id=h.id WHERE hi.item_id=? ORDER BY h.id DESC LIMIT 20`).all(id) as { id: number; kind: string; description: string; after_json: string; created_at: string; undone_at: string | null }[];
@@ -125,7 +125,7 @@ export function mergeCandidates(id: number, query = "") {
   if (!got || got.item.source_id) throw new Error("연결 자료를 선택하세요.");
   const needle = `%${query.replace(/[\\%_]/g, "\\$&")}%`;
   return db().prepare(`SELECT i.id,i.title,i.revision,(SELECT COUNT(*) FROM library_component c WHERE c.item_id=i.id) AS component_count
-    FROM library_item i WHERE i.storage_id=? AND i.id<>? AND i.source_id IS NULL AND i.hidden_at IS NULL
+    FROM library_item i WHERE i.storage_id=? AND i.id<>? AND i.source_id IS NULL AND i.hidden_at IS NULL AND i.deleted_at IS NULL
     AND (i.title LIKE ? ESCAPE '\\' OR CAST(i.id AS TEXT)=?) AND EXISTS(SELECT 1 FROM library_component c WHERE c.item_id=i.id)
     ORDER BY i.id DESC LIMIT 50`).all(got.item.storage_id, id, needle, query) as { id: number; title: string; revision: number; component_count: number }[];
 }

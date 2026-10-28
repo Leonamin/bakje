@@ -184,6 +184,10 @@ export function db(): Database.Database {
   }
   conn.pragma("busy_timeout = 5000");
   conn.exec(LIBRARY_SCHEMA);
+  const itemColumns = new Set((conn.prepare("PRAGMA table_info(library_item)").all() as { name: string }[]).map(c => c.name));
+  if (!itemColumns.has("deleted_at")) conn.exec("ALTER TABLE library_item ADD COLUMN deleted_at TEXT");
+  conn.exec("CREATE TABLE IF NOT EXISTS library_tombstone (storage_id INTEGER NOT NULL, external_id TEXT NOT NULL, PRIMARY KEY(storage_id,external_id))");
+  conn.exec("CREATE TABLE IF NOT EXISTS trash_media_cleanup (path TEXT PRIMARY KEY)");
   const storageColumns = new Set((conn.prepare("PRAGMA table_info(library_storage)").all() as { name: string }[]).map(c => c.name));
   if (!storageColumns.has("scan_interval_minutes")) conn.exec("ALTER TABLE library_storage ADD COLUMN scan_interval_minutes INTEGER NOT NULL DEFAULT 0");
   instance = conn;

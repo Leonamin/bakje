@@ -6,14 +6,14 @@ import { storages } from "@/lib/library-files";
 import { LibraryToolbar } from "@/components/library-toolbar";
 import { LibraryCard } from "@/components/library-card";
 import { RefreshButton } from "@/components/refresh-button";
-import { SwipeHide } from "@/components/swipe-hide";
+import { LibrarySelection } from "@/components/library-selection";
 export const dynamic = "force-dynamic";
 export default async function LibraryPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const sp = await searchParams;
   const get = (key: string) => typeof sp[key] === "string" ? sp[key] as string : undefined;
   const page = Math.max(1, Number(get("page")) || 1), limit = 60;
   const { hits, total } = await searchLibrary({ q: get("q"), origin: get("origin") ?? get("platform"), scope: get("scope") as "managed" | "linked" | undefined,
-    storage: Number(get("storage")) || undefined, folder: get("folder"), collection: get("collection"), media: get("media"), sort: get("sort"), tag: get("tag"), hidden: get("hidden") === "1", limit, offset: (page - 1) * limit });
+    storage: Number(get("storage")) || undefined, folder: get("folder"), collection: get("collection"), media: get("media"), sort: get("sort"), shuffle: Number(get("shuffle")) || undefined, tag: get("tag"), hidden: get("hidden") === "1", trash: get("trash") === "1", limit, offset: (page - 1) * limit });
   const facets = libraryFacets(), view = get("view") === "list" ? "list" : "grid";
   const pageUrl = (n: number) => { const p = new URLSearchParams(); for (const [k, v] of Object.entries(sp)) if (typeof v === "string") p.set(k, v); p.set("page", String(n)); return `/?${p}`; };
   return <div className="mx-auto max-w-6xl px-5 pb-10 pt-2 md:px-6 md:pt-8">
@@ -22,11 +22,8 @@ export default async function LibraryPage({ searchParams }: { searchParams: Prom
       <Link href="/settings" aria-label="설정" className="press flex h-11 w-11 items-center justify-center rounded-xl text-[var(--muted)] md:hidden"><Settings size={21} /></Link>
     </header>
     <Suspense fallback={<p>불러오는 중</p>}><LibraryToolbar total={total} tags={facets.tags.map(t => t.name)} view={view} storages={storages()} origins={facets.origins.map(o => o.origin)} collections={facets.collections.map(c => c.name)} /></Suspense>
-    {!hits.length ? <div className="py-16 text-center"><Archive size={25} className="mx-auto mb-3 text-[var(--muted)]" /><p>표시할 자료가 없습니다.</p><p className="label mt-2">링크를 박제하거나 폴더를 연결해 자료를 등록하세요.</p></div> :
-      <ul className={view === "grid" ? "mt-2 grid grid-cols-2 gap-2 md:grid-cols-3 md:gap-3 lg:grid-cols-4" : "mt-2 space-y-2"}>{hits.map(hit => {
-        const card = <LibraryCard hit={hit} view={view} />;
-        return <li key={hit.id}>{hit.source_id && !get("hidden") ? <SwipeHide id={hit.source_id}>{card}</SwipeHide> : card}</li>;
-      })}</ul>}
+    {get("trash") === "1" ? <p className="mt-4 text-sm">휴지통 · 자료는 이동한 지 7일 후 삭제됩니다.</p> : null}
+    {!hits.length ? <div className="py-16 text-center"><Archive size={25} className="mx-auto mb-3 text-[var(--muted)]" /><p>표시할 자료가 없습니다.</p></div> : <LibrarySelection key={`${get("hidden")}-${get("trash")}-${page}`} hits={hits} view={view} mode={get("trash") === "1" ? "trash" : get("hidden") === "1" ? "hidden" : "normal"} />}
     {total > limit ? <nav aria-label="자료 페이지" className="mt-6 flex items-center justify-center gap-4">{page > 1 ? <Link className="gc-button gc-button-secondary" href={pageUrl(page - 1)}>이전</Link> : null}<span className="label">{page} / {Math.ceil(total / limit)}</span>{page * limit < total ? <Link className="gc-button gc-button-secondary" href={pageUrl(page + 1)}>다음</Link> : null}</nav> : null}
   </div>;
 }

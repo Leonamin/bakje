@@ -57,7 +57,7 @@ export async function createOrganization(storageId: number, itemIds: number[] | 
   if (itemIds && (!itemIds.length || itemIds.length > 100 || new Set(itemIds).size !== itemIds.length)) throw new Error("1~100개 자료 또는 저장소 전체를 선택하세요.");
   const id = db().transaction(() => {
     assertStorageUnlocked(storageId);
-    const selected = db().prepare(`SELECT id,title,revision,folder_path,user_locked FROM library_item WHERE storage_id=? AND source_id IS NULL AND hidden_at IS NULL
+    const selected = db().prepare(`SELECT id,title,revision,folder_path,user_locked FROM library_item WHERE storage_id=? AND source_id IS NULL AND hidden_at IS NULL AND deleted_at IS NULL
       AND EXISTS(SELECT 1 FROM library_component c WHERE c.item_id=library_item.id) ${itemIds ? `AND id IN (${itemIds.map(() => "?").join(",")})` : ""} ORDER BY id`)
       .all(storageId, ...(itemIds ?? [])) as { id: number; title: string; revision: number; folder_path: string; user_locked: number }[];
     if (!selected.length || (itemIds && selected.length !== itemIds.length)) throw new Error("같은 연결 저장소의 보이는 자료를 선택하세요.");
@@ -182,7 +182,7 @@ async function verifiedOrPartial(file: string, source: string | null, op: Op) {
 }
 function validateRevisions(p: Plan) {
   for (const item of items(p.id)) {
-    const current = db().prepare("SELECT revision FROM library_item WHERE id=?").get(item.item_id) as { revision: number } | undefined;
+    const current = db().prepare("SELECT revision FROM library_item WHERE id=? AND deleted_at IS NULL").get(item.item_id) as { revision: number } | undefined;
     if (current?.revision !== (item.after_revision ?? item.revision)) throw new Error(`자료 #${item.item_id}가 계획 이후 변경되었습니다. 새 계획을 만드세요.`);
   }
 }
@@ -353,7 +353,7 @@ async function migrate(p: Plan) {
     for (const i of items(p.id)) {
       db().prepare("UPDATE library_item SET folder_path=?,user_locked=?,revision=revision+1,updated_at=? WHERE id=?")
         .run(undo ? i.previous_folder : i.destination_folder, undo ? i.previous_locked : 1, stamp(), i.item_id);
-      if (!undo) db().prepare("UPDATE library_organization_item SET after_revision=(SELECT revision FROM library_item WHERE id=?) WHERE plan_id=? AND item_id=?").run(i.item_id, p.id, i.item_id);
+      if (!undo) db().prepare("UPDATE library_organization_item SET after_revision=(SELECT revision FROM library_item WHERE id=? AND deleted_at IS NULL) WHERE plan_id=? AND item_id=?").run(i.item_id, p.id, i.item_id);
     }
     db().prepare("UPDATE library_organization SET state=?,phase=?,claim_token=NULL,lease_until=NULL,updated_at=? WHERE id=? AND claim_token=?")
       .run(undo ? "undone" : "applied", undo ? "undone" : "applied", stamp(), p.id, p.claim_token);

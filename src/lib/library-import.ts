@@ -151,7 +151,7 @@ async function processEntry(run: ImportRun, ordinal: number, payload: string) {
     db().transaction(() => {
       if (!active(run)) return;
       db().prepare(`INSERT INTO library_run_entry(run_id,ordinal,payload,state,item_id) VALUES(?,?,?,'done',?)
-        ON CONFLICT(run_id,ordinal) DO UPDATE SET state='done',item_id=excluded.item_id,error=NULL`).run(run.id, ordinal, payload, result.id);
+        ON CONFLICT(run_id,ordinal) DO UPDATE SET state='done',item_id=excluded.item_id,error=NULL`).run(run.id, ordinal, payload, result.id || null);
       db().prepare("UPDATE library_run SET cursor=?,succeeded=succeeded+1,updated_at=? WHERE id=? AND claim_token=?").run(ordinal, new Date().toISOString(), run.id, run.claim_token);
     })();
   } catch (err) { recordFailure(run, ordinal, payload, err); }

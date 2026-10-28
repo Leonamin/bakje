@@ -7,7 +7,7 @@ import { thumbUrl } from "./format";
 
 export interface LibrarySearchParams {
   q?: string; origin?: string; storage?: number; scope?: "managed" | "linked"; folder?: string;
-  collection?: string; media?: string; tag?: string; hidden?: boolean; sort?: string; limit?: number; offset?: number;
+  collection?: string; media?: string; tag?: string; hidden?: boolean; trash?: boolean; sort?: string; shuffle?: number; limit?: number; offset?: number;
 }
 export interface LibraryHit extends LibraryItem {
   storage_name: string; storage_kind: "managed" | "linked"; storage_enabled: number;
@@ -16,7 +16,7 @@ export interface LibraryHit extends LibraryItem {
 }
 const escapeLike = (value: string) => value.replace(/[\\%_]/g, "\\$&");
 function filters(p: LibrarySearchParams) {
-  const sql = ["st.enabled=1", p.hidden ? "COALESCE(s.hidden_at,i.hidden_at) IS NOT NULL" : "COALESCE(s.hidden_at,i.hidden_at) IS NULL"];
+  const sql = ["st.enabled=1", p.trash ? "i.deleted_at IS NOT NULL" : "i.deleted_at IS NULL", p.trash ? "1=1" : p.hidden ? "COALESCE(s.hidden_at,i.hidden_at) IS NOT NULL" : "COALESCE(s.hidden_at,i.hidden_at) IS NULL"];
   const args: (string | number)[] = [];
   if (p.origin) { sql.push("i.origin=?"); args.push(p.origin); }
   if (p.storage) { sql.push("i.storage_id=?"); args.push(p.storage); }
@@ -57,6 +57,8 @@ export async function searchLibrary(p: LibrarySearchParams = {}) {
   const { where, args } = filters(p);
   const select = `SELECT i.*,st.name AS storage_name,st.kind AS storage_kind,st.enabled AS storage_enabled,s.hidden_at AS source_hidden,s.status AS source_status ${JOINS}`;
   const timeOrder = p.sort === "posted" ? "COALESCE(s.posted_at,i.created_at) DESC" : "i.created_at DESC,i.id DESC";
+  const shuffleSeed = Number.isSafeInteger(p.shuffle) && p.shuffle! > 0 ? p.shuffle! % 2147483647 : 0;
+  const shuffleOrder = `((i.id * ${shuffleSeed} + i.id * i.id * 31) % 2147483647)`;
   const tokens = q.split(/\s+/).filter(Boolean);
   const longTokens = tokens.filter(token => token.length >= 3);
   const shortTokens = tokens.filter(token => token.length < 3);
@@ -75,6 +77,7 @@ export async function searchLibrary(p: LibrarySearchParams = {}) {
     keywordSql += " AND (i.title LIKE ? ESCAPE '\\' OR i.body LIKE ? ESCAPE '\\' OR i.note LIKE ? ESCAPE '\\' OR i.tags LIKE ? ESCAPE '\\')";
     const like = `%${escapeLike(token)}%`; keywordArgs.push(like, like, like, like);
   }
+  if (shuffleSeed) keywordOrder = shuffleOrder;
   const orderArgs: (string | number)[] = [];
   const total = (db().prepare(`SELECT COUNT(*) AS n ${keywordJoins} WHERE ${where}${keywordSql}`).get(...keywordArgs) as { n: number }).n;
   const rows = db().prepare(`${select}${usesFts ? " JOIN library_fts ON library_fts.rowid=i.id" : ""} WHERE ${where}${keywordSql} ORDER BY ${keywordOrder} LIMIT ? OFFSET ?`)
@@ -101,7 +104,8 @@ export async function searchLibrary(p: LibrarySearchParams = {}) {
       .all(...keywordArgs, ...orderArgs) as { id: number }[];
     const ids = rrf([keywordIds.map(r => r.id), semantic]);
     const found = db().prepare(`${select} WHERE i.id IN (${ids.map(() => "?").join(",")}) ORDER BY ${timeOrder}`).all(...ids) as Parameters<typeof hydrate>[0][];
-    if (p.sort !== "recent" && p.sort !== "posted") { const rank = new Map(ids.map((id, i) => [id, i])); found.sort((a, b) => rank.get(a.id)! - rank.get(b.id)!); }
+    if (shuffleSeed) found.sort((a, b) => ((a.id * shuffleSeed + a.id * a.id * 31) % 2147483647) - ((b.id * shuffleSeed + b.id * b.id * 31) % 2147483647));
+    else if (p.sort !== "recent" && p.sort !== "posted") { const rank = new Map(ids.map((id, i) => [id, i])); found.sort((a, b) => rank.get(a.id)! - rank.get(b.id)!); }
     const hits = found.slice(offset, offset + limit).map(row => {
       const hit = hydrate(row, q), match = best.get(row.id);
       if (match) {

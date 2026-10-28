@@ -1,3 +1,4 @@
+import { manageItems } from "@/lib/library-trash";
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getSource } from "@/lib/search";
@@ -57,9 +58,9 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
 export async function DELETE(_req: Request, ctx: { params: Promise<{ id: string }> }) {
   const { id } = await ctx.params;
   const sourceId = Number(id);
-  const conn = db();
-  conn.prepare("DELETE FROM source WHERE id = ?").run(sourceId);
-  conn.prepare("DELETE FROM search_doc WHERE source_id = ?").run(sourceId);
-  conn.prepare("DELETE FROM search_fts WHERE rowid = ?").run(sourceId);
+  const item = db().prepare("SELECT id FROM library_item WHERE source_id=?").get(sourceId) as { id: number } | undefined;
+  if (!item) return NextResponse.json({ error: "not found" }, { status: 404 });
+  try { manageItems([item.id], "trash"); }
+  catch (err) { return NextResponse.json({ error: err instanceof Error ? err.message : "삭제하지 못했습니다." }, { status: 400 }); }
   return NextResponse.json({ ok: true });
 }

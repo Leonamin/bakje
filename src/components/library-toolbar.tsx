@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState, useTransition } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { LayoutGrid, List, Search } from "lucide-react";
+import { LayoutGrid, List, Search, Shuffle } from "lucide-react";
 import { Button, IconButton } from "@/components/goodcase/basic/button";
 import { Select } from "@/components/goodcase/overlays/select";
 import { platformName } from "@/lib/format";
@@ -71,12 +71,15 @@ export function LibraryToolbar({ total, tags, view, storages = [], origins = [],
           onValueChange={value => push({ tag: value })}
           options={[{ value: "", label: "모든 태그" }, ...tags.map(tag => ({ value: tag, label: tag }))]}
         />
-        <Button variant="secondary" className="chip" aria-pressed={params.get("hidden") === "1"} onClick={() => push({ hidden: params.get("hidden") === "1" ? "" : "1" })}>숨긴 자료</Button>
+        <Button variant="secondary" className="chip" aria-pressed={params.get("hidden") === "1"} onClick={() => push({ hidden: params.get("hidden") === "1" ? "" : "1", trash: "" })}>숨긴 자료</Button>
+        <Button variant="secondary" onClick={() => push({ trash: params.get("trash") === "1" ? "" : "1", hidden: "" })}>{params.get("trash") === "1" ? "휴지통 닫기" : "휴지통"}</Button>
         <Button variant="secondary" onClick={() => router.push("/")}>필터 초기화</Button>
       </div>
     </details>
     {params.get("folder") ? <p className="label mt-3">원본 폴더: {params.get("folder")} <Button variant="secondary" onClick={() => push({ folder: "" })}>전체 폴더</Button></p> : null}
     <div className="mt-3 flex items-center justify-between"><span className="label numeric">{total.toLocaleString()}건{pending ? " · 불러오는 중" : ""}</span><div className="flex">
+      <IconButton label="다시 섞기" aria-pressed={!!params.get("shuffle")} onClick={() => push({ shuffle: String(Math.floor(Math.random() * 2147483646) + 1) })}><Shuffle size={19} /></IconButton>
+      {params.get("shuffle") ? <Button variant="secondary" onClick={() => push({ shuffle: "" })}>섞기 해제</Button> : null}
       <IconButton label="그리드 보기" aria-pressed={view === "grid"} onClick={() => push({ view: "grid" })}><LayoutGrid size={19} /></IconButton>
       <IconButton label="리스트 보기" aria-pressed={view === "list"} onClick={() => push({ view: "list" })}><List size={19} /></IconButton>
     </div></div>

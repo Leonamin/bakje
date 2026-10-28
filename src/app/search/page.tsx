@@ -14,8 +14,9 @@ export default async function SearchPage({
 }) {
   const sp = await searchParams;
   const q = typeof sp.q === "string" ? sp.q.trim() : "";
+  const seed = Number(typeof sp.shuffle === "string" ? sp.shuffle : "") || undefined;
   const tags = topTags(12);
-  const { hits, total } = q ? await searchLibrary({ q, limit: 50 }) : { hits: [], total: 0 };
+  const { hits, total } = q ? await searchLibrary({ q, shuffle: seed, limit: 50 }) : { hits: [], total: 0 };
 
   return (
     <div className="mx-auto max-w-3xl px-5 pb-10 pt-2 md:px-6 md:pt-8">
@@ -46,7 +47,7 @@ export default async function SearchPage({
         </div>
       ) : (
         <>
-          <p className="label numeric mt-4">{total}건</p>
+          <div className="mt-4 flex items-center gap-3"><p className="label numeric">{total}건</p><Link className="gc-button gc-button-secondary" href={`/search?q=${encodeURIComponent(q)}&shuffle=${Math.floor(Math.random() * 2147483646) + 1}`}>다시 섞기</Link>{seed ? <Link className="gc-button gc-button-secondary" href={`/search?q=${encodeURIComponent(q)}`}>섞기 해제</Link> : null}</div>
           <ul className="mt-2 space-y-3">
             {hits.map((hit) => (
               <li key={hit.id}>

@@ -27,7 +27,7 @@ export type ItemManifest = z.infer<typeof itemManifestSchema>;
 export interface LibraryItem {
   id: number; storage_id: number; external_id: string; source_id: number | null; title: string; kind: string;
   origin: string; origin_url: string | null; folder_path: string; body: string; tags: string; note: string;
-  metadata: string; grouping_rule: string; review_required: number; user_locked: number; hidden_at: string | null;
+  metadata: string; grouping_rule: string; review_required: number; user_locked: number; hidden_at: string | null; deleted_at: string | null;
   revision: number; content_hash: string; created_at: string; updated_at: string;
 }
 export interface ComponentRow {
@@ -50,6 +50,7 @@ export function syncSourceToLibrary(sourceId: number) {
 export async function registerItem(storageId: number, raw: unknown, groupingRule: string, priority = 50) {
   const manifest = itemManifestSchema.parse(raw);
   const s = storage(storageId);
+  if (db().prepare("SELECT 1 FROM library_tombstone WHERE storage_id=? AND external_id=?").get(storageId, manifest.external_id)) return { id: 0, revision: 0, state: "preserved" as const };
   if (!s.enabled || s.kind !== "linked") throw new Error("활성 연결 저장소를 선택하세요.");
   assertStorageUnlocked(storageId);
   // Manual grouping/relocation is authoritative even when an old source manifest names the former file paths.

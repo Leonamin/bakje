@@ -1,3 +1,4 @@
+import { manageItems } from "@/lib/library-trash";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { connectStorage, storages } from "@/lib/library-files";
@@ -12,6 +13,7 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 const id = z.number().int().positive();
 const input = z.discriminatedUnion("action", [
+  z.object({ action: z.literal("manage"), ids: z.array(id).min(1).max(100), operation: z.enum(["hide", "unhide", "trash", "restore"]) }),
   z.object({ action: z.literal("connect"), name: z.string().min(1).max(200), root: z.string().min(1).max(4000) }),
   z.object({ action: z.literal("opennana"), storage_id: id, prompt_path: z.string().optional(), images_manifest: z.string().optional(), video_manifest: z.string().optional() }),
   z.object({ action: z.literal("manifest"), storage_id: id, grouping_rule: z.string().min(1).max(5000), items: z.array(itemManifestSchema).min(1).max(100) }),
@@ -34,6 +36,7 @@ export async function POST(req: Request) {
   try {
     const body = input.parse(await req.json());
     switch (body.action) {
+      case "manage": manageItems(body.ids, body.operation); return Response.json({ ok: true });
       case "connect": return Response.json(await connectStorage(body.name, body.root));
       case "opennana": return Response.json(await submitOpenNana(body.storage_id, body.prompt_path, body.images_manifest, body.video_manifest));
       case "manifest": return Response.json(submitManifest(body.storage_id, body.grouping_rule, body.items));

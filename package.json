@@ -16,7 +16,8 @@
     "mock-llm": "node scripts/mock-llm.mjs",
     "test:library-management": "tsx scripts/test-library-management.ts",
     "test:library": "tsx scripts/test-library.ts",
-    "check:library": "tsx scripts/check-library-import.ts"
+    "check:library": "tsx scripts/check-library-import.ts",
+    "test:trash": "tsx scripts/test-trash.ts"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.32.2",

@@ -62,7 +62,7 @@ function makeSnippet(text: string, q: string): string {
 }
 
 function buildFilters(params: SearchParams): { filterSql: string; args: unknown[] } {
-  const filters: string[] = [params.hidden ? "s.hidden_at IS NOT NULL" : "s.hidden_at IS NULL"];
+  const filters: string[] = ["NOT EXISTS (SELECT 1 FROM library_item li WHERE li.source_id=s.id AND li.deleted_at IS NOT NULL)", params.hidden ? "s.hidden_at IS NOT NULL" : "s.hidden_at IS NULL"];
   const args: unknown[] = [];
 
   if (params.platform) {

@@ -8,6 +8,8 @@ okf_version: "0.1"
 
 # Logs
 
+- [2026-10-28-library-trash-shuffle.md](./2026-10-28-library-trash-shuffle.md) — 다중 선택, 7일 휴지통, 미디어 정리와 검색 결과 셔플
+
 - [2026-10-28-library-management.md](./2026-10-28-library-management.md) — 묶음 역할·순서·분리·합치기와 원본 정리 계획·실행·되돌리기, 중단 복구
 
 - [2026-10-28-library-back-navigation.md](./2026-10-28-library-back-navigation.md) — 상세에서 이전 목록으로 복귀할 때 검색어·필터·페이지 보존
