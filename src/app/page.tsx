@@ -23,7 +23,7 @@ export default async function LibraryPage({ searchParams }: { searchParams: Prom
     </header>
     <Suspense fallback={<p>불러오는 중</p>}><LibraryToolbar total={total} tags={facets.tags.map(t => t.name)} view={view} storages={storages()} origins={facets.origins.map(o => o.origin)} collections={facets.collections.map(c => c.name)} /></Suspense>
     {get("trash") === "1" ? <p className="mt-4 text-sm">휴지통 · 자료는 이동한 지 7일 후 삭제됩니다.</p> : null}
-    {!hits.length ? <div className="py-16 text-center"><Archive size={25} className="mx-auto mb-3 text-[var(--muted)]" /><p>표시할 자료가 없습니다.</p></div> : <LibrarySelection key={`${get("hidden")}-${get("trash")}-${page}`} hits={hits} view={view} mode={get("trash") === "1" ? "trash" : get("hidden") === "1" ? "hidden" : "normal"} />}
+    {!hits.length ? <div className="py-16 text-center"><Archive size={25} className="mx-auto mb-3 text-[var(--muted)]" /><p>표시할 자료가 없습니다.</p></div> : <LibrarySelection key={JSON.stringify(Object.entries(sp).filter(([k]) => k !== "page" && k !== "shuffle").sort())} hits={hits} view={view} mode={get("trash") === "1" ? "trash" : get("hidden") === "1" ? "hidden" : "normal"} />}
     {total > limit ? <nav aria-label="자료 페이지" className="mt-6 flex items-center justify-center gap-4">{page > 1 ? <Link className="gc-button gc-button-secondary" href={pageUrl(page - 1)}>이전</Link> : null}<span className="label">{page} / {Math.ceil(total / limit)}</span>{page * limit < total ? <Link className="gc-button gc-button-secondary" href={pageUrl(page + 1)}>다음</Link> : null}</nav> : null}
   </div>;
 }

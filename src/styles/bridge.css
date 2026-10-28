@@ -98,6 +98,11 @@ html {
   border-bottom: 1px solid var(--line);
 }
 
+/* A dialog without a body (confirm) must not show the header and footer dividers back to back. */
+.gc-modal header + footer {
+  border-top: 0;
+}
+
 .gc-modal footer,
 .gc-drawer footer {
   border-top: 1px solid var(--line);
