@@ -8,6 +8,7 @@ import { getLibraryItem } from "@/lib/library-catalog";
 import { LibraryStructureEditor } from "@/components/library-structure-editor";
 import { LibraryOrganizationPanel } from "@/components/library-organization-panel";
 import { LibraryItemEditor } from "@/components/library-item-editor";
+import { MediaGallery } from "@/components/media-gallery";
 import { platformName } from "@/lib/format";
 export const dynamic = "force-dynamic";
 const roles: Record<string, string> = { prompt: "프롬프트", result: "결과", reference: "참고", body: "본문" };
@@ -26,7 +27,7 @@ export default async function ItemPage({ params }: { params: Promise<{ id: strin
     {item.review_required ? <p className="mt-4 text-[14px] text-[var(--warn)]">자료 묶음 확인이 필요합니다.</p> : null}
     <LibraryStructureEditor itemId={id} />
     <div className="mt-8 space-y-7">{components.map(c => <section key={c.id} id={`component-${c.id}`} className="scroll-mt-20"><h2 className="mb-2 text-[15px] font-semibold">{roles[c.role] ?? c.role}{c.language ? ` · ${c.language}` : ""}</h2>
-      {c.kind === "text" ? <div className="whitespace-pre-wrap break-words rounded-2xl bg-[var(--surface)] p-4 text-[15px] leading-relaxed">{c.text_content}</div> : c.kind === "image" ? <a className="media-tile block rounded-2xl bg-[var(--surface)]" href={`/api/library/assets/${c.asset_id}`} target="_blank" rel="noreferrer"><img className="max-h-[80vh] w-full object-contain" src={`/api/library/assets/${c.asset_id}`} alt={`${item.title} · ${roles[c.role] ?? c.role} ${c.ordinal + 1}`} loading="lazy" /></a> : c.kind === "video" ? <video controls preload="metadata" className="max-h-[80vh] w-full rounded-2xl bg-black" src={`/api/library/assets/${c.asset_id}`} /> : <a className="gc-button gc-button-secondary" href={`/api/library/assets/${c.asset_id}`} download>파일 다운로드</a>}
+      {c.kind === "text" ? <div className="whitespace-pre-wrap break-words rounded-2xl bg-[var(--surface)] p-4 text-[15px] leading-relaxed">{c.text_content}</div> : c.kind === "image" ? <MediaGallery images={[{ id: String(c.id), src: `/api/library/assets/${c.asset_id}`, alt: `${item.title} · ${roles[c.role] ?? c.role} ${c.ordinal + 1}` }]} /> : c.kind === "video" ? <video controls preload="metadata" className="max-h-[80vh] w-full rounded-2xl bg-black" src={`/api/library/assets/${c.asset_id}`} /> : <a className="gc-button gc-button-secondary" href={`/api/library/assets/${c.asset_id}`} download>파일 다운로드</a>}
       {c.relative_path ? <p className="label mt-2 break-all">{c.relative_path}</p> : null}
     </section>)}</div>
     <LibraryOrganizationPanel storageId={storage.id} itemIds={[id]} />

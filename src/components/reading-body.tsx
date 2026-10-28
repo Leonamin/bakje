@@ -8,7 +8,7 @@ import { Button, IconButton } from "@/components/goodcase/basic/button";
 import { Spinner } from "@/components/goodcase/basic/spinner";
 import type { MediaRow, PartRow } from "@/lib/types";
 import { buildAskPrompt } from "@/lib/ask-prompt";
-import { MediaGallery } from "./media-gallery";
+import { MediaGallery, splitMedia } from "./media-gallery";
 
 /** Parts longer than this start folded. The main post never folds. */
 const FOLD_AT = 600;
@@ -307,7 +307,7 @@ export function ReadingBody({
               </div>
               {partMedia.length > 0 ? (
                 <div className="mt-4">
-                  <MediaGallery media={partMedia} />
+                  <MediaGallery {...splitMedia(partMedia)} />
                 </div>
               ) : null}
             </>
