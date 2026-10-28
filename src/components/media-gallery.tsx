@@ -16,9 +16,14 @@ export function splitMedia(media: MediaRow[]) {
   };
 }
 
+/** 이 범위를 벗어나는 극단 비율(세로로 아주 긴 캡처 등)만 잘라서 보여 준다. 뷰어에서는 원본 비율. */
+const MIN_RATIO = 0.5;
+const MAX_RATIO = 2.5;
+
 export function MediaGallery({ images, clips = [] }: { images: ViewerImage[]; clips?: MediaRow[] }) {
   const [index, setIndex] = useState(0);
   const [open, setOpen] = useState(false);
+  const [ratio, setRatio] = useState(0);
 
   return (
     <div className="space-y-3">
@@ -38,7 +43,7 @@ export function MediaGallery({ images, clips = [] }: { images: ViewerImage[]; cl
                 setIndex(i);
                 setOpen(true);
               }}
-              className={`press media-tile group relative ${images.length === 1 ? "max-h-[560px]" : "aspect-[3/4]"}`}
+              className={`press media-tile group relative ${images.length === 1 ? "flex justify-center" : "aspect-[3/4]"}`}
               aria-label={`이미지 ${i + 1} 크게 보기`}
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -46,7 +51,10 @@ export function MediaGallery({ images, clips = [] }: { images: ViewerImage[]; cl
                 src={m.src}
                 alt=""
                 loading={i < 2 ? "eager" : "lazy"}
-                className={images.length === 1 ? "max-h-[560px] w-full object-contain" : "h-full w-full object-cover"}
+                onLoad={images.length === 1 ? (e) => setRatio(e.currentTarget.naturalWidth / e.currentTarget.naturalHeight) : undefined}
+                // ponytail: 단일 이미지는 로드 후 비율로 자르므로 첫 렌더에서 한 번 높이가 바뀐다. 서버에서 width/height를 넘기면 없앨 수 있다.
+                style={images.length === 1 ? { aspectRatio: ratio ? Math.min(Math.max(ratio, MIN_RATIO), MAX_RATIO) : undefined } : undefined}
+                className={images.length === 1 ? `max-h-[560px] max-w-full object-cover h-auto! ${ratio && ratio < 1 ? "w-auto!" : ""}` : "h-full w-full object-cover"}
               />
               {i === 3 && images.length > 4 ? (
                 <span className="absolute inset-0 flex items-center justify-center bg-black/55 text-[20px] font-semibold text-white">
