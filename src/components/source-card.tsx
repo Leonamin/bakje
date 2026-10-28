@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Play } from "lucide-react";
 import type { SearchHit } from "@/lib/search";
+import { ThumbPreview } from "@/components/thumb-preview";
 import { formatDate, platformName, thumbUrl } from "@/lib/format";
 
 const PLATFORM_TONE: Record<string, string> = {
@@ -94,10 +95,11 @@ function Thumb({ hit, src, className }: { hit: SearchHit; src: string; className
 export function SourceCard({ hit, query, view, debug }: { hit: SearchHit; query?: string; view: "grid" | "list" | "feed"; debug?: boolean }) {
   const thumb = thumbUrl(hit.thumb, view === "feed" ? 960 : view === "list" ? 320 : 640);
   const text = hit.title || hit.snippet;
+  const preview = thumbUrl(hit.thumb, 640);
 
   if (view === "feed") {
     return (
-      <Link href={`/sources/${hit.id}`} className="plate-hover block overflow-hidden rounded-2xl bg-[var(--surface)]">
+      <ThumbPreview src={preview}><Link href={`/sources/${hit.id}`} className="plate-hover block overflow-hidden rounded-2xl bg-[var(--surface)]">
         {thumb ? <Thumb hit={hit} src={thumb} className="aspect-video w-full" /> : null}
         <div className="px-4 pb-4 pt-3">
           <Meta hit={hit} debug={debug} />
@@ -110,13 +112,13 @@ export function SourceCard({ hit, query, view, debug }: { hit: SearchHit; query?
             <Highlight text={text} q={query} />
           </p>
         </div>
-      </Link>
+      </Link></ThumbPreview>
     );
   }
 
   if (view === "list") {
     return (
-      <Link href={`/sources/${hit.id}`} className="plate-hover flex gap-3 rounded-2xl bg-[var(--surface)] p-3">
+      <ThumbPreview src={preview}><Link href={`/sources/${hit.id}`} className="plate-hover flex gap-3 rounded-2xl bg-[var(--surface)] p-3">
         {thumb ? (
           <div className="media-tile h-16 w-16 shrink-0 rounded-xl">
             {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -129,12 +131,12 @@ export function SourceCard({ hit, query, view, debug }: { hit: SearchHit; query?
             <Highlight text={text} q={query} />
           </p>
         </div>
-      </Link>
+      </Link></ThumbPreview>
     );
   }
 
   return (
-    <Link href={`/sources/${hit.id}`} className="plate-hover flex h-full flex-col overflow-hidden rounded-2xl bg-[var(--surface)]">
+    <ThumbPreview src={preview}><Link href={`/sources/${hit.id}`} className="plate-hover flex h-full flex-col overflow-hidden rounded-2xl bg-[var(--surface)]">
       {thumb ? <Thumb hit={hit} src={thumb} className="aspect-[4/3] w-full" /> : null}
       <div className="flex flex-1 flex-col gap-1.5 p-3">
         {thumb ? null : (
@@ -153,6 +155,6 @@ export function SourceCard({ hit, query, view, debug }: { hit: SearchHit; query?
           </div>
         ) : null}
       </div>
-    </Link>
+    </Link></ThumbPreview>
   );
 }

@@ -2,10 +2,11 @@ import Link from "next/link";
 import { FileText, Folder, Image as ImageIcon } from "lucide-react";
 import type { LibraryHit } from "@/lib/library-search";
 import { platformName } from "@/lib/format";
+import { ThumbPreview } from "@/components/thumb-preview";
 export function LibraryCard({ hit, view = "grid", debug = false }: { hit: LibraryHit; view?: "grid" | "list" | "feed"; debug?: boolean }) {
   const href = hit.source_id ? `/sources/${hit.source_id}` : `/items/${hit.id}${hit.match_component ? `#component-${hit.match_component}` : ""}`;
   const horizontal = view === "list";
-  return <Link href={href} className={`plate-hover flex h-full overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--surface)] ${horizontal ? "flex-row gap-3 p-3" : "flex-col"}`}>
+  return <ThumbPreview src={hit.thumb}><Link href={href} className={`plate-hover flex h-full overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--surface)] ${horizontal ? "flex-row gap-3 p-3" : "flex-col"}`}>
     <div className={`media-tile flex shrink-0 items-center justify-center bg-[var(--surface-2)] ${horizontal ? "h-20 w-20 rounded-lg" : (hit.thumb ? "aspect-[4/3]" : "aspect-[16/7]") + " w-full"}`}>
       {hit.thumb ? <img src={hit.thumb} alt="" loading="lazy" decoding="async" className="h-full w-full object-cover" /> : hit.kind === "prompt" ? <ImageIcon size={28} className="text-[var(--muted)]" /> : <FileText size={28} className="text-[var(--muted)]" />}
     </div>
@@ -17,5 +18,5 @@ export function LibraryCard({ hit, view = "grid", debug = false }: { hit: Librar
       {hit.review_required ? <span className="label text-[var(--warn)]">묶음 확인 필요</span> : null}
       {hit.analysis_failed ? <span className="label text-[var(--warn)]">일부 분석 실패</span> : hit.analysis_pending ? <span className="label">저장됨 · 분석 대기 {hit.analysis_pending}</span> : hit.match ? <span className="label">{hit.match === "image" ? "이미지와 비슷" : "내용이 비슷"}{debug && hit.score !== undefined ? ` · ${hit.score.toFixed(3)}` : ""}</span> : null}
     </div>
-  </Link>;
+  </Link></ThumbPreview>;
 }
