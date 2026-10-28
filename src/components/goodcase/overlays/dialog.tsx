@@ -246,7 +246,7 @@ function Modal({
               <X size={20} />
             </RDialog.Close>
           </header>
-          <div className="gc-modal-body">{children}</div>
+          {children ? <div className="gc-modal-body">{children}</div> : null}
           {footer && <footer>{footer}</footer>}
         </RDialog.Content>
       </RDialog.Portal>
