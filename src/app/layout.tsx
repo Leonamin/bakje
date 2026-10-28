@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import localFont from "next/font/local";
 import { Providers } from "@/components/providers";
 import { BottomNav, TopBar } from "@/components/app-nav";
+import { NavigationProgress } from "@/components/navigation-state";
 import "./globals.css";
 
 // ponytail: one 2MB variable file, cached after first load; switch to Pretendard's dynamic subset if first paint on mobile data hurts.
@@ -30,6 +31,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="ko" className={pretendard.variable}>
       <body>
         <Providers>
+          <NavigationProgress />
           <div className="app-shell">
             <TopBar />
             <main className="app-main">{children}</main>

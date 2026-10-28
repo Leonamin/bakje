@@ -1,14 +1,14 @@
 "use client";
 
-import { useEffect, useRef, useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useRef, useState } from "react";
 import { Search, X } from "lucide-react";
 import { IconButton } from "@/components/goodcase/basic/button";
+import { Spinner } from "@/components/goodcase/basic/spinner";
+import { useNavigate, useNavigating } from "@/components/navigation-state";
 
 export function SearchInput({ initialQuery }: { initialQuery: string }) {
-  const router = useRouter();
+  const navigate = useNavigate(), isPending = useNavigating();
   const [value, setValue] = useState(initialQuery);
-  const [isPending, startTransition] = useTransition();
   const ref = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -22,7 +22,7 @@ export function SearchInput({ initialQuery }: { initialQuery: string }) {
   function submit(next: string) {
     const sp = new URLSearchParams();
     if (next.trim()) sp.set("q", next.trim());
-    startTransition(() => router.push(`/search?${sp.toString()}`, { scroll: false }));
+    navigate(`/search?${sp.toString()}`);
   }
 
   return (
@@ -34,11 +34,11 @@ export function SearchInput({ initialQuery }: { initialQuery: string }) {
       }}
       className="relative"
     >
-      <Search
+      {isPending ? <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2"><Spinner size="small" isDecorative /></span> : <Search
         size={20}
         strokeWidth={1.8}
         className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--muted)]"
-      />
+      />}
       <input
         ref={ref}
         value={value}
@@ -62,7 +62,6 @@ export function SearchInput({ initialQuery }: { initialQuery: string }) {
           <X size={20} />
         </IconButton>
       ) : null}
-      {isPending ? <span className="label absolute -bottom-6 left-1">검색 중…</span> : null}
     </form>
   );
 }

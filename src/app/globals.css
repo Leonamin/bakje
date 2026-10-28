@@ -30,6 +30,32 @@ body {
   color: var(--accent-strong);
 }
 
+/* Thin indeterminate bar at the very top while search / shuffle / paging loads. */
+.nav-progress {
+  position: fixed;
+  inset: 0 0 auto 0;
+  z-index: 60;
+  height: 3px;
+  overflow: hidden;
+  background: color-mix(in srgb, var(--accent) 20%, transparent);
+}
+.nav-progress::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  width: 40%;
+  border-radius: 3px;
+  background: var(--accent);
+  animation: nav-progress 1s ease-in-out infinite;
+}
+@keyframes nav-progress {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(250%); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .nav-progress::after { width: 100%; opacity: 0.6; animation: none; }
+}
+
 .app-shell {
   min-height: 100dvh;
 }
@@ -97,7 +123,8 @@ body {
   border-color: var(--line-strong);
 }
 
-.chip[data-active="true"] {
+.chip[data-active="true"],
+.chip[aria-pressed="true"] {
   background: color-mix(in srgb, var(--accent) 14%, transparent);
   border-color: color-mix(in srgb, var(--accent) 55%, transparent);
   color: var(--accent-strong);
