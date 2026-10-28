@@ -17,7 +17,7 @@ X, Threads, Reddit 게시글을 링크 하나로 내 디스크에 복제하고 �
 - 2026-10-28 UI·보안 정리: 선택 모드(카드 클릭 선택, sticky 툴바, 확인 창, 쪽 이동 중 유지), 로딩 표시, 공용 `Chip` 필터 툴바, 폴더 연결 허용 루트 제한과 검색 중 쓰기 실패 수정. → [UI 시스템](./concepts/ui-system.md), [결정 018](./decisions/018-linked-root-allowlist.md)
 
 - MVP 구현 완료: 3개 플랫폼 수집, 작성자 이어쓰기 사슬, 미디어 로컬 복제, 한국어 키워드 검색.
-- 운영 배포: `/opt/bakje` 릴리스 + Docker Compose, 데이터는 `/var/lib/bakje`, tailnet `https://<기기이름>.<tailnet>.ts.net:8888`. 최신 릴리스 `20261028T141756Z`.
+- 운영 배포: `/opt/bakje` 릴리스 + Docker Compose, 데이터는 `/var/lib/bakje`, tailnet `https://<기기이름>.<tailnet>.ts.net:8888`. 최신 릴리스 `20261028T155511Z`.
 - 수집 우선 UI, 수집 작업 재시도·오프라인 대기열·서비스 워커. → [결정 010](./decisions/010-capture-first-ui.md), [결정 011](./decisions/011-resilient-capture-queue.md)
 - 로고는 크림색 화석 나선 단색 마크(미니멀). 시안은 [로고 시안 모음](./references/logo-sketches.md). → [결정 015](./decisions/015-logo-fossil-spiral.md)
 - 요청형 번역과 LLM 설정 화면 `/settings`. 실제 키로 번역을 실사용해 확인했다(2026-10-26). → [결정 013](./decisions/013-on-demand-translation-and-llm-settings.md)

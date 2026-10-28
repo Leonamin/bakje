@@ -3,6 +3,7 @@ export { Combobox } from "./combobox";
 export type { Option } from "./types";
 export { Menu, type MenuItem } from "./menu";
 export { Popover } from "./popover";
+export { HoverCard } from "./hover-card";
 export { Tooltip } from "./tooltip";
 export { Dialog, Drawer, DialogClose, type DialogProps } from "./dialog";
 export { Accordion } from "./accordion";
