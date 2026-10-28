@@ -1,5 +1,6 @@
 @import "tailwindcss";
-@import "../styles/tokens.css";
+/* Reference defaults must yield to the app palette in components. */
+@import "../styles/tokens.css" layer(base);
 @import "../styles/global.css" layer(base);
 @import "../styles/basic.css" layer(components);
 @import "../styles/overlays.css" layer(components);

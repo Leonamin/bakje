@@ -22,7 +22,7 @@
   background: var(--gc-accent);
   color: var(--gc-on-accent);
 }
-.gc-button-primary:hover {
+.gc-button-primary:hover:not(:disabled) {
   background: var(--gc-accent-hover);
 }
 .gc-button-secondary {
@@ -30,7 +30,7 @@
   border-color: var(--gc-border);
   color: var(--gc-text);
 }
-.gc-button-secondary:hover {
+.gc-button-secondary:hover:not(:disabled) {
   background: var(--gc-surface-subtle);
 }
 .gc-button-danger {
