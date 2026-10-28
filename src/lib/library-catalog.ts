@@ -132,6 +132,7 @@ export function editLibraryItem(id: number, revision: number, patch: { title?: s
     const existing = getLibraryItem(id);
     if (!existing) throw new Error("자료를 찾을 수 없습니다.");
     assertStorageUnlocked(existing.item.storage_id);
+    if (existing.item.deleted_at) throw new Error("휴지통의 자료는 수정할 수 없습니다. 삭제를 취소한 뒤 수정하세요.");
     if (existing.item.source_id && (patch.title !== undefined || patch.note !== undefined || patch.hidden !== undefined || patch.review_required !== undefined)) throw new Error("SNS 본문·메모·숨김은 기존 정리 기능을 사용하세요.");
     const updated = db().prepare(`UPDATE library_item SET title=?,note=?,hidden_at=?,review_required=?,user_locked=1,revision=revision+1,updated_at=? WHERE id=? AND revision=?`)
       .run(patch.title ?? existing.item.title, patch.note ?? existing.item.note,

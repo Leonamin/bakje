@@ -5,7 +5,17 @@ import { cosine } from "./embed";
 export type RelatedItem = { id: number; title: string; origin: string };
 
 /** Compare saved, current-model vectors; no embedding service is needed at request time. */
+// ponytail: the scan loads every vector, so keep each result 10 minutes; add an on-disk neighbour index if the catalog outgrows this.
+const cache = new Map<number, { at: number; items: RelatedItem[] }>();
 export function relatedItems(itemId: number): RelatedItem[] {
+  const hit = cache.get(itemId);
+  if (hit && Date.now() - hit.at < 600_000) return hit.items;
+  const items = computeRelated(itemId);
+  if (cache.size >= 200) cache.delete(cache.keys().next().value!);
+  cache.set(itemId, { at: Date.now(), items });
+  return items;
+}
+function computeRelated(itemId: number): RelatedItem[] {
   const rows = db().prepare(`WITH eligible AS (
     SELECT i.id, i.source_id, i.title, i.origin FROM library_item i
     JOIN library_storage st ON st.id=i.storage_id LEFT JOIN source s ON s.id=i.source_id

@@ -6,6 +6,7 @@ import assert from "node:assert/strict";
 const root = process.argv[2];
 if (!root) throw new Error("Usage: pnpm exec tsx scripts/check-library-import.ts /path/to/opennana/data");
 const directory = await fs.mkdtemp(path.join(os.tmpdir(), "bakje-opennana-check-"));
+process.env.LIBRARY_ALLOWED_ROOTS = root;
 process.env.ARCHIVE_DATA_DIR = directory;
 delete process.env.EMBEDDER_URL;
 const { connectStorage } = await import("../src/lib/library-files");
