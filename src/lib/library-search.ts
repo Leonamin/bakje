@@ -16,7 +16,7 @@ export interface LibraryHit extends LibraryItem {
 }
 const escapeLike = (value: string) => value.replace(/[\\%_]/g, "\\$&");
 function filters(p: LibrarySearchParams) {
-  const sql = ["st.enabled=1", p.trash ? "i.deleted_at IS NOT NULL" : "i.deleted_at IS NULL", p.trash ? "1=1" : p.hidden ? "COALESCE(s.hidden_at,i.hidden_at) IS NOT NULL" : "COALESCE(s.hidden_at,i.hidden_at) IS NULL"];
+  const sql = ["st.enabled=1", p.trash ? "i.deleted_at IS NOT NULL" : "i.deleted_at IS NULL", p.trash ? "1=1" : p.hidden ? "COALESCE(s.hidden_at,i.hidden_at) IS NOT NULL AND CASE WHEN json_valid(i.metadata) THEN json_extract(i.metadata,'$.merged_into') END IS NULL" : "COALESCE(s.hidden_at,i.hidden_at) IS NULL"];
   const args: (string | number)[] = [];
   if (p.origin) { sql.push("i.origin=?"); args.push(p.origin); }
   if (p.storage) { sql.push("i.storage_id=?"); args.push(p.storage); }
@@ -92,18 +92,17 @@ export async function searchLibrary(p: LibrarySearchParams = {}) {
       UNION ALL SELECT e.id,v.vec,'image',NULL FROM media_embedding v JOIN media m ON m.id=v.media_id JOIN eligible e ON e.source_id=m.source_id WHERE v.model_key=?`)
       .iterate(...args, MODEL_KEY, MODEL_KEY, MODEL_KEY) as Iterable<{ id: number; vec: Buffer; via: "text" | "image"; component: number | null }>;
     const best = new Map<number, { score: number; via: "text" | "image"; component: number | null }>();
-    let scanned = 0;
+    // Synchronous on purpose: awaiting while iterate() is open makes every other write on this connection fail ("database connection is busy").
     for (const c of candidates) {
       const score = cosine(c.vec, query);
       if (score >= 0.7 && score > (best.get(c.id)?.score ?? -1)) best.set(c.id, { score, via: c.via, component: c.component });
-      if (++scanned % 1000 === 0) await new Promise<void>(resolve => setImmediate(resolve));
     }
     const semantic = [...best].sort((a, b) => b[1].score - a[1].score).slice(0, 300).map(([id]) => id);
     if (!semantic.length) return { hits: rows.map(r => hydrate(r, q)), total };
     const keywordIds = db().prepare(`SELECT i.id ${keywordJoins} WHERE ${where}${keywordSql} ORDER BY ${keywordOrder}`)
       .all(...keywordArgs, ...orderArgs) as { id: number }[];
     const ids = rrf([keywordIds.map(r => r.id), semantic]);
-    const found = db().prepare(`${select} WHERE i.id IN (${ids.map(() => "?").join(",")}) ORDER BY ${timeOrder}`).all(...ids) as Parameters<typeof hydrate>[0][];
+    const found = db().prepare(`${select} WHERE i.id IN (SELECT value FROM json_each(?)) ORDER BY ${timeOrder}`).all(JSON.stringify(ids)) as Parameters<typeof hydrate>[0][];
     if (shuffleSeed) found.sort((a, b) => ((a.id * shuffleSeed + a.id * a.id * 31) % 2147483647) - ((b.id * shuffleSeed + b.id * b.id * 31) % 2147483647));
     else if (p.sort !== "recent" && p.sort !== "posted") { const rank = new Map(ids.map((id, i) => [id, i])); found.sort((a, b) => rank.get(a.id)! - rank.get(b.id)!); }
     const hits = found.slice(offset, offset + limit).map(row => {
@@ -120,7 +119,7 @@ export async function searchLibrary(p: LibrarySearchParams = {}) {
     // total counts all keyword matches plus semantic-only additions, even outside the fusion window.
     const keywordMembership = new Set((db().prepare(`SELECT i.id ${keywordJoins} WHERE ${where}${keywordSql}`).all(...keywordArgs) as { id: number }[]).map(r => r.id));
     return { hits, total: total + semantic.filter(id => !keywordMembership.has(id)).length };
-  } catch { return { hits: rows.map(r => hydrate(r, q)), total }; }
+  } catch (error) { console.error("[library search] semantic search failed; using keyword results", error); return { hits: rows.map(r => hydrate(r, q)), total }; }
 }
 export function libraryFacets() {
   return {

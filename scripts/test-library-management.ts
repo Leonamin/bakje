@@ -5,6 +5,7 @@ import path from "node:path";
 import os from "node:os";
 import sharp from "sharp";
 const temporary = await fs.mkdtemp(path.join(os.tmpdir(), "bakje-management-test-"));
+process.env.LIBRARY_ALLOWED_ROOTS = os.tmpdir();
 const original = path.join(temporary, "originals");
 await fs.mkdir(original);
 await sharp({ create: { width: 20, height: 20, channels: 3, background: "#b7d894" } }).png().toFile(path.join(original, "result.png"));

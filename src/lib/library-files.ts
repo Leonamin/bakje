@@ -47,9 +47,19 @@ export async function resolveFile(storageId: number, relative: string) {
   if (full !== root && !full.startsWith(root + path.sep)) throw new Error("연결 루트 밖의 파일입니다.");
   return full;
 }
+/** Linked roots must sit under LIBRARY_ALLOWED_ROOTS (":"-separated, default /library) or the export folder; never the rest of the data volume. */
+async function assertAllowedRoot(canonical: string) {
+  const allowed = [...(process.env.LIBRARY_ALLOWED_ROOTS ?? "/library").split(":").filter(Boolean), path.join(DATA_DIR, "exports")];
+  for (const candidate of allowed) {
+    const real = await fs.realpath(candidate).catch(() => null);
+    if (real && (canonical === real || canonical.startsWith(real + path.sep))) return;
+  }
+  throw new Error("허용된 위치의 폴더만 연결할 수 있습니다. 호스트 설정의 LIBRARY_ALLOWED_ROOTS와 마운트를 확인하세요.");
+}
 export async function connectStorage(name: string, root: string) {
   if (!name.trim() || !path.isAbsolute(root)) throw new Error("저장소 이름과 절대 경로가 필요합니다.");
   const canonical = await fs.realpath(root);
+  await assertAllowedRoot(canonical);
   if (!(await fs.stat(canonical)).isDirectory()) throw new Error("폴더를 선택하세요.");
   const now = new Date().toISOString();
   const id = db().prepare(`INSERT INTO library_storage(name,kind,root_path,status,created_at) VALUES(?,'linked',?,'online',?)

@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState, useTransition } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { LayoutGrid, List, Search, Shuffle } from "lucide-react";
+import { LayoutGrid, List, Search, Shuffle, SlidersHorizontal } from "lucide-react";
 import { Button, IconButton } from "@/components/goodcase/basic/button";
 import { Select } from "@/components/goodcase/overlays/select";
 import { platformName } from "@/lib/format";
@@ -15,6 +15,7 @@ export function LibraryToolbar({ total, tags, view, storages = [], origins = [],
   const [query, setQuery] = useState(params.get("q") ?? "");
   const q = params.get("q") ?? "";
   useEffect(() => setQuery(q), [q]);
+  const active = ["storage", "origin", "platform", "collection", "media", "sort", "tag", "hidden", "trash", "folder"].filter(k => params.get(k)).length;
   function push(next: Record<string, string>) {
     const sp = new URLSearchParams(params.toString());
     sp.delete("page");
@@ -31,7 +32,8 @@ export function LibraryToolbar({ total, tags, view, storages = [], origins = [],
       {[{ value: "", label: "전체 자료" }, { value: "managed", label: "기본 저장소" }, { value: "linked", label: "연결 폴더" }].map(s =>
         <Button key={s.value} variant="secondary" className="chip shrink-0" aria-pressed={(params.get("scope") ?? "") === s.value} data-active={(params.get("scope") ?? "") === s.value} onClick={() => push({ scope: s.value, storage: "", folder: "" })}>{s.label}</Button>)}
     </div>
-    <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
+    <details className="mt-3" open={active > 0}><summary className="label flex cursor-pointer items-center gap-2"><SlidersHorizontal size={14} />필터{active ? <span className="numeric rounded-full bg-[var(--accent)] px-2 text-[11px] text-[var(--accent-bg)]">{active}</span> : null}</summary>
+    <div className="mt-3 grid grid-cols-2 gap-2 md:grid-cols-4">
       <Select
         label="저장 위치"
         value={params.get("storage") ?? ""}
@@ -57,7 +59,6 @@ export function LibraryToolbar({ total, tags, view, storages = [], origins = [],
         options={[{ value: "", label: "모든 형식" }, { value: "image", label: "이미지 포함" }, { value: "video", label: "영상 포함" }]}
       />
     </div>
-    <details className="mt-3"><summary className="label cursor-pointer">정렬·태그·숨긴 자료</summary>
       <div className="mt-2 flex flex-wrap items-center gap-2">
         <Select
           label="정렬"

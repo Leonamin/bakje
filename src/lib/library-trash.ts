@@ -4,13 +4,15 @@ import { assertStorageUnlocked } from "./library-lock";
 import fs from "node:fs";
 import path from "node:path";
 
+function mergedInto(metadata: string) { try { return !!JSON.parse(metadata).merged_into; } catch { return false; } }
 export function manageItems(ids: number[], action: "hide" | "unhide" | "trash" | "restore") {
   const conn = db();
   conn.transaction(() => {
     for (const id of ids) {
-      const item = conn.prepare("SELECT id,source_id,storage_id,deleted_at FROM library_item WHERE id=?").get(id) as { id: number; source_id: number | null; storage_id: number; deleted_at: string | null } | undefined;
+      const item = conn.prepare("SELECT id,source_id,storage_id,deleted_at,metadata FROM library_item WHERE id=?").get(id) as { id: number; source_id: number | null; storage_id: number; deleted_at: string | null; metadata: string } | undefined;
       if (!item) throw new Error("자료를 찾을 수 없습니다.");
       assertStorageUnlocked(item.storage_id);
+      if (action === "unhide" && mergedInto(item.metadata)) throw new Error("합쳐진 자료는 숨김 해제할 수 없습니다. 묶음 편집의 되돌리기를 사용하세요.");
       if (action === "restore") {
         if (!item.deleted_at) throw new Error("삭제 예정 자료가 아닙니다.");
         conn.prepare("UPDATE library_item SET deleted_at=NULL WHERE id=?").run(id);

@@ -8,6 +8,7 @@ import { execFileSync } from "node:child_process";
 import sharp from "sharp";
 
 const temp = await fs.mkdtemp(path.join(os.tmpdir(), "bakje-library-test-"));
+process.env.LIBRARY_ALLOWED_ROOTS = os.tmpdir();
 const linked = path.join(temp, "originals");
 await fs.mkdir(linked);
 await fs.writeFile(path.join(linked, "prompt.txt"), "어두운 정원의 패션 이미지\n\n패션 프롬프트 원문");

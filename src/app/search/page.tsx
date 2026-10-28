@@ -51,7 +51,7 @@ export default async function SearchPage({
           <ul className="mt-2 space-y-3">
             {hits.map((hit) => (
               <li key={hit.id}>
-                <LibraryCard hit={hit} view="list" />
+                <LibraryCard hit={hit} view="list" debug={sp.debug === "1"} />
               </li>
             ))}
           </ul>
