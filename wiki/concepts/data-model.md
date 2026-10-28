@@ -62,3 +62,7 @@ data/  (운영: /var/lib/bakje)
 
 
 `library_change`·`library_change_item`은 구성요소 편집·분리·합치기의 전후 스냅샷과 되돌림 시각을 기록한다. `library_organization`·`library_organization_item`·`library_organization_op`은 원본 정리 계획, 자료 버전, 파일별 해시·원래/목적 경로·체크포인트를 보존한다. 실행 중 `library_storage_lock`이 같은 저장소의 스캔·편집과 신규 배경 분석을 대기시킨다. 구성요소 ID와 `input_hash`가 같은 역할/순서·소속 변경은 임베딩을 재사용한다. → [묶음 편집과 원본 정리](./library-organization.md)
+
+### better-sqlite3 순회 중에는 양보하지 않는다 (2026-10-28)
+
+`iterate()`가 열려 있는 동안 `await`로 이벤트 루프를 내주면, 그 사이 같은 연결의 **쓰기와 트랜잭션이** `This database connection is busy executing a query`로 실패한다(읽기는 성공). better-sqlite3로 직접 재현해 확인했다. 의미 검색이 1,000행마다 양보하던 코드가 이 문제였고, 분석 결과 저장·휴지통 워커·원본 정리 단계·`POST /api/library`가 검색과 겹치면 간헐적으로 실패할 수 있었다. 순회 안에서는 `await`하지 않는다(`embed.ts`의 `semanticHits`처럼 동기로 끝낸다). 오래 걸릴 일이면 `.all()`로 읽은 뒤 청크로 나눠 양보한다. 검색은 후보 id를 `IN (?,?,…)` 대신 `json_each(?)` 하나로 넘겨 매개변수 한도를 피한다.
