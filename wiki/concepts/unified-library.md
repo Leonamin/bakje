@@ -114,7 +114,7 @@ MCP와 직접 JSON 제출의 경로는 저장소 루트 기준이다. 파일 매
 
 JSONL은 LF로만 레코드를 구분한다. 프롬프트 문자열 안의 U+2028·U+2029는 유효한 JSON 데이터이므로 줄 경계로 분리하지 않는다.
 
-Docker는 폴더를 먼저 읽기 전용으로 마운트해야 한다. 예시 `compose.library.example.yml`은 기존 Compose의 서비스 설정을 유지하면서 호스트 폴더 하나를 컨테이너 `/library`에 추가한다. 웹에서는 `/library`를 등록한다. 운영에서는 `/etc/bakje/compose.override.yml`의 읽기 전용 마운트를 사용하고 웹에 `/library/opennana`를 등록한다. [운영과 배포](./operations.md)의 연결 폴더 절차를 참고한다.
+Docker는 폴더를 먼저 읽기 전용으로 마운트해야 한다. 예시 `compose.library.example.yml`은 기존 Compose의 서비스 설정을 유지하면서 호스트 폴더 하나를 컨테이너 `/library`에 추가한다. 웹에서는 `/library`를 등록한다. 새 연결은 `LIBRARY_ALLOWED_ROOTS`(기본 `/library`)와 `<데이터>/exports` 아래만 허용한다. → [결정 018](../decisions/018-linked-root-allowlist.md) 운영에서는 `/etc/bakje/compose.override.yml`의 읽기 전용 마운트를 사용하고 웹에 `/library/opennana`를 등록한다. [운영과 배포](./operations.md)의 연결 폴더 절차를 참고한다.
 
 ## 저장과 분석 작업
 

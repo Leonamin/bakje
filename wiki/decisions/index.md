@@ -25,3 +25,4 @@ okf_version: "0.1"
 - [015-logo-fossil-spiral.md](./015-logo-fossil-spiral.md) — 미니멀 방향, 화석 나선 로고 확정과 OpenGraph 보류
 - [016-hide-posts.md](./016-hide-posts.md) — 휴지통 대신 hidden_at 숨김, 서버 액션으로 목록 캐시 무효화
 - [017-x-age-restricted-cookie.md](./017-x-age-restricted-cookie.md) — 연령 제한 X 게시글만 전용 계정 쿠키+Playwright로 수집
+- [018-linked-root-allowlist.md](./018-linked-root-allowlist.md) — 연결 폴더를 허용 루트 아래로 제한, MCP 토큰 분리는 후속 과제
