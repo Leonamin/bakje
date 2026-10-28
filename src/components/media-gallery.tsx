@@ -5,19 +5,20 @@ import { Play } from "lucide-react";
 import { ImageViewer, type ViewerImage } from "@/components/goodcase/composed/image-viewer";
 import type { MediaRow } from "@/lib/types";
 
-export function MediaGallery({ media }: { media: MediaRow[] }) {
+/** 게시글 미디어(MediaRow)를 뷰어용 이미지·영상으로 나눈다. */
+export function splitMedia(media: MediaRow[]) {
+  const usable = media.filter((m) => m.status === "ok" && m.local_path);
+  return {
+    images: usable
+      .filter((m) => m.kind === "image")
+      .map((m, i): ViewerImage => ({ id: String(m.id), src: `/api/media/${m.local_path}`, alt: `게시글 이미지 ${i + 1}` })),
+    clips: usable.filter((m) => m.kind !== "image"),
+  };
+}
+
+export function MediaGallery({ images, clips = [] }: { images: ViewerImage[]; clips?: MediaRow[] }) {
   const [index, setIndex] = useState(0);
   const [open, setOpen] = useState(false);
-
-  const usable = media.filter((m) => m.status === "ok" && m.local_path);
-  const images = usable.filter((m) => m.kind === "image");
-  const clips = usable.filter((m) => m.kind !== "image");
-
-  const viewerImages: ViewerImage[] = images.map((m, i) => ({
-    id: String(m.id),
-    src: `/api/media/${m.local_path}`,
-    alt: `게시글 이미지 ${i + 1}`,
-  }));
 
   return (
     <div className="space-y-3">
@@ -42,7 +43,7 @@ export function MediaGallery({ media }: { media: MediaRow[] }) {
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
-                src={`/api/media/${m.local_path}`}
+                src={m.src}
                 alt=""
                 loading={i < 2 ? "eager" : "lazy"}
                 className={images.length === 1 ? "max-h-[560px] w-full object-contain" : "h-full w-full object-cover"}
@@ -95,7 +96,7 @@ export function MediaGallery({ media }: { media: MediaRow[] }) {
 
       {images.length > 0 ? (
         <ImageViewer
-          images={viewerImages}
+          images={images}
           index={index}
           isOpen={open}
           onOpenChange={setOpen}
