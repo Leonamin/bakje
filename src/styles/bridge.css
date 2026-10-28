@@ -331,3 +331,9 @@ textarea:focus-visible {
     box-shadow: none;
   }
 }
+
+/* Toggled icon buttons (view mode, shuffle, select mode) must show that they are on, same tone as an active chip. */
+.gc-icon-button[aria-pressed="true"] {
+  color: var(--accent-strong);
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+}

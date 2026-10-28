@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { Busy, NavLink } from "@/components/navigation-state";
 import { SearchX } from "lucide-react";
 import { topTags } from "@/lib/search";
 import { searchLibrary } from "@/lib/library-search";
@@ -32,10 +32,10 @@ export default async function SearchPage({
             <h2 className="label mb-3">태그</h2>
             <div className="flex flex-wrap gap-2">
               {tags.map((tag) => (
-                <Link key={tag.name} href={`/search?q=${encodeURIComponent(tag.name)}`} className="chip">
+                <NavLink scroll={false} key={tag.name} href={`/search?q=${encodeURIComponent(tag.name)}`} className="chip">
                   #{tag.name}
                   <span className="numeric text-[12px] text-[var(--muted)]">{tag.count}</span>
-                </Link>
+                </NavLink>
               ))}
             </div>
           </section>
@@ -47,14 +47,14 @@ export default async function SearchPage({
         </div>
       ) : (
         <>
-          <div className="mt-4 flex items-center gap-3"><p className="label numeric">{total}건</p><Link className="gc-button gc-button-secondary" href={`/search?q=${encodeURIComponent(q)}&shuffle=${Math.floor(Math.random() * 2147483646) + 1}`}>다시 섞기</Link>{seed ? <Link className="gc-button gc-button-secondary" href={`/search?q=${encodeURIComponent(q)}`}>섞기 해제</Link> : null}</div>
-          <ul className="mt-2 space-y-3">
+          <div className="mt-4 flex items-center gap-3"><p className="label numeric">{total}건</p><NavLink scroll={false} className="gc-button gc-button-secondary" href={`/search?q=${encodeURIComponent(q)}&shuffle=${Math.floor(Math.random() * 2147483646) + 1}`}>다시 섞기</NavLink>{seed ? <NavLink scroll={false} className="gc-button gc-button-secondary" href={`/search?q=${encodeURIComponent(q)}`}>섞기 해제</NavLink> : null}</div>
+          <Busy><ul className="mt-2 space-y-3">
             {hits.map((hit) => (
               <li key={hit.id}>
                 <LibraryCard hit={hit} view="list" debug={sp.debug === "1"} />
               </li>
             ))}
-          </ul>
+          </ul></Busy>
         </>
       )}
     </div>

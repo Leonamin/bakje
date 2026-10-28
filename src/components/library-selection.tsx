@@ -5,6 +5,7 @@ import { Check, X } from "lucide-react";
 import { Button, IconButton } from "./goodcase/basic/button";
 import { ConfirmDialog } from "./goodcase/composed/confirm-dialog";
 import { SwipeHide } from "./swipe-hide";
+import { useSelection } from "./selection-state";
 import { LibraryCard } from "./library-card";
 import type { LibraryHit } from "@/lib/library-search";
 
@@ -13,8 +14,7 @@ const MAX_SELECTED = 100; // POST /api/library accepts at most 100 ids per reque
 
 export function LibrarySelection({ hits, view, mode }: { hits: LibraryHit[]; view: "grid" | "list"; mode: "normal" | "hidden" | "trash" }) {
   const router = useRouter();
-  const [selecting, setSelecting] = useState(false);
-  const [selected, setSelected] = useState<number[]>([]);
+  const { selecting, selected, setSelected, start, exit: exitSelection } = useSelection();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -34,7 +34,7 @@ export function LibrarySelection({ hits, view, mode }: { hits: LibraryHit[]; vie
     if (next.length > MAX_SELECTED) return full();
     setError(""); setSelected(next);
   };
-  const exit = () => { setSelecting(false); setSelected([]); setError(""); };
+  const exit = () => { exitSelection(); setError(""); };
   const ids = selected, count = ids.length;
   const otherPages = count - pageIds.filter(id => selected.includes(id)).length;
   const scope = otherPages ? `다른 쪽 ${otherPages}개를 포함합니다. ` : "";
@@ -58,7 +58,6 @@ export function LibrarySelection({ hits, view, mode }: { hits: LibraryHit[]; vie
     title={`${count}개 자료를 휴지통으로 옮길까요?`} description={`${scope}7일 후 삭제됩니다. 관련 묶음 편집과 원본 정리 기록은 되돌릴 수 없게 됩니다.`}
     confirmLabel="휴지통으로 이동" onConfirm={() => run("trash")} />;
   return <>
-    {selecting ? null : <div className="mt-1 flex items-center justify-end gap-2"><Button variant="secondary" onClick={() => { setSelecting(true); setSelected([]); }}>선택</Button></div>}
     {/* sticky: flush full-bleed on mobile; on md+ a rounded bar floating 16px under the 56px top bar (z-40) */}
     {selecting ? <div role="toolbar" aria-label="선택한 자료 작업" className="sticky top-0 z-30 -mx-5 mb-2 mt-1 flex flex-wrap items-center gap-2 border-b border-[var(--line)] bg-[var(--surface)] px-5 py-2 shadow-lg md:top-[72px] md:mx-0 md:rounded-xl md:border md:px-3">
       <IconButton label="선택 모드 끝내기" size="compact" onClick={exit}><X size={19} /></IconButton>
@@ -74,7 +73,7 @@ export function LibrarySelection({ hits, view, mode }: { hits: LibraryHit[]; vie
       return <li key={hit.id} data-selected={on || undefined} className={`relative rounded-2xl transition-transform ${selecting ? "cursor-pointer" : ""} ${on ? "scale-[0.96] ring-2 ring-[var(--accent)]" : ""}`} onPointerDown={e => {
       if (e.pointerType !== "touch" || selecting) return;
       point.current = { x: e.clientX, y: e.clientY }; suppress.current = false;
-      timer.current = setTimeout(() => { suppress.current = true; setSelecting(true); setSelected([hit.id]); }, 550);
+      timer.current = setTimeout(() => { suppress.current = true; start([hit.id]); }, 550);
     }} onPointerMove={e => { if (point.current && Math.hypot(e.clientX - point.current.x, e.clientY - point.current.y) > 10) cancel(); }} onPointerUp={cancel} onPointerCancel={cancel} onContextMenu={e => { if (selecting || suppress.current) e.preventDefault(); }} onClickCapture={e => {
       if (suppress.current) { e.preventDefault(); e.stopPropagation(); suppress.current = false; return; }
       // In selection mode the whole card toggles; the indicator button handles itself.
