@@ -6,7 +6,7 @@ export function LibraryCard({ hit, view = "grid" }: { hit: LibraryHit; view?: "g
   const href = hit.source_id ? `/sources/${hit.source_id}` : `/items/${hit.id}${hit.match_component ? `#component-${hit.match_component}` : ""}`;
   const horizontal = view === "list";
   return <Link href={href} className={`plate-hover flex h-full overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--surface)] ${horizontal ? "flex-row gap-3 p-3" : "flex-col"}`}>
-    <div className={`media-tile flex shrink-0 items-center justify-center bg-[var(--surface-2)] ${horizontal ? "h-20 w-20 rounded-lg" : "aspect-[4/3] w-full"}`}>
+    <div className={`media-tile flex shrink-0 items-center justify-center bg-[var(--surface-2)] ${horizontal ? "h-20 w-20 rounded-lg" : (hit.thumb ? "aspect-[4/3]" : "aspect-[16/7]") + " w-full"}`}>
       {hit.thumb ? <img src={hit.thumb} alt="" loading="lazy" decoding="async" className="h-full w-full object-cover" /> : hit.kind === "prompt" ? <ImageIcon size={28} className="text-[var(--muted)]" /> : <FileText size={28} className="text-[var(--muted)]" />}
     </div>
     <div className={`flex min-w-0 flex-1 flex-col gap-2 ${horizontal ? "" : "p-3"}`}>

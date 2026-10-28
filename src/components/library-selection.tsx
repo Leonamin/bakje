@@ -1,6 +1,7 @@
 "use client";
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { Check, Circle } from "lucide-react";
 import { Button } from "./goodcase/basic/button";
 import { SwipeHide } from "./swipe-hide";
 import { LibraryCard } from "./library-card";
@@ -30,7 +31,7 @@ export function LibrarySelection({ hits, view, mode }: { hits: LibraryHit[]; vie
     finally { setBusy(false); }
   }
   return <>
-    <div className="mt-3 flex items-center justify-end gap-2"><button type="button" className="gc-button gc-button-secondary" onClick={() => { setSelecting(!selecting); setSelected([]); }}>{selecting ? "선택 취소" : "선택"}</button></div>
+    <div className="mt-1 flex items-center justify-end gap-2"><button type="button" className="gc-button gc-button-secondary" onClick={() => { setSelecting(!selecting); setSelected([]); }}>{selecting ? "선택 취소" : "선택"}</button></div>
     {selecting ? <div className="sticky top-0 z-20 my-2 flex flex-wrap items-center gap-2 rounded-xl border border-[var(--line)] bg-[var(--surface)] p-3 shadow-lg">
       <span className="mr-auto text-sm">{selected.length}개 선택</span>
       <button className="gc-button gc-button-secondary" onClick={() => setSelected(selected.length === hits.length ? [] : hits.map(h => h.id))}>현재 페이지 {selected.length === hits.length ? "선택 해제" : "전체 선택"}</button>
@@ -48,7 +49,7 @@ export function LibrarySelection({ hits, view, mode }: { hits: LibraryHit[]; vie
       if (selecting && !(e.target as HTMLElement).closest("button")) { e.preventDefault(); e.stopPropagation(); toggle(hit.id); }
     }}>
       {!selecting && mode === "normal" && hit.source_id ? <SwipeHide id={hit.source_id}><LibraryCard hit={hit} view={view} /></SwipeHide> : <LibraryCard hit={hit} view={view} />}
-      {selecting ? <Button variant="secondary" type="button" aria-label={`${hit.title || "자료"} 선택`} aria-pressed={selected.includes(hit.id)} className="absolute right-3 top-3 rounded-full border bg-[var(--surface)] px-2 py-1 text-sm" onClick={e => { e.stopPropagation(); toggle(hit.id); }}>{selected.includes(hit.id) ? "✓" : "○"}</Button> : null}
+      {selecting ? <Button variant="secondary" type="button" aria-label={`${hit.title || "자료"} 선택`} aria-pressed={selected.includes(hit.id)} className="absolute right-3 top-3 !h-9 !w-9 rounded-full border bg-[var(--surface)] !p-0" onClick={e => { e.stopPropagation(); toggle(hit.id); }}>{selected.includes(hit.id) ? <Check size={18} className="text-[var(--accent)]" /> : <Circle size={18} />}</Button> : null}
       {mode === "trash" && hit.deleted_at ? <p className="label px-2 py-1">삭제 예정: {new Date(new Date(hit.deleted_at).getTime() + 7 * 86400000).toLocaleDateString("ko-KR")}</p> : null}
     </li>)}</ul>
   </>;
