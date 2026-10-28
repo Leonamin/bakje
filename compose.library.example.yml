@@ -1,0 +1,6 @@
+# Optional read-only library mount. Keep compose.yml as the base configuration.
+# BAKJE_LIBRARY_ROOT=/path/to/opennana/data docker compose -f compose.yml -f compose.library.example.yml up -d
+services:
+  web:
+    volumes:
+      - ${BAKJE_LIBRARY_ROOT:?Set BAKJE_LIBRARY_ROOT to the host folder}:/library:ro

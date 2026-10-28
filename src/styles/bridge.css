@@ -106,12 +106,32 @@ html {
 
 .gc-input,
 .gc-textarea,
+.gc-select,
 .gc-select-trigger {
   background: #11161e;
   border-color: var(--line-strong);
   color: var(--ink);
   border-radius: 12px;
   font-size: 16px; /* below 16px iOS zooms the page on focus */
+}
+
+/* Reference tokens are unlayered. Scope the app palette on portaled menus
+   and their triggers so those defaults cannot turn dropdowns light/blue. */
+.gc-select,
+.gc-floating,
+.gc-modal:not(.gc-viewer-dialog) {
+  --gc-surface: var(--surface);
+  --gc-text: var(--ink);
+  --gc-text-muted: var(--muted);
+  --gc-control-border: var(--line-strong);
+  --gc-surface-subtle: var(--surface-2);
+  --gc-border: var(--line-strong);
+  --gc-accent: var(--accent);
+  --gc-accent-soft: #202b22;
+  --gc-focus: var(--accent);
+  --gc-control-height: 44px;
+  --gc-text-base: 14px;
+  --gc-shadow: 0 18px 48px #00000073;
 }
 
 .gc-combobox-input {

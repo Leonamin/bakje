@@ -37,7 +37,7 @@ export function relative(iso: string | null): string {
 }
 
 export function platformName(p: string): string {
-  return p === "x" ? "X" : p === "threads" ? "Threads" : p === "reddit" ? "Reddit" : p;
+  return p === "x" ? "X" : p === "threads" ? "Threads" : p === "reddit" ? "Reddit" : p === "opennana" ? "OpenNana" : p === "local" ? "직접 등록" : p;
 }
 
 export function statusLabel(s: string): { text: string; tone: "ok" | "warn" | "bad" } {

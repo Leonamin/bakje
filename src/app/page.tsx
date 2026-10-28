@@ -1,92 +1,32 @@
 import Link from "next/link";
 import { Suspense } from "react";
-import { Archive, Plus, Settings } from "lucide-react";
-import { searchHybrid, topTags } from "@/lib/search";
+import { Archive, FolderCog, Settings } from "lucide-react";
+import { searchLibrary, libraryFacets } from "@/lib/library-search";
+import { storages } from "@/lib/library-files";
 import { LibraryToolbar } from "@/components/library-toolbar";
+import { LibraryCard } from "@/components/library-card";
 import { RefreshButton } from "@/components/refresh-button";
 import { SwipeHide } from "@/components/swipe-hide";
-import { SourceCard } from "@/components/source-card";
-
 export const dynamic = "force-dynamic";
-
-export default async function LibraryPage({
-  searchParams,
-}: {
-  searchParams: Promise<Record<string, string | string[] | undefined>>;
-}) {
+export default async function LibraryPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const sp = await searchParams;
-  const get = (k: string) => (typeof sp[k] === "string" ? (sp[k] as string) : undefined);
-  const q = get("q")?.trim() || "";
-  const platform = get("platform");
-  const media = get("media") as "image" | "video" | "any" | undefined;
-  const sort = (get("sort") as "relevance" | "recent" | "posted" | undefined) ?? undefined;
-  const tag = get("tag");
-  const hidden = get("hidden") === "1";
-  const view = get("view") === "list" ? "list" : "grid";
-
-  const { hits, total } = await searchHybrid({ q, platform, media, sort, tag, hidden, limit: 60 });
-  const tags = topTags(10);
-
-  const isFiltered = Boolean(q || platform || media || tag || sort || hidden);
-
-  return (
-    <div className="mx-auto max-w-6xl px-5 pb-10 pt-2 md:px-6 md:pt-8">
-      <header className="flex h-16 items-center md:mb-4">
-        <h1 className="text-[24px] font-bold tracking-tight">라이브러리</h1>
-        <div className="ml-auto">
-          <RefreshButton />
-        </div>
-        <Link
-          href="/settings"
-          aria-label="설정"
-          className="-mr-2 flex h-11 w-11 items-center justify-center rounded-xl text-[var(--muted)] md:hidden"
-        >
-          <Settings size={22} strokeWidth={1.8} />
-        </Link>
-      </header>
-
-      <Suspense fallback={<div className="h-12 rounded-xl border border-[var(--line)]" />}>
-        <LibraryToolbar total={total} tags={tags.map((t) => t.name)} view={view} />
-      </Suspense>
-
-      {hits.length === 0 ? (
-        <div className="mt-8 px-6 py-16 text-center">
-          <Archive size={24} strokeWidth={1.6} className="mx-auto mb-3 text-[var(--muted)]" />
-          <p className="text-[14px] text-[var(--ink)]">
-            {isFiltered ? "조건에 맞는 게시글이 없습니다." : "아직 저장한 게시글이 없습니다."}
-          </p>
-          {isFiltered ? (
-            <Link href="/" className="gc-button gc-button-secondary mt-4">
-              필터 초기화
-            </Link>
-          ) : (
-            <Link
-              href="/add"
-              className="gc-button gc-button-primary mt-4"
-            >
-              <Plus size={18} strokeWidth={2.2} />
-              첫 게시글 저장
-            </Link>
-          )}
-        </div>
-      ) : (
-        <ul
-          className={
-            view === "grid"
-              ? "mt-2 grid grid-cols-2 gap-2 md:grid-cols-3 md:gap-3 lg:grid-cols-4"
-              : "mt-2 space-y-2"
-          }
-        >
-          {hits.map((hit) => {
-            const card = <SourceCard hit={hit} query={q} view={view} debug={get("debug") === "1"} />;
-            return (
-              <li key={hit.id}>
-                {hidden ? card : <SwipeHide id={hit.id}>{card}</SwipeHide>}
-              </li>
-            );
-          })}
-        </ul>
-      )}
-    </div>
-  );
+  const get = (key: string) => typeof sp[key] === "string" ? sp[key] as string : undefined;
+  const page = Math.max(1, Number(get("page")) || 1), limit = 60;
+  const { hits, total } = await searchLibrary({ q: get("q"), origin: get("origin") ?? get("platform"), scope: get("scope") as "managed" | "linked" | undefined,
+    storage: Number(get("storage")) || undefined, folder: get("folder"), collection: get("collection"), media: get("media"), sort: get("sort"), tag: get("tag"), hidden: get("hidden") === "1", limit, offset: (page - 1) * limit });
+  const facets = libraryFacets(), view = get("view") === "list" ? "list" : "grid";
+  const pageUrl = (n: number) => { const p = new URLSearchParams(); for (const [k, v] of Object.entries(sp)) if (typeof v === "string") p.set(k, v); p.set("page", String(n)); return `/?${p}`; };
+  return <div className="mx-auto max-w-6xl px-5 pb-10 pt-2 md:px-6 md:pt-8">
+    <header className="flex min-h-16 items-center gap-2 md:mb-4"><h1 className="mr-auto text-[24px] font-bold tracking-tight">라이브러리</h1>
+      <Link href="/library" className="gc-button gc-button-secondary !px-3"><FolderCog size={18} /><span>폴더·작업</span></Link><RefreshButton />
+      <Link href="/settings" aria-label="설정" className="press flex h-11 w-11 items-center justify-center rounded-xl text-[var(--muted)] md:hidden"><Settings size={21} /></Link>
+    </header>
+    <Suspense fallback={<p>불러오는 중</p>}><LibraryToolbar total={total} tags={facets.tags.map(t => t.name)} view={view} storages={storages()} origins={facets.origins.map(o => o.origin)} collections={facets.collections.map(c => c.name)} /></Suspense>
+    {!hits.length ? <div className="py-16 text-center"><Archive size={25} className="mx-auto mb-3 text-[var(--muted)]" /><p>표시할 자료가 없습니다.</p><p className="label mt-2">링크를 박제하거나 폴더를 연결해 자료를 등록하세요.</p></div> :
+      <ul className={view === "grid" ? "mt-2 grid grid-cols-2 gap-2 md:grid-cols-3 md:gap-3 lg:grid-cols-4" : "mt-2 space-y-2"}>{hits.map(hit => {
+        const card = <LibraryCard hit={hit} view={view} />;
+        return <li key={hit.id}>{hit.source_id && !get("hidden") ? <SwipeHide id={hit.source_id}>{card}</SwipeHide> : card}</li>;
+      })}</ul>}
+    {total > limit ? <nav aria-label="자료 페이지" className="mt-6 flex items-center justify-center gap-4">{page > 1 ? <Link className="gc-button gc-button-secondary" href={pageUrl(page - 1)}>이전</Link> : null}<span className="label">{page} / {Math.ceil(total / limit)}</span>{page * limit < total ? <Link className="gc-button gc-button-secondary" href={pageUrl(page + 1)}>다음</Link> : null}</nav> : null}
+  </div>;
 }

@@ -55,3 +55,10 @@ data/  (운영: /var/lib/bakje)
 ## 재수집 시 동작
 
 `source`는 upsert하고 `part`·`media` 행은 지우고 다시 만든다. 파일은 sha256으로 중복 제거되므로 같은 미디어를 다시 받아도 디스크가 늘지 않는다. 기존 번역은 원문 텍스트가 같으면 보존한다.
+
+## 통합 라이브러리 확장 (2026-10-28)
+
+기존 SNS 테이블과 상세 ID는 유지하고 `library_storage`, `library_item`, `library_component`, `library_asset`, `library_collection`, `library_collection_item`을 추가한다. 기존 `source.id`는 공통 자료의 `source_id`로 매핑한다. `library_run`·`library_run_entry`는 등록/내보내기, `analysis_job`은 배경 분석, `library_vector`·`embedding_cache`·`library_fts`는 검색 파생 데이터를 보유한다. 기존 임베딩 테이블에도 `model_key`를 추가해 모델/전처리가 다른 벡터의 혼합을 막는다. 세부 책임과 등록 규격은 [통합 라이브러리](./unified-library.md)를 참고한다.
+
+
+`library_change`·`library_change_item`은 구성요소 편집·분리·합치기의 전후 스냅샷과 되돌림 시각을 기록한다. `library_organization`·`library_organization_item`·`library_organization_op`은 원본 정리 계획, 자료 버전, 파일별 해시·원래/목적 경로·체크포인트를 보존한다. 실행 중 `library_storage_lock`이 같은 저장소의 스캔·편집과 신규 배경 분석을 대기시킨다. 구성요소 ID와 `input_hash`가 같은 역할/순서·소속 변경은 임베딩을 재사용한다. → [묶음 편집과 원본 정리](./library-organization.md)

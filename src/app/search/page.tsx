@@ -1,8 +1,9 @@
 import Link from "next/link";
 import { SearchX } from "lucide-react";
-import { searchHybrid, topTags } from "@/lib/search";
+import { topTags } from "@/lib/search";
+import { searchLibrary } from "@/lib/library-search";
 import { SearchInput } from "@/components/search-input";
-import { SourceCard } from "@/components/source-card";
+import { LibraryCard } from "@/components/library-card";
 
 export const dynamic = "force-dynamic";
 
@@ -14,7 +15,7 @@ export default async function SearchPage({
   const sp = await searchParams;
   const q = typeof sp.q === "string" ? sp.q.trim() : "";
   const tags = topTags(12);
-  const { hits, total } = q ? await searchHybrid({ q, limit: 50 }) : { hits: [], total: 0 };
+  const { hits, total } = q ? await searchLibrary({ q, limit: 50 }) : { hits: [], total: 0 };
 
   return (
     <div className="mx-auto max-w-3xl px-5 pb-10 pt-2 md:px-6 md:pt-8">
@@ -49,7 +50,7 @@ export default async function SearchPage({
           <ul className="mt-2 space-y-3">
             {hits.map((hit) => (
               <li key={hit.id}>
-                <SourceCard hit={hit} query={q} view="feed" debug={sp.debug === "1"} />
+                <LibraryCard hit={hit} view="list" />
               </li>
             ))}
           </ul>

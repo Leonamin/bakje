@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getSource } from "@/lib/search";
+import { syncSourceToLibrary } from "@/lib/library-catalog";
 import { rebuildSearch } from "@/lib/pipeline";
 
 export const runtime = "nodejs";
@@ -49,6 +50,7 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
     }
   }
 
+  if (Array.isArray(body?.tags)) syncSourceToLibrary(sourceId);
   return NextResponse.json({ ok: true });
 }
 

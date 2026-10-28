@@ -233,3 +233,12 @@ SQLite는 WAL 모드이므로 서비스 중 백업하려면 `sqlite3 /var/lib/ba
 ## 라이선스
 
 [MIT](LICENSE)
+
+
+## 통합 라이브러리와 연결 폴더
+
+라이브러리는 **출처(X·Threads·Reddit·OpenNana 등)**, **파일 저장소**, **컬렉션**을 별도로 관리한다. `/library`에서 읽기 전용 폴더를 연결하고 등록 작업·분석 큐를 확인한다. OpenNana는 `prompts.jsonl`과 `media/`가 있는 폴더를 연결한다. Docker용 추가 마운트 예시는 `compose.library.example.yml`이다.
+
+AI 에이전트는 기존 `/mcp` 인증을 사용해 폴더를 조사하고 `register_library_items`로 사용자 기준의 자료 묶음을 등록한다. 등록 후 임베딩은 지속 큐에서 실행하며, 분석 중에도 새 박제를 저장한다. `export_library_items`는 원본을 유지한 채 자료별 파일과 매니페스트 사본을 만든다.
+
+현재 동작·MCP 도구·자료 규격·남은 범위는 [통합 라이브러리 위키](wiki/concepts/unified-library.md)를 참고한다. 회귀 검증은 `pnpm test:library`, 실제 OpenNana 전체 연결 검증은 `pnpm check:library /path/to/opennana/data`로 실행한다. 검증 스크립트는 임시 DB를 사용한다.

@@ -17,6 +17,7 @@ config_dir="${ARCHIVE_CONFIG_DIR:-/etc/bakje}"
 config_file="${config_dir}/bakje.env"
 keep_releases="${ARCHIVE_KEEP_RELEASES:-3}"
 data_dir="${ARCHIVE_DATA_DIR:-/var/lib/bakje}"
+compose_override="${ARCHIVE_COMPOSE_OVERRIDE:-${config_dir}/compose.override.yml}"
 
 if [ "$(id -u)" -eq 0 ]; then
   echo "Run as the service user, not root (docker group is enough)." >&2
@@ -57,26 +58,43 @@ tar \
   --exclude='scripts/_*' \
   -C "$project_dir" -cf - . | tar -C "$release_dir" -xf -
 
+compose() {
+  if [ -f "$compose_override" ]; then
+    ARCHIVE_DATA_DIR="$data_dir" docker compose -f "$release_dir/compose.yml" -f "$compose_override" --env-file "$config_file" "$@"
+  else
+    ARCHIVE_DATA_DIR="$data_dir" docker compose -f "$release_dir/compose.yml" --env-file "$config_file" "$@"
+  fi
+}
+
+# Keep host-specific read-only library mounts outside releases and validate
+# them before changing the current release pointer.
+compose config --quiet
+
 ln -sfn "$release_dir" /opt/bakje/current.new
 mv -Tf /opt/bakje/current.new /opt/bakje/current
 
 cd /opt/bakje/current
-ARCHIVE_DATA_DIR="$data_dir" docker compose --env-file "$config_file" up -d --build --remove-orphans --force-recreate
+if [ "${ARCHIVE_DEPLOY_WEB_ONLY:-0}" = "1" ]; then
+  compose up -d --build --no-deps --force-recreate web
+else
+  compose up -d --build --remove-orphans --force-recreate
+fi
 
 echo "==> waiting for health"
 attempt=0
 while [ "$attempt" -lt 45 ]; do
-  if docker compose --env-file "$config_file" exec -T web \
+  if compose exec -T web \
     node -e "fetch('http://127.0.0.1:3000/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))" >/dev/null 2>&1; then
-    docker compose --env-file "$config_file" ps || true
+    compose ps || true
     if [ -x "$project_dir/scripts/prune-releases.sh" ]; then
       ARCHIVE_RELEASES_DIR="$releases_root" \
         "$project_dir/scripts/prune-releases.sh" --keep "$keep_releases" \
         || echo "Warning: release pruning failed; old releases were left in place." >&2
     fi
-    # Build cache and dangling layers accumulate on a shared host; dropping
-    # only dangling images keeps other services untouched.
-    docker image prune -f >/dev/null 2>&1 || true
+    # Global dangling-image cleanup is opt-in on a host shared with other apps.
+    if [ "${ARCHIVE_PRUNE_IMAGES:-0}" = "1" ]; then
+      docker image prune -f >/dev/null 2>&1 || true
+    fi
     echo "Deployment complete: $release_dir"
     exit 0
   fi
@@ -85,5 +103,5 @@ while [ "$attempt" -lt 45 ]; do
 done
 
 echo "Web container did not become healthy in time." >&2
-docker compose --env-file "$config_file" logs --tail 80 web >&2 || true
+compose logs --tail 80 web >&2 || true
 exit 1

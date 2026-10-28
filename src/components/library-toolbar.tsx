@@ -1,288 +1,84 @@
 "use client";
-
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Check, LayoutGrid, List, Search, SlidersHorizontal, X } from "lucide-react";
-import { Drawer } from "@/components/goodcase/overlays/dialog";
+import { LayoutGrid, List, Search } from "lucide-react";
 import { Button, IconButton } from "@/components/goodcase/basic/button";
-import { TextField } from "@/components/goodcase/basic/text-field";
+import { Select } from "@/components/goodcase/overlays/select";
+import { platformName } from "@/lib/format";
 
-const PLATFORMS = [
-  { value: "", label: "전체" },
-  { value: "x", label: "X" },
-  { value: "threads", label: "Threads" },
-  { value: "reddit", label: "Reddit" },
-];
-
-const MEDIA = [
-  { value: "", label: "전체" },
-  { value: "image", label: "이미지" },
-  { value: "video", label: "영상" },
-];
-
-const SORT = [
-  { value: "", label: "최근 저장" },
-  { value: "posted", label: "원문 작성일" },
-  { value: "relevance", label: "관련도" },
-];
-
-export function LibraryToolbar({
-  total,
-  tags,
-  view,
-}: {
-  total: number;
-  tags: string[];
-  view: "grid" | "list";
+export function LibraryToolbar({ total, tags, view, storages = [], origins = [], collections = [] }: {
+  total: number; tags: string[]; view: "grid" | "list";
+  storages?: { id: number; name: string; enabled: number }[]; origins?: string[]; collections?: string[];
 }) {
-  const router = useRouter();
-  const params = useSearchParams();
-  const [isPending, startTransition] = useTransition();
+  const router = useRouter(), params = useSearchParams();
+  const [pending, start] = useTransition();
   const [query, setQuery] = useState(params.get("q") ?? "");
-  const [sheetOpen, setSheetOpen] = useState(false);
-
-  const current = useMemo(
-    () => ({
-      q: params.get("q") ?? "",
-      platform: params.get("platform") ?? "",
-      media: params.get("media") ?? "",
-      sort: params.get("sort") ?? "",
-      tag: params.get("tag") ?? "",
-      hidden: params.get("hidden") ?? "",
-    }),
-    [params],
-  );
-
-  useEffect(() => setQuery(current.q), [current.q]);
-
-  const [draft, setDraft] = useState({ media: current.media, sort: current.sort, tag: current.tag, hidden: current.hidden });
-  useEffect(() => {
-    setDraft({ media: current.media, sort: current.sort, tag: current.tag, hidden: current.hidden });
-  }, [current.media, current.sort, current.tag, current.hidden]);
-
-  function push(next: Partial<typeof current> & { view?: string }) {
+  const q = params.get("q") ?? "";
+  useEffect(() => setQuery(q), [q]);
+  function push(next: Record<string, string>) {
     const sp = new URLSearchParams(params.toString());
-    for (const [key, value] of Object.entries({ ...current, ...next })) {
-      if (value) sp.set(key, value);
-      else sp.delete(key);
-    }
-    if (next.view) sp.set("view", next.view);
-    startTransition(() => router.push(`/?${sp.toString()}`, { scroll: false }));
+    sp.delete("page");
+    for (const [key, value] of Object.entries(next)) { if (value) sp.set(key, value); else sp.delete(key); }
+    start(() => router.push(`/?${sp}`, { scroll: false }));
   }
-
-  const activeFilterCount =
-    (current.media ? 1 : 0) + (current.sort ? 1 : 0) + (current.tag ? 1 : 0) + (current.hidden ? 1 : 0);
-
-  return (
-    <>
-      <form
-        onSubmit={(e) => {
-          e.preventDefault();
-          push({ q: query });
-        }}
-        className="relative"
-        role="search"
-      >
-        <Search
-          size={20}
-          strokeWidth={1.8}
-          className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--muted)]"
+  return <div aria-busy={pending}>
+    <form role="search" className="flex items-center gap-2" onSubmit={e => { e.preventDefault(); push({ q: query }); }}>
+      <div className="relative flex-1"><Search size={19} className="absolute left-3 top-3.5 text-[var(--muted)]" />
+        <input aria-label="검색" placeholder="프롬프트, 이미지, 게시글 검색" value={query} onChange={e => setQuery(e.target.value)} className="h-12 w-full rounded-xl border border-[var(--line)] bg-[var(--surface)] pl-10 pr-3 text-[16px]" /></div>
+      <Button type="submit" variant="secondary">검색</Button>
+    </form>
+    <div className="my-3 flex gap-2 overflow-x-auto" aria-label="저장소 범위">
+      {[{ value: "", label: "전체 자료" }, { value: "managed", label: "기본 저장소" }, { value: "linked", label: "연결 폴더" }].map(s =>
+        <Button key={s.value} variant="secondary" className="chip shrink-0" aria-pressed={(params.get("scope") ?? "") === s.value} data-active={(params.get("scope") ?? "") === s.value} onClick={() => push({ scope: s.value, storage: "", folder: "" })}>{s.label}</Button>)}
+    </div>
+    <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
+      <Select
+        label="저장 위치"
+        value={params.get("storage") ?? ""}
+        onValueChange={value => push({ storage: value, folder: "", scope: "" })}
+        options={[{ value: "", label: "모든 저장소" }, ...storages.filter(s => s.enabled).map(s => ({ value: String(s.id), label: s.name }))]}
+      />
+      <Select
+        label="출처"
+        value={params.get("origin") ?? params.get("platform") ?? ""}
+        onValueChange={value => push({ origin: value, platform: "" })}
+        options={[{ value: "", label: "모든 출처" }, ...[...new Set(["x", "threads", "reddit", ...origins])].map(origin => ({ value: origin, label: platformName(origin) }))]}
+      />
+      <Select
+        label="컬렉션"
+        value={params.get("collection") ?? ""}
+        onValueChange={value => push({ collection: value })}
+        options={[{ value: "", label: "모든 컬렉션" }, ...collections.map(name => ({ value: name, label: name }))]}
+      />
+      <Select
+        label="형식"
+        value={params.get("media") ?? ""}
+        onValueChange={value => push({ media: value })}
+        options={[{ value: "", label: "모든 형식" }, { value: "image", label: "이미지 포함" }, { value: "video", label: "영상 포함" }]}
+      />
+    </div>
+    <details className="mt-3"><summary className="label cursor-pointer">정렬·태그·숨긴 자료</summary>
+      <div className="mt-2 flex flex-wrap items-center gap-2">
+        <Select
+          label="정렬"
+          value={params.get("sort") ?? ""}
+          onValueChange={value => push({ sort: value })}
+          options={[{ value: "", label: "관련도 / 최근 저장" }, { value: "recent", label: "최근 저장" }, { value: "posted", label: "원문 작성일" }]}
         />
-        <input
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="키워드, 작성자, 번역문"
-          aria-label="검색"
-          enterKeyHint="search"
-          className="h-12 w-full rounded-xl border border-[var(--line)] bg-[var(--surface)] pl-11 pr-12 text-[16px] text-[var(--ink)] outline-none placeholder:text-[color-mix(in_srgb,var(--muted)_75%,transparent)] focus:border-[var(--line-strong)]"
+        <Select
+          label="태그"
+          value={params.get("tag") ?? ""}
+          onValueChange={value => push({ tag: value })}
+          options={[{ value: "", label: "모든 태그" }, ...tags.map(tag => ({ value: tag, label: tag }))]}
         />
-        {query ? (
-          <IconButton
-            label="검색어 지우기"
-            onClick={() => {
-              setQuery("");
-              push({ q: "" });
-            }}
-            className="absolute right-1 top-1/2 -translate-y-1/2"
-          >
-            <X size={20} />
-          </IconButton>
-        ) : null}
-      </form>
-
-      <div className="mt-3">
-        <div className="chip-scroll -mx-5 px-5 md:mx-0 md:px-0">
-          {PLATFORMS.map((p) => (
-            <button
-              key={p.value}
-              type="button"
-              className="chip"
-              data-active={current.platform === p.value}
-              onClick={() => push({ platform: p.value })}
-            >
-              {p.label}
-            </button>
-          ))}
-          <span className="mx-1 h-5 w-px shrink-0 self-center bg-[var(--line)]" />
-          {MEDIA.filter((m) => m.value).map((m) => (
-            <button
-              key={m.value}
-              type="button"
-              className="chip"
-              data-active={current.media === m.value}
-              onClick={() => push({ media: current.media === m.value ? "" : m.value })}
-            >
-              {m.label}
-            </button>
-          ))}
-        </div>
+        <Button variant="secondary" className="chip" aria-pressed={params.get("hidden") === "1"} onClick={() => push({ hidden: params.get("hidden") === "1" ? "" : "1" })}>숨긴 자료</Button>
+        <Button variant="secondary" onClick={() => router.push("/")}>필터 초기화</Button>
       </div>
-
-      <div className="mt-2 flex items-center gap-2">
-        <span className={`label numeric ${isPending ? "opacity-50" : ""}`}>
-          {total}건{current.q ? ` · “${current.q}”` : ""}
-        </span>
-        {current.hidden ? (
-          <button type="button" className="chip !h-8 !text-[12px]" data-active="true" onClick={() => push({ hidden: "" })}>
-            숨긴 글
-            <X size={14} />
-          </button>
-        ) : null}
-        {current.tag ? (
-          <button type="button" className="chip !h-8 !text-[12px]" data-active="true" onClick={() => push({ tag: "" })}>
-            #{current.tag}
-            <X size={14} />
-          </button>
-        ) : null}
-
-        <div className="ml-auto flex shrink-0 items-center">
-          <IconButton label="필터" onClick={() => setSheetOpen(true)} className="relative">
-            <SlidersHorizontal size={20} strokeWidth={1.8} />
-            {activeFilterCount > 0 ? (
-              <span className="absolute right-1 top-1 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-[var(--accent)] px-1 text-[11px] font-semibold text-[var(--gc-on-accent)]">
-                {activeFilterCount}
-              </span>
-            ) : null}
-          </IconButton>
-          <div className="flex">
-            {(["grid", "list"] as const).map((v) => {
-              const Icon = v === "grid" ? LayoutGrid : List;
-              return (
-                <IconButton
-                  key={v}
-                  label={v === "grid" ? "그리드 보기" : "리스트 보기"}
-                  onClick={() => push({ view: v })}
-                  aria-pressed={view === v}
-                  className={view === v ? "!text-[var(--ink)]" : ""}
-                >
-                  <Icon size={20} strokeWidth={1.8} />
-                </IconButton>
-              );
-            })}
-          </div>
-        </div>
-      </div>
-
-      <Drawer
-        isOpen={sheetOpen}
-        onOpenChange={setSheetOpen}
-        title="필터"
-        footer={
-          <div className="flex w-full gap-2">
-            <Button
-              variant="secondary"
-              className="flex-1"
-              onClick={() => {
-                setDraft({ media: "", sort: "", tag: "", hidden: "" });
-                push({ media: "", sort: "", tag: "", hidden: "" });
-                setSheetOpen(false);
-              }}
-            >
-              초기화
-            </Button>
-            <Button
-              className="flex-1"
-              onClick={() => {
-                push({ media: draft.media, sort: draft.sort, tag: draft.tag, hidden: draft.hidden });
-                setSheetOpen(false);
-              }}
-            >
-              적용
-            </Button>
-          </div>
-        }
-      >
-        <div className="space-y-5">
-          <fieldset>
-            <legend className="label mb-2">미디어</legend>
-            <div className="flex gap-2">
-              {MEDIA.map((m) => (
-                <button
-                  key={m.value}
-                  type="button"
-                  className="chip flex-1 justify-center"
-                  data-active={draft.media === m.value}
-                  onClick={() => setDraft({ ...draft, media: m.value })}
-                >
-                  {m.label}
-                </button>
-              ))}
-            </div>
-          </fieldset>
-
-          <fieldset>
-            <legend className="label mb-2">정렬</legend>
-            <div className="flex gap-2">
-              {SORT.map((s) => (
-                <button
-                  key={s.value}
-                  type="button"
-                  className="chip flex-1 justify-center"
-                  data-active={draft.sort === s.value}
-                  onClick={() => setDraft({ ...draft, sort: s.value })}
-                >
-                  {s.label}
-                </button>
-              ))}
-            </div>
-          </fieldset>
-
-          {tags.length > 0 ? (
-            <fieldset>
-              <legend className="label mb-2">태그</legend>
-              <div className="flex flex-wrap gap-2">
-                {tags.map((t) => (
-                  <button
-                    key={t}
-                    type="button"
-                    className="chip"
-                    data-active={draft.tag === t}
-                    onClick={() => setDraft({ ...draft, tag: draft.tag === t ? "" : t })}
-                  >
-                    {draft.tag === t ? <Check size={14} /> : null}
-                    #{t}
-                  </button>
-                ))}
-              </div>
-            </fieldset>
-          ) : (
-            <p className="label">태그가 아직 없습니다. 게시글 상세의 정리에서 추가할 수 있습니다.</p>
-          )}
-
-          <fieldset>
-            <legend className="label mb-2">숨김</legend>
-            <button
-              type="button"
-              className="chip"
-              data-active={draft.hidden === "1"}
-              onClick={() => setDraft({ ...draft, hidden: draft.hidden === "1" ? "" : "1" })}
-            >
-              {draft.hidden === "1" ? <Check size={14} /> : null}
-              숨긴 글만 보기
-            </button>
-          </fieldset>
-        </div>
-      </Drawer>
-    </>
-  );
+    </details>
+    {params.get("folder") ? <p className="label mt-3">원본 폴더: {params.get("folder")} <Button variant="secondary" onClick={() => push({ folder: "" })}>전체 폴더</Button></p> : null}
+    <div className="mt-3 flex items-center justify-between"><span className="label numeric">{total.toLocaleString()}건{pending ? " · 불러오는 중" : ""}</span><div className="flex">
+      <IconButton label="그리드 보기" aria-pressed={view === "grid"} onClick={() => push({ view: "grid" })}><LayoutGrid size={19} /></IconButton>
+      <IconButton label="리스트 보기" aria-pressed={view === "list"} onClick={() => push({ view: "list" })}><List size={19} /></IconButton>
+    </div></div>
+  </div>;
 }

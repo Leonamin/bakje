@@ -13,7 +13,10 @@
     "check": "tsx scripts/check.ts",
     "lint:ui": "tsx scripts/lint-ui.ts",
     "gc": "tsx scripts/gc.ts",
-    "mock-llm": "node scripts/mock-llm.mjs"
+    "mock-llm": "node scripts/mock-llm.mjs",
+    "test:library-management": "tsx scripts/test-library-management.ts",
+    "test:library": "tsx scripts/test-library.ts",
+    "check:library": "tsx scripts/check-library-import.ts"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.32.2",

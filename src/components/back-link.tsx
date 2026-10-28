@@ -13,7 +13,11 @@ export function BackLink({ fallback = "/", className, label, children }: { fallb
       aria-label={label}
       className={className}
       onClick={(e) => {
-        if (window.history.length > 1) {
+        if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+        // history.length also counts blank/external pages on direct entry.
+        // Prefer the same-origin history check when the browser supports it.
+        const navigation = (window as Window & { navigation?: { canGoBack: boolean } }).navigation;
+        if (navigation?.canGoBack ?? window.history.length > 1) {
           e.preventDefault();
           router.back();
         }

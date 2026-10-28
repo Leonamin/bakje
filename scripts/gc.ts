@@ -7,10 +7,11 @@
 import fs from "node:fs";
 import path from "node:path";
 import { MEDIA_DIR, db } from "../src/lib/db";
+import { catalogMediaReferences } from "../src/lib/library-files";
 import { makePoster } from "../src/lib/media";
 
 const conn = db();
-const referenced = new Set<string>();
+const referenced = await catalogMediaReferences();
 
 for (const row of conn.prepare("SELECT local_path, poster_path FROM media WHERE status = 'ok'").all() as {
   local_path: string | null;

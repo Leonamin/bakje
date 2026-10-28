@@ -8,6 +8,11 @@ okf_version: "0.1"
 
 # Concepts
 
+- [library-organization.md](./library-organization.md) — 묶음 역할·순서·분리·합치기, 원본 정리 계획·실행·되돌리기와 중단 복구
+
+- [unified-library.md](./unified-library.md) — 통합 목록, 출처·저장소·컬렉션, AI 묶음 등록 MCP, 지속 분석 큐와 규격 사본 내보내기
+
+- [unified-library-plan.md](./unified-library-plan.md) — 통합 자료 탐색 기획안: 서비스 경계, 폴더 연결, 자료 조합, 임베딩과 구현 단계
 - [product-scope.md](./product-scope.md) — 문제 정의, MVP 범위, 비목표
 - [collection-rules.md](./collection-rules.md) — 작성자 연속 사슬만 수집하는 규칙
 - [platform-adapters.md](./platform-adapters.md) — X·Threads·Reddit 수집 경로와 실패 모드

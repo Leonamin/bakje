@@ -22,6 +22,9 @@ function walk(dir: string) {
 
 function scan(path: string) {
   const src = readFileSync(path, "utf8");
+  for (const m of src.matchAll(/<select\b/g)) {
+    bad.push(`${path}:${src.slice(0, m.index).split("\n").length}  native <select>, use goodcase Select`);
+  }
   for (const m of src.matchAll(/<button\b[^>]*>/g)) {
     // Tag attributes may span lines and contain `>` inside arrow bodies; the class is always on the tag's opening lines.
     const tail = src.slice(m.index, m.index + 600).split(/>\s*\n/)[0];

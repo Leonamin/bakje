@@ -5,5 +5,9 @@ export async function register() {
     startQueue();
     const { startEmbedSweep } = await import("./lib/embed");
     startEmbedSweep();
+    const { startLibraryWorker } = await import("./lib/library-import");
+    startLibraryWorker();
+    const { startOrganizationWorker } = await import("./lib/library-organization");
+    startOrganizationWorker();
   }
 }

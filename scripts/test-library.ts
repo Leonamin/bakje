@@ -1,0 +1,201 @@
+/** Integration regression checks use temporary files and a local fake embedder; never the operating DB. */
+import assert from "node:assert/strict";
+import fs from "node:fs/promises";
+import path from "node:path";
+import os from "node:os";
+import http from "node:http";
+import { execFileSync } from "node:child_process";
+import sharp from "sharp";
+
+const temp = await fs.mkdtemp(path.join(os.tmpdir(), "bakje-library-test-"));
+const linked = path.join(temp, "originals");
+await fs.mkdir(linked);
+await fs.writeFile(path.join(linked, "prompt.txt"), "어두운 정원의 패션 이미지\n\n패션 프롬프트 원문");
+await sharp({ create: { width: 32, height: 32, channels: 3, background: "#88aa44" } }).png().toFile(path.join(linked, "result.png"));
+await fs.writeFile(path.join(linked, "video.mp4"), "fake-video");
+let requests = 0;
+let onInference: (() => Promise<void>) | undefined;
+const server = http.createServer(async (req, res) => {
+  const chunks = []; for await (const chunk of req) chunks.push(chunk);
+  const input = JSON.parse(Buffer.concat(chunks).toString());
+  requests++;
+  if (onInference) { const fn = onInference; onInference = undefined; await fn(); }
+  const count = input.texts?.length ?? input.images?.length ?? 1;
+  const vectors = Array.from({ length: count }, () => [1, ...Array(255).fill(0)]);
+  res.writeHead(200, { "content-type": "application/json" }); res.end(JSON.stringify({ vectors }));
+});
+await new Promise<void>(resolve => server.listen(0, "127.0.0.1", resolve));
+process.env.ARCHIVE_DATA_DIR = path.join(temp, "data");
+process.env.EMBEDDER_URL = `http://127.0.0.1:${(server.address() as { port: number }).port}`;
+const { db } = await import("../src/lib/db");
+const { connectStorage, resolveFile } = await import("../src/lib/library-files");
+const { registerItem, getLibraryItem, editLibraryItem, syncSourceToLibrary } = await import("../src/lib/library-catalog");
+const { searchLibrary } = await import("../src/lib/library-search");
+const { tickAnalysis, markStale } = await import("../src/lib/embed");
+const { submitManifest, submitExport, submitManifestFile, submitOpenNana, getRun, tickLibraryWorker, EXPORT_DIR, controlRun } = await import("../src/lib/library-import");
+const { serveFile } = await import("../src/lib/serve-file");
+const { retryAnalysis, MODEL_KEY } = await import("../src/lib/analysis-jobs");
+async function until(predicate: () => boolean, label: string) {
+  const deadline = Date.now() + 15000;
+  while (!predicate()) { if (Date.now() > deadline) throw new Error(`timeout: ${label}`); await new Promise(r => setTimeout(r, 30)); }
+}
+const manifest = { external_id: "garden-v1", title: "정원 패션", kind: "prompt", origin: "x", origin_url: "https://x.com/example/status/1", collections: ["패션 참고"], components: [
+  { key: "prompt:ko", kind: "text", role: "prompt", language: "ko", path: "prompt.txt" },
+  { key: "result:1", kind: "image", role: "result", path: "result.png" },
+  { key: "video:1", kind: "video", role: "result", path: "video.mp4" },
+] };
+try {
+  const s = await connectStorage("테스트 공유 폴더", linked);
+  assert.equal((await connectStorage("테스트 공유 폴더", linked)).id, s.id);
+  const first = await registerItem(s.id, manifest, "프로젝트·버전별 묶음");
+  assert.equal(first.state, "created");
+  const repeated = await registerItem(s.id, manifest, "프로젝트·버전별 묶음");
+  assert.equal(repeated.id, first.id); assert.equal(repeated.state, "unchanged");
+  assert.equal(getLibraryItem(first.id)!.components.length, 3);
+  assert.equal((await searchLibrary({ q: "정원" })).total, 1);
+  assert.equal((await searchLibrary({ q: "정원 패션" })).total, 1);
+  assert.equal((await searchLibrary({ q: "프롬프트 원문" })).total, 1);
+  assert.equal((await searchLibrary({ q: "프롬프트", storage: s.id, origin: "x", collection: "패션 참고" })).total, 1);
+  assert.equal((await searchLibrary({ origin: "reddit" })).total, 0);
+  assert.equal((await searchLibrary({ scope: "managed" })).total, 0);
+  assert.equal((await searchLibrary({ media: "video" })).total, 1);
+  assert.equal((await searchLibrary({ q: "비일치" })).total, 0);
+  assert.equal((await searchLibrary({ q: "%" })).total, 0);
+  const before = requests;
+  await tickAnalysis(); await tickAnalysis();
+  await until(() => (db().prepare("SELECT COUNT(*) AS n FROM library_vector").get() as { n: number }).n === 2, "vectors");
+  const semantic = await searchLibrary({ q: "다른 표현", storage: s.id });
+  assert.equal(semantic.hits[0].id, first.id);
+  assert.equal(semantic.hits[0].score, 1);
+  assert.ok(requests > before);
+  const duplicateImage = await registerItem(s.id, { ...manifest, external_id: "garden-v2", components: [manifest.components[1]] }, "두번째 결과");
+  const requestsBeforeReuse = requests;
+  await tickAnalysis();
+  await until(() => !!db().prepare("SELECT 1 FROM library_vector WHERE component_id=(SELECT id FROM library_component WHERE item_id=?)").get(duplicateImage.id), "cache reuse");
+  assert.equal(requests, requestsBeforeReuse);
+  const revised = { ...manifest, components: [{ key: "prompt:ko", kind: "text", role: "prompt", text: "수정 전 텍스트" }] };
+  await registerItem(s.id, revised, "변경 테스트");
+  onInference = async () => { await registerItem(s.id, { ...revised, components: [{ ...revised.components[0], text: "수정 후 텍스트" }] }, "변경 테스트"); };
+  await tickAnalysis();
+  await until(() => !!db().prepare("SELECT 1 FROM analysis_job WHERE state='superseded' AND target_type='component'").get(), "stale result rejection");
+  await tickAnalysis();
+  await registerItem(s.id, revised, "입력 이전 버전으로 되돌리기");
+  await tickAnalysis();
+  await until(() => !!db().prepare(`SELECT 1 FROM library_vector v JOIN library_component c ON c.id=v.component_id WHERE c.item_id=? AND v.input_hash=c.input_hash`).get(first.id), "reverted input requeued");
+  const got = getLibraryItem(first.id)!;
+  editLibraryItem(first.id, got.item.revision, { title: "사용자 제목", note: "사용자가 쓴 메모", collections: ["사용자 분류"] });
+  assert.equal((await registerItem(s.id, manifest, "자동 재스캔")).state, "preserved");
+  assert.equal(getLibraryItem(first.id)!.item.title, "사용자 제목");
+  assert.equal((await searchLibrary({ q: "사용자가 쓴 메모", collection: "사용자 분류" })).total, 1);
+  assert.throws(() => editLibraryItem(first.id, got.item.revision, { title: "덮어쓰기" }));
+  await fs.symlink(path.join(temp, "data"), path.join(linked, "escape"));
+  await assert.rejects(resolveFile(s.id, "../data/archive.db"));
+  await assert.rejects(resolveFile(s.id, "escape/archive.db"));
+  db().prepare("UPDATE library_storage SET enabled=0 WHERE id=?").run(s.id);
+  assert.equal((await searchLibrary()).total, 0);
+  assert.ok(getLibraryItem(first.id));
+  await assert.rejects(resolveFile(s.id, "result.png"));
+  db().prepare("UPDATE library_storage SET enabled=1 WHERE id=?").run(s.id);
+  const job = submitManifest(s.id, "AI가 선택한 기준", [{ ...manifest, external_id: "queued" }, { ...manifest, external_id: "broken", components: [{ key: "x", kind: "image", role: "result", path: "missing.png" }] }]);
+  await tickLibraryWorker();
+  await until(() => ["partial", "done", "failed"].includes(getRun(job.id).state), "queued import");
+  assert.equal(getRun(job.id).state, "partial"); assert.equal(getRun(job.id).failed, 1); assert.equal(getRun(job.id).succeeded, 1);
+  await fs.copyFile(path.join(linked, "result.png"), path.join(linked, "missing.png"));
+  controlRun(job.id, "retry"); await tickLibraryWorker();
+  await until(() => getRun(job.id).state === "done", "retry import");
+  assert.equal(getRun(job.id).failed, 0);
+  const exportRun = submitExport([first.id, duplicateImage.id]);
+  await tickLibraryWorker(); await until(() => getRun(exportRun.id).state === "done", "export");
+  const exported = JSON.parse(await fs.readFile(path.join(EXPORT_DIR, String(exportRun.id), String(first.id), "item.json"), "utf8"));
+  assert.equal(exported.note, "사용자가 쓴 메모");
+  assert.equal(exported.external_id, manifest.external_id); assert.equal(exported.components.length, 1);
+  assert.equal(await fs.readFile(path.join(linked, "prompt.txt"), "utf8"), "어두운 정원의 패션 이미지\n\n패션 프롬프트 원문");
+  const exportedStorage = await connectStorage("내보낸 묶음", path.join(EXPORT_DIR, String(exportRun.id)));
+  const roundtrip = await submitManifestFile(exportedStorage.id, "items.jsonl", "사본 재등록");
+  await tickLibraryWorker(); await until(() => getRun(roundtrip.id).state === "done", "roundtrip");
+  assert.equal((await searchLibrary({ storage: exportedStorage.id })).total, 2);
+  await fs.writeFile(path.join(linked, "unicode.jsonl"), JSON.stringify({ external_id: "unicode", title: "유니코드 줄 구분자", components: [{ key: "prompt", kind: "text", role: "prompt", text: "앞\u2028중간\u2029뒤" }] }) + "\n");
+  const unicode = await submitManifestFile(s.id, "unicode.jsonl", "JSONL 회귀");
+  await tickLibraryWorker(); await until(() => getRun(unicode.id).state === "done", "unicode JSONL");
+  assert.equal(getRun(unicode.id).succeeded, 1);
+  db().prepare("UPDATE library_run SET state='running',claim_token='dead-worker',lease_until='2000-01-01T00:00:00.000Z',cursor=0,succeeded=0 WHERE id=?").run(unicode.id);
+  await tickLibraryWorker(); await until(() => getRun(unicode.id).state === "done", "import expired lease recovery");
+  db().prepare("UPDATE library_storage SET scan_interval_minutes=1 WHERE id=?").run(s.id);
+  db().prepare("UPDATE library_run SET created_at='2000-01-01T00:00:00.000Z' WHERE id=?").run(unicode.id);
+  await tickLibraryWorker();
+  const scheduled = db().prepare("SELECT id FROM library_run WHERE storage_id=? AND id>? ORDER BY id DESC LIMIT 1").get(s.id, unicode.id) as { id: number };
+  assert.ok(scheduled); await until(() => getRun(scheduled.id).state === "done", "scheduled file scan");
+  db().prepare("UPDATE library_storage SET scan_interval_minutes=0 WHERE id=?").run(s.id);
+
+  const range = serveFile(new Request("http://test", { headers: { range: "bytes=-5" } }), path.join(linked, "video.mp4"), "video/mp4");
+  assert.equal(range.status, 206); assert.equal(await range.text(), "video");
+  assert.equal(serveFile(new Request("http://test", { headers: { range: "bytes=9-1" } }), path.join(linked, "video.mp4"), "video/mp4").status, 416);
+  const now = new Date().toISOString();
+  const sourceId = Number(db().prepare("INSERT INTO source(platform,native_id,canonical_url,title,first_seen_at) VALUES('reddit','test','https://reddit.com/test','기존 SNS',?)").run(now).lastInsertRowid);
+  db().prepare("INSERT INTO search_doc(source_id,title,body) VALUES(?,?,?)").run(sourceId, "기존 SNS", "SNS 본문");
+  syncSourceToLibrary(sourceId); markStale(sourceId);
+  await until(() => !!db().prepare("SELECT 1 FROM embed_state WHERE source_id=?").get(sourceId), "SNS analysis");
+  assert.equal((await searchLibrary({ scope: "managed" })).hits[0].source_id, sourceId);
+  db().prepare("UPDATE source SET hidden_at=? WHERE id=?").run(now, sourceId);
+  assert.equal((await searchLibrary({ scope: "managed" })).total, 0);
+  assert.equal((await searchLibrary({ scope: "managed", hidden: true })).total, 1);
+  const catalogSource = (db().prepare("SELECT id,revision FROM library_item WHERE source_id=?").get(sourceId) as { id: number; revision: number });
+  editLibraryItem(catalogSource.id, catalogSource.revision, { collections: ["SNS와 폴더 공통"] });
+  assert.equal((await searchLibrary({ collection: "SNS와 폴더 공통", hidden: true })).total, 1);
+  // Hold an inference request: saving a new SNS capture must finish before the model responds.
+  let releaseInference!: () => void;
+  let inferenceStarted = false;
+  onInference = async () => { inferenceStarted = true; await new Promise<void>(resolve => { releaseInference = resolve; }); };
+  const { embedTexts, queryVector } = await import("../src/lib/embedding-client");
+  const held = embedTexts(["delayed background inference"]);
+  await until(() => inferenceStarted, "held model request");
+  const { saveParsed } = await import("../src/lib/pipeline");
+  const captureStarted = Date.now();
+  const captured = await saveParsed({ platform: "x", nativeId: "local-fixture", canonicalUrl: "https://x.com/test/status/123", authorHandle: "fixture", authorName: "fixture", authorAvatar: null, title: "분석 중 새 박제", postedAt: null, lang: "ko", metrics: {}, parts: [{ kind: "main", text: "임베딩과 무관하게 저장되는 본문", sourceUrl: "https://x.com/test/status/123", media: [] }] }, "<html>fixture</html>");
+  assert.ok(captured); assert.ok(Date.now() - captureStarted < 1000);
+  assert.ok(db().prepare("SELECT 1 FROM search_doc WHERE source_id=?").get(captured));
+  const timeoutStarted = Date.now();
+  await assert.rejects(queryVector("foreground deadline"));
+  assert.ok(Date.now() - timeoutStarted < 6000, "foreground timeout includes queue time");
+  releaseInference(); await held;
+  db().prepare("INSERT INTO setting(key,value) VALUES('library.bulk_paused','1') ON CONFLICT(key) DO UPDATE SET value='1'").run();
+  const bulk = await registerItem(s.id, { external_id: "bulk-pause", title: "대량 대기", components: [{ key: "p", kind: "text", role: "prompt", text: "bulk queue" }] }, "대량", 50);
+  const fresh = await registerItem(s.id, { external_id: "fresh-priority", title: "신규 우선", components: [{ key: "p", kind: "text", role: "prompt", text: "fresh queue" }] }, "신규", 10);
+  await tickAnalysis();
+  await until(() => !!db().prepare("SELECT 1 FROM library_vector WHERE component_id IN (SELECT id FROM library_component WHERE item_id=?)").get(fresh.id), "fresh priority");
+  assert.ok(db().prepare("SELECT 1 FROM analysis_job WHERE state='pending' AND target_id IN (SELECT id FROM library_component WHERE item_id=?) AND target_type='component'").get(bulk.id));
+  // Simulate a dead worker's lease; its input and previously completed chunks are recoverable.
+  db().prepare("UPDATE setting SET value='0' WHERE key='library.bulk_paused'").run();
+  db().prepare("UPDATE analysis_job SET state='running',claim_token='dead-worker',lease_until='2000-01-01T00:00:00.000Z' WHERE target_type='component' AND target_id IN (SELECT id FROM library_component WHERE item_id=?)").run(bulk.id);
+  await tickAnalysis();
+  await until(() => !!db().prepare("SELECT 1 FROM library_vector WHERE component_id IN (SELECT id FROM library_component WHERE item_id=?)").get(bulk.id), "expired lease recovery");
+  // A missing image is retryable, never marked with a permanent empty vector.
+  const missing = await registerItem(s.id, { ...manifest, external_id: "disconnect", components: [manifest.components[1]] }, "연결 중단", 1);
+  await fs.rename(path.join(linked, "result.png"), path.join(linked, "result-away.png"));
+  await tickAnalysis();
+  await until(() => !!db().prepare("SELECT 1 FROM analysis_job j JOIN library_component c ON c.id=j.target_id WHERE c.item_id=? AND j.error IS NOT NULL").get(missing.id), "missing image retry");
+  assert.equal((db().prepare("SELECT COUNT(*) AS n FROM library_vector WHERE component_id=(SELECT id FROM library_component WHERE item_id=?)").get(missing.id) as { n: number }).n, 0);
+  await fs.rename(path.join(linked, "result-away.png"), path.join(linked, "result.png"));
+  db().prepare("UPDATE analysis_job SET state='failed' WHERE target_type='component' AND target_id IN (SELECT id FROM library_component WHERE item_id=?)").run(missing.id);
+  retryAnalysis(s.id); await tickAnalysis();
+  // A disconnected root fails scanning but retains all catalog items.
+  const beforeCount = (db().prepare("SELECT COUNT(*) AS n FROM library_item").get() as { n: number }).n;
+  await fs.rename(linked, linked + "-offline");
+  await assert.rejects(submitOpenNana(s.id));
+  assert.equal((db().prepare("SELECT COUNT(*) AS n FROM library_item").get() as { n: number }).n, beforeCount);
+  await fs.rename(linked + "-offline", linked);
+  const mediaRoot = path.join(process.env.ARCHIVE_DATA_DIR!, "media");
+  await fs.copyFile(path.join(linked, "result.png"), path.join(mediaRoot, "shared.png"));
+  await fs.copyFile(path.join(linked, "result.png"), path.join(mediaRoot, "orphan.png"));
+  const sharedStore = await connectStorage("공유 미디어 참조", mediaRoot);
+  await registerItem(sharedStore.id, { external_id: "shared", title: "공유 파일", components: [{ key: "i", kind: "image", role: "result", path: "shared.png" }] }, "공유 참조");
+  db().prepare("UPDATE library_storage SET enabled=0 WHERE id=?").run(sharedStore.id);
+  execFileSync(process.execPath, ["node_modules/tsx/dist/cli.mjs", "scripts/gc.ts"], { env: process.env });
+  await fs.access(path.join(mediaRoot, "shared.png"));
+  await assert.rejects(fs.access(path.join(mediaRoot, "orphan.png")));
+  console.log("library integration: registration, grouping, search, model cache, stale results, locking, path confinement, reconnect, partial retries, exports, HTTP ranges and legacy SNS passed");
+  console.log(`temporary fixture: ${temp}; model namespace: ${MODEL_KEY}`);
+} finally {
+  server.closeAllConnections(); server.close();
+}
+process.exit(0);

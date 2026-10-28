@@ -8,6 +8,17 @@ okf_version: "0.1"
 
 # Logs
 
+- [2026-10-28-library-management.md](./2026-10-28-library-management.md) — 묶음 역할·순서·분리·합치기와 원본 정리 계획·실행·되돌리기, 중단 복구
+
+- [2026-10-28-library-back-navigation.md](./2026-10-28-library-back-navigation.md) — 상세에서 이전 목록으로 복귀할 때 검색어·필터·페이지 보존
+
+- [2026-10-28-library-select-components.md](./2026-10-28-library-select-components.md) — 라이브러리 드롭다운 7곳 공용 Select 적용, 전체 값·어두운 테마·UI 검사 보강
+
+- [2026-10-28-unified-library-deployment.md](./2026-10-28-unified-library-deployment.md) — 운영 배포, 기존 SNS·임베딩 서버 보존, OpenNana 읽기 전용 연결 준비
+
+- [2026-10-28-unified-library-implementation.md](./2026-10-28-unified-library-implementation.md) — 출처·저장소·컬렉션 분리, AI 자료 묶음 MCP, 지속 분석 큐와 규격 사본 내보내기 구현
+
+- [2026-10-28-unified-library-plan.md](./2026-10-28-unified-library-plan.md) — 서비스 경계와 통합 자료 목록·폴더 연결·검색 확장 기획안
 - [2026-10-26-article-media-and-storage.md](./2026-10-26-article-media-and-storage.md) — X Article 영상·이미지 박제, twimg 403 수정, 세로 영상 잘림 수정, 저장 공간 표시
 - [2026-10-26-x-age-restricted-cookie.md](./2026-10-26-x-age-restricted-cookie.md) — 연령 제한 X 게시글 실패 원인 규명, 안내 문구, 전용 계정 쿠키 수집 구현·배포
 - [2026-10-26-summary-card-and-ask-ai.md](./2026-10-26-summary-card-and-ask-ai.md) — 요약카드 상시 표시·접기, AI 질문 프롬프트 복사

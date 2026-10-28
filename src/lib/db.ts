@@ -1,6 +1,7 @@
 import Database from "better-sqlite3";
 import fs from "node:fs";
 import path from "node:path";
+import { LIBRARY_SCHEMA } from "./library-schema";
 
 export const DATA_DIR = process.env.ARCHIVE_DATA_DIR
   ? path.resolve(process.env.ARCHIVE_DATA_DIR)
@@ -177,6 +178,14 @@ export function db(): Database.Database {
   if (!srcColumns.has("hidden_at")) conn.exec("ALTER TABLE source ADD COLUMN hidden_at TEXT");
   const trColumns = new Set((conn.prepare("PRAGMA table_info(translation)").all() as { name: string }[]).map((c) => c.name));
   if (!trColumns.has("title_ko")) conn.exec("ALTER TABLE translation ADD COLUMN title_ko TEXT");
+  for (const table of ["embedding", "media_embedding", "embed_state"]) {
+    const columns = new Set((conn.prepare(`PRAGMA table_info(${table})`).all() as { name: string }[]).map(c => c.name));
+    if (!columns.has("model_key")) conn.exec(`ALTER TABLE ${table} ADD COLUMN model_key TEXT NOT NULL DEFAULT 'google/embeddinggemma-2:256:chunks1500:jpeg896:v1'`);
+  }
+  conn.pragma("busy_timeout = 5000");
+  conn.exec(LIBRARY_SCHEMA);
+  const storageColumns = new Set((conn.prepare("PRAGMA table_info(library_storage)").all() as { name: string }[]).map(c => c.name));
+  if (!storageColumns.has("scan_interval_minutes")) conn.exec("ALTER TABLE library_storage ADD COLUMN scan_interval_minutes INTEGER NOT NULL DEFAULT 0");
   instance = conn;
   return conn;
 }

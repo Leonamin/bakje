@@ -6,7 +6,7 @@ import { Logo } from "@/components/logo";
 import { LibraryBig, Plus, Search, Settings } from "lucide-react";
 
 const ITEMS = [
-  { href: "/", label: "라이브러리", icon: LibraryBig, match: (p: string) => p === "/" || p.startsWith("/sources") },
+  { href: "/", label: "라이브러리", icon: LibraryBig, match: (p: string) => p === "/" || p.startsWith("/sources") || p.startsWith("/items") || p.startsWith("/library") },
   { href: "/add", label: "수집", icon: Plus, match: (p: string) => p.startsWith("/add"), capture: true },
   { href: "/search", label: "검색", icon: Search, match: (p: string) => p.startsWith("/search") },
 ];

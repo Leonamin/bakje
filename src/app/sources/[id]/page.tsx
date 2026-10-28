@@ -6,6 +6,9 @@ import { getSource } from "@/lib/search";
 import { ReadingBody } from "@/components/reading-body";
 import { SourceOrganizer } from "@/components/source-organizer";
 import { compactNumber, formatDateTime, platformName } from "@/lib/format";
+import { db } from "@/lib/db";
+import { getLibraryItem } from "@/lib/library-catalog";
+import { LibraryItemEditor } from "@/components/library-item-editor";
 import { needsTranslation } from "@/lib/lang";
 
 export const dynamic = "force-dynamic";
@@ -30,6 +33,8 @@ export default async function SourcePage({ params }: { params: Promise<{ id: str
 
   const { source, parts, media, tags, translation } = data;
   const status = STATUS[source.status];
+  const catalogId = db().prepare("SELECT id FROM library_item WHERE source_id=?").get(source.id) as { id: number } | undefined;
+  const catalog = catalogId ? getLibraryItem(catalogId.id) : null;
 
   const organizer = (
     <SourceOrganizer sourceId={source.id} tags={tags} note={source.note} lastCheckedAt={source.last_checked_at} hidden={!!source.hidden_at} />
@@ -126,6 +131,7 @@ export default async function SourcePage({ params }: { params: Promise<{ id: str
               }
             />
 
+            {catalog ? <LibraryItemEditor id={catalog.item.id} revision={catalog.item.revision} title={catalog.item.title} note={catalog.item.note} collections={catalog.collections} hidden={!!source.hidden_at} collectionsOnly /> : null}
             {source.note ? (
               <section className="mt-8 border-t border-[var(--line)] pt-4">
                 <h2 className="label mb-2">내 메모</h2>
