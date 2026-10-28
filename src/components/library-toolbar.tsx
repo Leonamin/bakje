@@ -11,7 +11,7 @@ import { useSelection } from "@/components/selection-state";
 import { platformName } from "@/lib/format";
 
 const SCOPES = [{ value: "", label: "전체 자료" }, { value: "managed", label: "기본 저장소" }, { value: "linked", label: "연결 폴더" }];
-const FILTER_KEYS = ["storage", "origin", "platform", "collection", "media", "sort", "tag", "hidden", "trash", "folder"];
+const FILTER_KEYS = ["storage", "origin", "platform", "collection", "media", "sort", "tag", "hidden", "trash", "folder", "from", "to"];
 
 export function LibraryToolbar({ total, tags, view, storages = [], origins = [], collections = [] }: {
   total: number; tags: string[]; view: "grid" | "list";
@@ -33,7 +33,7 @@ export function LibraryToolbar({ total, tags, view, storages = [], origins = [],
   return <div aria-busy={pending}>
     <form role="search" className="flex items-center gap-2" onSubmit={e => { e.preventDefault(); push({ q: query }); }}>
       <div className="relative flex-1"><Search size={19} className="absolute left-3 top-3.5 text-[var(--muted)]" />
-        <input aria-label="검색" placeholder="프롬프트, 이미지, 게시글 검색" value={query} onChange={e => setQuery(e.target.value)} className="h-12 w-full rounded-xl border border-[var(--line)] bg-[var(--surface)] pl-10 pr-3 text-[16px]" /></div>
+        <input aria-label="검색" placeholder="검색 · 제외는 -단어, 또는은 |" value={query} onChange={e => setQuery(e.target.value)} className="h-12 w-full rounded-xl border border-[var(--line)] bg-[var(--surface)] pl-10 pr-3 text-[16px]" /></div>
       <Button type="submit" variant="secondary">검색</Button>
     </form>
     {/* One chip row: where the items live (scrolls on narrow screens) + the filter toggle, which stays visible. */}
@@ -83,6 +83,10 @@ export function LibraryToolbar({ total, tags, view, storages = [], origins = [],
           onValueChange={value => push({ tag: value })}
           options={[{ value: "", label: "모든 태그" }, ...tags.map(tag => ({ value: tag, label: tag }))]}
         />
+      </div>
+      <div className="flex items-center gap-2 text-sm">저장일
+        <input type="date" aria-label="시작일" value={params.get("from") ?? ""} max={params.get("to") ?? undefined} onChange={e => push({ from: e.target.value })} className="h-11 rounded-xl border border-[var(--line)] bg-[var(--surface)] px-3" />~
+        <input type="date" aria-label="종료일" value={params.get("to") ?? ""} min={params.get("from") ?? undefined} onChange={e => push({ to: e.target.value })} className="h-11 rounded-xl border border-[var(--line)] bg-[var(--surface)] px-3" />
       </div>
       <div className="flex flex-wrap items-center gap-2">
         <Chip active={hidden} onClick={() => push({ hidden: hidden ? "" : "1", trash: "" })}><EyeOff size={15} />숨긴 자료</Chip>

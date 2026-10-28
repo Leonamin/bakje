@@ -62,6 +62,14 @@ try {
   assert.equal((await searchLibrary({ media: "video" })).total, 1);
   assert.equal((await searchLibrary({ q: "비일치" })).total, 0);
   assert.equal((await searchLibrary({ q: "%" })).total, 0);
+  assert.equal((await searchLibrary({ q: "정원 -패션" })).total, 0);
+  assert.equal((await searchLibrary({ q: "정원 -없는단어" })).total, 1);
+  assert.equal((await searchLibrary({ q: "-패션" })).total, 0);
+  assert.equal((await searchLibrary({ q: "비일치 | 정원" })).total, 1);
+  assert.equal((await searchLibrary({ q: "비일치 | 없음" })).total, 0);
+  assert.equal((await searchLibrary({ q: "정원", from: "2000-01-01", to: "2999-12-31" })).total, 1);
+  assert.equal((await searchLibrary({ from: "2999-01-01" })).total, 0);
+  assert.equal((await searchLibrary({ to: "2000-01-01" })).total, 0);
   const before = requests;
   await tickAnalysis(); await tickAnalysis();
   await until(() => (db().prepare("SELECT COUNT(*) AS n FROM library_vector").get() as { n: number }).n === 2, "vectors");

@@ -7,7 +7,7 @@ import { thumbUrl } from "./format";
 
 export interface LibrarySearchParams {
   q?: string; origin?: string; storage?: number; scope?: "managed" | "linked"; folder?: string;
-  collection?: string; media?: string; tag?: string; hidden?: boolean; trash?: boolean; sort?: string; shuffle?: number; limit?: number; offset?: number;
+  collection?: string; from?: string; to?: string; media?: string; tag?: string; hidden?: boolean; trash?: boolean; sort?: string; shuffle?: number; limit?: number; offset?: number;
 }
 export interface LibraryHit extends LibraryItem {
   storage_name: string; storage_kind: "managed" | "linked"; storage_enabled: number;
@@ -15,7 +15,27 @@ export interface LibraryHit extends LibraryItem {
   match?: "text" | "image"; score?: number; match_component?: number; snippet: string;
 }
 const escapeLike = (value: string) => value.replace(/[\\%_]/g, "\\$&");
-function filters(p: LibrarySearchParams) {
+const LIKE_SQL = "(i.title LIKE ? ESCAPE '\\' OR i.body LIKE ? ESCAPE '\\' OR i.note LIKE ? ESCAPE '\\' OR i.tags LIKE ? ESCAPE '\\')";
+const phrase = (token: string) => `"${token.replace(/"/g, '""')}"`;
+/** Spaces mean AND, `|` splits OR groups, a leading `-` means NOT. */
+function parseQuery(raw: string) {
+  const groups: string[][] = [[]], not: string[] = [];
+  for (const t of raw.split(/\s+/).filter(Boolean)) {
+    if (t === "|") groups.push([]);
+    else if (t.length > 1 && t[0] === "-") not.push(t.slice(1));
+    else groups.at(-1)!.push(t);
+  }
+  return { groups: groups.filter(g => g.length), not };
+}
+/** AND of tokens as plain SQL; used where the FTS join (and its bm25 rank) is not available. */
+function textMatch(tokens: string[], args: (string | number)[]) {
+  const long = tokens.filter(t => t.length >= 3), parts: string[] = [];
+  if (long.length) { parts.push("i.id IN (SELECT rowid FROM library_fts WHERE library_fts MATCH ?)"); args.push(long.map(phrase).join(" AND ")); }
+  for (const t of tokens.filter(t => t.length < 3)) { parts.push(LIKE_SQL); const like = `%${escapeLike(t)}%`; args.push(like, like, like, like); }
+  return parts.join(" AND ");
+}
+const DAY = /^\d{4}-\d{2}-\d{2}$/;
+function filters(p: LibrarySearchParams, not: string[] = []) {
   const sql = ["st.enabled=1", p.trash ? "i.deleted_at IS NOT NULL" : "i.deleted_at IS NULL", p.trash ? "1=1" : p.hidden ? "COALESCE(s.hidden_at,i.hidden_at) IS NOT NULL AND CASE WHEN json_valid(i.metadata) THEN json_extract(i.metadata,'$.merged_into') END IS NULL" : "COALESCE(s.hidden_at,i.hidden_at) IS NULL"];
   const args: (string | number)[] = [];
   if (p.origin) { sql.push("i.origin=?"); args.push(p.origin); }
@@ -31,6 +51,11 @@ function filters(p: LibrarySearchParams) {
   if (p.media === "image" || p.media === "video") {
     sql.push("(EXISTS(SELECT 1 FROM library_component mc WHERE mc.item_id=i.id AND mc.kind=?) OR EXISTS(SELECT 1 FROM media m WHERE m.source_id=i.source_id AND m.kind=? AND m.status='ok'))"); args.push(p.media, p.media);
   }
+  // Saved date, inclusive on both ends.
+  if (p.from && DAY.test(p.from)) { sql.push("date(i.created_at)>=?"); args.push(p.from); }
+  if (p.to && DAY.test(p.to)) { sql.push("date(i.created_at)<=?"); args.push(p.to); }
+  // In `where` so the semantic candidates are filtered too.
+  for (const t of not) sql.push(`NOT (${textMatch([t], args)})`);
   return { where: sql.join(" AND "), args };
 }
 const JOINS = "FROM library_item i JOIN library_storage st ON st.id=i.storage_id LEFT JOIN source s ON s.id=i.source_id";
@@ -51,15 +76,16 @@ function hydrate(row: LibraryItem & { storage_name: string; storage_kind: "manag
     snippet: row.body.slice(Math.max(0, index - 60), Math.max(0, index - 60) + 220) };
 }
 export async function searchLibrary(p: LibrarySearchParams = {}) {
-  const q = p.q?.trim() ?? "";
+  const { groups, not } = parseQuery(p.q?.trim() ?? "");
+  const q = groups.flat().join(" ");
   const limit = Math.max(1, Math.min(100, p.limit ?? 60));
   const offset = Math.max(0, p.offset ?? 0);
-  const { where, args } = filters(p);
+  const { where, args } = filters(p, not);
   const select = `SELECT i.*,st.name AS storage_name,st.kind AS storage_kind,st.enabled AS storage_enabled,s.hidden_at AS source_hidden,s.status AS source_status ${JOINS}`;
   const timeOrder = p.sort === "posted" ? "COALESCE(s.posted_at,i.created_at) DESC" : "i.created_at DESC,i.id DESC";
   const shuffleSeed = Number.isSafeInteger(p.shuffle) && p.shuffle! > 0 ? p.shuffle! % 2147483647 : 0;
   const shuffleOrder = `((i.id * ${shuffleSeed} + i.id * i.id * 31) % 2147483647)`;
-  const tokens = q.split(/\s+/).filter(Boolean);
+  const tokens = groups.length === 1 ? groups[0] : [];
   const longTokens = tokens.filter(token => token.length >= 3);
   const shortTokens = tokens.filter(token => token.length < 3);
   const usesFts = longTokens.length > 0;
@@ -68,7 +94,7 @@ export async function searchLibrary(p: LibrarySearchParams = {}) {
   const keywordArgs: (number | string)[] = [...args];
   let keywordOrder = timeOrder;
   if (usesFts) {
-    const match = longTokens.map(token => `"${token.replace(/"/g, '\"\"')}"`).join(" AND ");
+    const match = longTokens.map(phrase).join(" AND ");
     keywordSql = " AND library_fts MATCH ?";
     keywordArgs.push(match);
     if (p.sort !== "recent" && p.sort !== "posted") keywordOrder = "bm25(library_fts) ASC," + timeOrder;
@@ -77,6 +103,10 @@ export async function searchLibrary(p: LibrarySearchParams = {}) {
     keywordSql += " AND (i.title LIKE ? ESCAPE '\\' OR i.body LIKE ? ESCAPE '\\' OR i.note LIKE ? ESCAPE '\\' OR i.tags LIKE ? ESCAPE '\\')";
     const like = `%${escapeLike(token)}%`; keywordArgs.push(like, like, like, like);
   }
+  if (groups.length > 1) {
+    // ponytail: OR groups skip the FTS join, so no bm25 rank; semantic fusion still orders when on.
+    keywordSql = ` AND (${groups.map(g => `(${textMatch(g, keywordArgs)})`).join(" OR ")})`;
+  }
   if (shuffleSeed) keywordOrder = shuffleOrder;
   const orderArgs: (string | number)[] = [];
   const total = (db().prepare(`SELECT COUNT(*) AS n ${keywordJoins} WHERE ${where}${keywordSql}`).get(...keywordArgs) as { n: number }).n;
@@ -84,7 +114,8 @@ export async function searchLibrary(p: LibrarySearchParams = {}) {
     .all(...keywordArgs, ...orderArgs, limit, offset) as Parameters<typeof hydrate>[0][];
   if (!q || !embedderEnabled) return { hits: rows.map(r => hydrate(r, q)), total };
   try {
-    const query = await queryVector(q);
+    // One vector per OR group; a candidate scores its best group.
+    const queries = await Promise.all(groups.map(g => queryVector(g.join(" "))));
     const candidates = db().prepare(`WITH eligible AS (SELECT i.id,i.source_id ${JOINS} WHERE ${where})
       SELECT e.id,v.vec,c.kind AS via,c.id AS component FROM library_vector v JOIN library_component c ON c.id=v.component_id
       JOIN eligible e ON e.id=c.item_id WHERE v.model_key=? AND v.input_hash=c.input_hash
@@ -94,7 +125,7 @@ export async function searchLibrary(p: LibrarySearchParams = {}) {
     const best = new Map<number, { score: number; via: "text" | "image"; component: number | null }>();
     // Synchronous on purpose: awaiting while iterate() is open makes every other write on this connection fail ("database connection is busy").
     for (const c of candidates) {
-      const score = cosine(c.vec, query);
+      const score = Math.max(...queries.map(query => cosine(c.vec, query)));
       if (score >= 0.7 && score > (best.get(c.id)?.score ?? -1)) best.set(c.id, { score, via: c.via, component: c.component });
     }
     const semantic = [...best].sort((a, b) => b[1].score - a[1].score).slice(0, 300).map(([id]) => id);

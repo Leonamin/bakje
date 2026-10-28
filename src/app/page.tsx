@@ -15,7 +15,7 @@ export default async function LibraryPage({ searchParams }: { searchParams: Prom
   const get = (key: string) => typeof sp[key] === "string" ? sp[key] as string : undefined;
   const page = Math.max(1, Number(get("page")) || 1), limit = 60;
   const { hits, total } = await searchLibrary({ q: get("q"), origin: get("origin") ?? get("platform"), scope: get("scope") as "managed" | "linked" | undefined,
-    storage: Number(get("storage")) || undefined, folder: get("folder"), collection: get("collection"), media: get("media"), sort: get("sort"), shuffle: Number(get("shuffle")) || undefined, tag: get("tag"), hidden: get("hidden") === "1", trash: get("trash") === "1", limit, offset: (page - 1) * limit });
+    storage: Number(get("storage")) || undefined, folder: get("folder"), collection: get("collection"), from: get("from"), to: get("to"), media: get("media"), sort: get("sort"), shuffle: Number(get("shuffle")) || undefined, tag: get("tag"), hidden: get("hidden") === "1", trash: get("trash") === "1", limit, offset: (page - 1) * limit });
   const facets = libraryFacets(), view = get("view") === "list" ? "list" : "grid";
   const pageUrl = (n: number) => { const p = new URLSearchParams(); for (const [k, v] of Object.entries(sp)) if (typeof v === "string") p.set(k, v); p.set("page", String(n)); return `/?${p}`; };
   return <div className="mx-auto max-w-6xl px-5 pb-10 pt-2 md:px-6 md:pt-8">
