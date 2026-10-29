@@ -26,3 +26,4 @@ okf_version: "0.1"
 - [016-hide-posts.md](./016-hide-posts.md) — 휴지통 대신 hidden_at 숨김, 서버 액션으로 목록 캐시 무효화
 - [017-x-age-restricted-cookie.md](./017-x-age-restricted-cookie.md) — 연령 제한 X 게시글만 전용 계정 쿠키+Playwright로 수집
 - [018-linked-root-allowlist.md](./018-linked-root-allowlist.md) — 연결 폴더를 허용 루트 아래로 제한, MCP 토큰 분리는 후속 과제
+- [019-no-manual-upload-free-folder.md](./019-no-manual-upload-free-folder.md) — 수동 박제 업로드 화면 대신 AI가 관리하는 자유 공유폴더

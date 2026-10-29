@@ -8,6 +8,8 @@ okf_version: "0.1"
 
 # Logs
 
+- [2026-10-29-manual-capture-folder.md](./2026-10-29-manual-capture-folder.md) — 수동 박제 업로드 대신 자유 공유폴더 결정
+
 - [2026-10-29-bakjebon-term.md](./2026-10-29-bakjebon-term.md) — 박제본 정의와 삭제 목표
 
 - [2026-10-28-hover-thumb-preview.md](./2026-10-28-hover-thumb-preview.md) — 카드 호버 0.5초 뒤 원본 비율 썸네일 미리보기
