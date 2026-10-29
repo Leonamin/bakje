@@ -9,6 +9,7 @@ import { Checkbox } from "@/components/goodcase/basic/checkbox";
 import { TextField } from "@/components/goodcase/basic/text-field";
 import { Select } from "@/components/goodcase/overlays/select";
 import { Dialog } from "@/components/goodcase/overlays/dialog";
+import { Fold } from "./fold";
 import type { ComponentRow, LibraryItem } from "@/lib/library-catalog";
 
 interface History { id: number; description: string; can_undo: boolean; undone_at: string | null }
@@ -64,8 +65,7 @@ export function LibraryStructureEditor({ itemId }: { itemId: number }) {
   function move(index: number, delta: number) {
     const next = [...parts]; [next[index], next[index + delta]] = [next[index + delta], next[index]]; setParts(next);
   }
-  return <details className="mt-6 rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-4" onToggle={e => setOpen(e.currentTarget.open)}>
-    <summary className="cursor-pointer text-[15px] font-semibold">자료 묶음 편집</summary>
+  return <Fold title="자료 묶음 편집" className="mt-6 rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-4" onToggle={setOpen}>
     <p className="label mt-3">역할·순서를 바꾸거나 구성요소를 분리·합칠 수 있습니다. 이 편집은 원본 파일을 이동하지 않습니다.</p>
     {message ? <p role="status" className="mt-3 text-[14px]">{message}</p> : null}
     {newItem ? <Link className="gc-button gc-button-secondary mt-3" href={`/items/${newItem}`}>분리한 자료 열기</Link> : null}
@@ -103,5 +103,5 @@ export function LibraryStructureEditor({ itemId }: { itemId: number }) {
       <ul className="mt-4 max-h-72 space-y-2 overflow-y-auto">{candidates.map(c => <li key={c.id} className="rounded-xl border border-[var(--line)] p-3"><Checkbox label={`#${c.id} ${c.title} · 구성요소 ${c.component_count}개`} isChecked={merging.some(s => s.id === c.id)} isDisabled={busy || (!merging.some(s => s.id === c.id) && merging.length >= 20)} onCheckedChange={checked => setMerging(checked ? [...merging, c] : merging.filter(s => s.id !== c.id))} /></li>)}</ul>
       {!candidates.length ? <p className="label mt-3">같은 저장소에 합칠 자료가 없습니다. 다른 검색어를 입력해 보세요.</p> : null}
     </Dialog>
-  </details>;
+  </Fold>;
 }

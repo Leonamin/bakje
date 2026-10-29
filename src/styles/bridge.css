@@ -137,6 +137,11 @@ html {
   gap: var(--gc-space-2);
 }
 
+/* Pill shape everywhere, matching .chip. */
+.gc-button {
+  border-radius: 999px;
+}
+
 .gc-button-primary {
   background: var(--accent);
   color: var(--gc-on-accent);

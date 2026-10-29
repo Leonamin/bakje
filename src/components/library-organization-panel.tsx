@@ -9,6 +9,7 @@ import { TextField } from "@/components/goodcase/basic/text-field";
 import { Select } from "@/components/goodcase/overlays/select";
 import { Dialog } from "@/components/goodcase/overlays/dialog";
 import { formatBytes } from "@/lib/format";
+import { Fold } from "./fold";
 interface Plan {
   id: number; storage_id: number; state: string; phase: string; direction: string; target_dir: string; total: number;
   prepared: number; error: string | null; writable: boolean; affected_shared_items: number;
@@ -54,8 +55,7 @@ export function LibraryOrganizationPanel({ storageId, itemIds }: { storageId: nu
   const count = plan?.counts.reduce((n, c) => n + c.count, 0) ?? 0;
   const done = plan?.counts.filter(c => c.state === (plan.direction === "undo" ? "undone" : "done")).reduce((n, c) => n + c.count, 0) ?? 0;
   const bytes = plan?.counts.reduce((n, c) => n + c.bytes, 0) ?? 0;
-  return <details className="mt-5 rounded-2xl border border-[var(--line)] p-4" onToggle={e => setOpen(e.currentTarget.open)}>
-    <summary className="cursor-pointer text-[15px] font-semibold">원본 폴더 정리</summary>
+  return <Fold title="원본 폴더 정리" className="mt-5 rounded-2xl border border-[var(--line)] p-4" onToggle={setOpen}>
     <p className="label mt-3">{itemIds ? "이 자료의" : "이 저장소 전체 자료의"} 프롬프트·이미지·영상을 자료별 폴더로 정리합니다. 먼저 경로와 파일 내용을 확인해 계획을 만들고, 적용을 누를 때 원본을 이동합니다.</p>
     <form className="mt-4 flex flex-wrap items-end gap-3" onSubmit={e => { e.preventDefault(); void send({ action: "plan", storage_id: storageId, item_ids: itemIds, target_dir: base }); }}>
       <TextField label="정리할 하위 폴더" value={base} onChange={e => setBase(e.target.value)} disabled={busy} required description="선택한 연결 루트 안에 작업별 폴더를 만듭니다." /><Button type="submit" variant="secondary" isLoading={busy}><FolderTree size={16} />변경 계획 만들기</Button>
@@ -85,5 +85,5 @@ export function LibraryOrganizationPanel({ storageId, itemIds }: { storageId: nu
       <p className="my-4 text-[14px]">파일 {count.toLocaleString()}개 · {formatBytes(bytes)}</p>
       <Checkbox label={confirm === "undo" ? "파일을 원래 위치로 되돌리는 것을 확인했습니다." : "변경 경로를 확인했고 원본 파일 이동을 적용합니다."} isChecked={checked} isDisabled={busy} onCheckedChange={setChecked} />
     </Dialog>
-  </details>;
+  </Fold>;
 }
