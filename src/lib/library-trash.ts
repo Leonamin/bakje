@@ -1,5 +1,5 @@
-import { db, MEDIA_DIR } from "./db";
-import { catalogMediaReferences } from "./library-files";
+import { db, MEDIA_DIR, RAW_DIR } from "./db";
+import { catalogMediaReferences, resolveFile } from "./library-files";
 import { assertStorageUnlocked } from "./library-lock";
 import fs from "node:fs";
 import path from "node:path";
@@ -43,7 +43,13 @@ export function purgeExpired() {
       conn.prepare("UPDATE library_change SET before_json='[]',after_json='[]',undone_at=COALESCE(undone_at,?) WHERE id IN (SELECT change_id FROM library_change_item WHERE item_id=?)").run(new Date().toISOString(), row.id);
       conn.prepare("DELETE FROM library_change_item WHERE item_id=?").run(row.id);
       conn.prepare("DELETE FROM analysis_job WHERE (target_type='component' AND target_id IN (SELECT id FROM library_component WHERE item_id=?)) OR (target_type='source' AND target_id=?) OR (target_type='media' AND target_id IN (SELECT id FROM media WHERE source_id=?))").run(row.id, row.source_id, row.source_id);
+      // Owned originals: only files in storages that opted in, and never files another item's component still uses.
+      conn.prepare(`INSERT OR IGNORE INTO trash_original_cleanup(storage_id,path) SELECT a.storage_id,a.relative_path FROM library_asset a
+        JOIN library_storage s ON s.id=a.storage_id AND s.allow_delete=1 AND s.kind='linked'
+        WHERE a.id IN (SELECT asset_id FROM library_component WHERE item_id=? AND asset_id IS NOT NULL)
+        AND NOT EXISTS(SELECT 1 FROM library_component c WHERE c.asset_id=a.id AND c.item_id<>?)`).run(row.id, row.id);
       if (row.source_id) {
+        conn.prepare("INSERT OR IGNORE INTO trash_original_cleanup(storage_id,path) SELECT 0,body_path FROM snapshot WHERE source_id=? AND body_path IS NOT NULL UNION SELECT 0,replace(body_path,'.html','.json') FROM snapshot WHERE source_id=? AND body_path IS NOT NULL").run(row.source_id, row.source_id);
         conn.prepare("INSERT OR IGNORE INTO trash_media_cleanup(path) SELECT local_path FROM media WHERE source_id=? AND local_path IS NOT NULL UNION SELECT poster_path FROM media WHERE source_id=? AND poster_path IS NOT NULL").run(row.source_id, row.source_id);
         conn.prepare("DELETE FROM search_fts WHERE rowid=?").run(row.source_id);
         conn.prepare("DELETE FROM search_doc WHERE source_id=?").run(row.source_id);
@@ -74,9 +80,39 @@ export async function cleanupTrashMedia() {
     conn.prepare("DELETE FROM trash_media_cleanup WHERE path=?").run(name);
   }
 }
+/** Retryable: a failed unlink keeps its row and error; ENOENT counts as done. */
+export async function cleanupTrashOriginals() {
+  const conn = db();
+  const rows = conn.prepare("SELECT storage_id,path FROM trash_original_cleanup").all() as { storage_id: number; path: string }[];
+  for (const { storage_id, path: rel } of rows) {
+    const key = [storage_id, rel];
+    try {
+      let file: string;
+      if (storage_id === 0) {
+        file = path.resolve(RAW_DIR, rel);
+        if (!file.startsWith(RAW_DIR + path.sep)) throw new Error("스냅샷 경로가 올바르지 않습니다.");
+      } else {
+        const s = conn.prepare("SELECT allow_delete,enabled FROM library_storage WHERE id=?").get(storage_id) as { allow_delete: number; enabled: number } | undefined;
+        if (!s?.enabled || !s.allow_delete || conn.prepare("SELECT 1 FROM library_storage_lock WHERE storage_id=?").get(storage_id)) continue; // keep queued until allowed again
+        // Re-check at deletion time: a later scan or merge may have linked the file to another item.
+        if (conn.prepare("SELECT 1 FROM library_asset a JOIN library_component c ON c.asset_id=a.id WHERE a.storage_id=? AND a.relative_path=?").get(storage_id, rel)) { conn.prepare("DELETE FROM trash_original_cleanup WHERE storage_id=? AND path=?").run(...key); continue; }
+        const dir = await resolveFile(storage_id, path.posix.dirname(rel));
+        file = path.join(dir, path.posix.basename(rel));
+      }
+      if (fs.lstatSync(file).isFile()) fs.unlinkSync(file); // symlinks and directories are left alone
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== "ENOENT") {
+        conn.prepare("UPDATE trash_original_cleanup SET error=? WHERE storage_id=? AND path=?").run(String((error as Error).message).slice(0, 300), ...key);
+        console.error("[trash original]", error); continue;
+      }
+    }
+    if (storage_id) conn.prepare("DELETE FROM library_asset WHERE storage_id=? AND relative_path=? AND NOT EXISTS(SELECT 1 FROM library_component WHERE asset_id=library_asset.id)").run(...key);
+    conn.prepare("DELETE FROM trash_original_cleanup WHERE storage_id=? AND path=?").run(...key);
+  }
+}
 export function startTrashWorker() {
   const global = globalThis as typeof globalThis & { __trashTimer?: ReturnType<typeof setInterval> };
   if (global.__trashTimer) return;
-  const run = () => { try { purgeExpired(); void cleanupTrashMedia().catch(error => console.error("[trash media]", error)); } catch (error) { console.error("[trash]", error); } };
+  const run = () => { try { purgeExpired(); void cleanupTrashMedia().catch(error => console.error("[trash media]", error)); void cleanupTrashOriginals().catch(error => console.error("[trash original]", error)); } catch (error) { console.error("[trash]", error); } };
   run(); global.__trashTimer = setInterval(run, 3600000); global.__trashTimer.unref();
 }

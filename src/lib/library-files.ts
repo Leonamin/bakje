@@ -6,7 +6,7 @@ import { db, DATA_DIR } from "./db";
 
 export interface StorageRow {
   id: number; name: string; kind: "managed" | "linked"; root_path: string; enabled: number;
-  status: string; scan_interval_minutes: number; error: string | null; last_scan_at: string | null;
+  status: string; scan_interval_minutes: number; allow_delete: number; error: string | null; last_scan_at: string | null;
 }
 export const MIME: Record<string, string> = {
   jpg: "image/jpeg", jpeg: "image/jpeg", png: "image/png", webp: "image/webp", gif: "image/gif",

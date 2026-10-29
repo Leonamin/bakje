@@ -190,6 +190,9 @@ export function db(): Database.Database {
   conn.exec("CREATE TABLE IF NOT EXISTS trash_media_cleanup (path TEXT PRIMARY KEY)");
   const storageColumns = new Set((conn.prepare("PRAGMA table_info(library_storage)").all() as { name: string }[]).map(c => c.name));
   if (!storageColumns.has("scan_interval_minutes")) conn.exec("ALTER TABLE library_storage ADD COLUMN scan_interval_minutes INTEGER NOT NULL DEFAULT 0");
+  if (!storageColumns.has("allow_delete")) conn.exec("ALTER TABLE library_storage ADD COLUMN allow_delete INTEGER NOT NULL DEFAULT 0");
+  // storage_id 0 = raw HTML snapshot dir; otherwise a linked storage whose owner allowed deleting originals.
+  conn.exec("CREATE TABLE IF NOT EXISTS trash_original_cleanup (storage_id INTEGER NOT NULL, path TEXT NOT NULL, error TEXT, PRIMARY KEY(storage_id,path))");
   instance = conn;
   return conn;
 }

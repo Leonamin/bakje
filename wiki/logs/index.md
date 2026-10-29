@@ -8,6 +8,8 @@ okf_version: "0.1"
 
 # Logs
 
+- [2026-10-29-bakjebon-term.md](./2026-10-29-bakjebon-term.md) — 박제본 정의와 삭제 목표
+
 - [2026-10-28-hover-thumb-preview.md](./2026-10-28-hover-thumb-preview.md) — 카드 호버 0.5초 뒤 원본 비율 썸네일 미리보기
 - [2026-10-28-detail-image-ratio-related-thumb.md](./2026-10-28-detail-image-ratio-related-thumb.md) — 상세 단일 이미지 높이·비율 제한, 연관 자료 1:1 썸네일
 - [2026-10-28-ui-polish-and-code-review.md](./2026-10-28-ui-polish-and-code-review.md) — 선택 모드·필터 툴바·로딩 표시 개선, 통합 라이브러리 코드 리뷰 반영(검색 쓰기 실패, 폴더 연결 제한), 배포 5회

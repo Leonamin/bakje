@@ -4,7 +4,7 @@ import os from "node:os";
 import path from "node:path";
 process.env.ARCHIVE_DATA_DIR = fs.mkdtempSync(path.join(os.tmpdir(), "bakje-trash-test-"));
 const { db, MEDIA_DIR } = await import("../src/lib/db");
-const { manageItems, purgeExpired, cleanupTrashMedia } = await import("../src/lib/library-trash");
+const { manageItems, purgeExpired, cleanupTrashMedia, cleanupTrashOriginals } = await import("../src/lib/library-trash");
 const d = db(), now = new Date().toISOString();
 d.prepare("INSERT INTO library_storage(id,name,kind,root_path,status,created_at) VALUES(2,'test','linked','/tmp/trash-fixture','online',?)").run(now);
 const id = Number(d.prepare("INSERT INTO library_item(storage_id,external_id,title,created_at,updated_at) VALUES(2,'fixture','fixture',?,?)").run(now,now).lastInsertRowid);
@@ -29,4 +29,34 @@ await cleanupTrashMedia(); assert.equal(fs.existsSync(file),true);
 d.prepare("DELETE FROM source WHERE id=?").run(sourceId);
 d.prepare("INSERT OR IGNORE INTO trash_media_cleanup VALUES('fixture.jpg')").run();
 await cleanupTrashMedia(); assert.equal(fs.existsSync(file),false);
+// Owned originals: opted-in storage deletes unshared files only; opted-out storage and shared files stay.
+const root = fs.mkdtempSync(path.join(os.tmpdir(), "bakje-owned-")), other = fs.mkdtempSync(path.join(os.tmpdir(), "bakje-kept-"));
+for (const [n, r, allow] of [[3, root, 1], [4, other, 0]] as const) d.prepare("INSERT INTO library_storage(id,name,kind,root_path,status,allow_delete,created_at) VALUES(?,?,'linked',?,'online',?,?)").run(n, `s${n}`, fs.realpathSync(r), allow, now);
+for (const f of ["own.jpg", "shared.jpg"]) fs.writeFileSync(path.join(root, f), "x");
+fs.writeFileSync(path.join(other, "own.jpg"), "x");
+const mk = (storage: number, ext: string) => Number(d.prepare("INSERT INTO library_item(storage_id,external_id,title,created_at,updated_at,deleted_at) VALUES(?,?,?,?,?,'2000-01-01T00:00:00.000Z')").run(storage, ext, ext, now, now).lastInsertRowid);
+const asset = (storage: number, rel: string) => Number(d.prepare("INSERT INTO library_asset(storage_id,relative_path,mime) VALUES(?,?,'image/jpeg')").run(storage, rel).lastInsertRowid);
+const comp = (item: number, key: string, a: number) => d.prepare("INSERT INTO library_component(item_id,component_key,kind,role,ordinal,asset_id,input_hash) VALUES(?,?,'image','result',0,?,'h')").run(item, key, a);
+const gone = mk(3, "gone"), keep = mk(3, "keep"), foreign = mk(4, "foreign");
+const own = asset(3, "own.jpg"), shared = asset(3, "shared.jpg"), foreignAsset = asset(4, "own.jpg");
+comp(gone, "a", own); comp(gone, "b", shared); comp(keep, "b", shared); comp(foreign, "a", foreignAsset);
+d.prepare("UPDATE library_item SET deleted_at=NULL WHERE id=?").run(keep);
+purgeExpired(); await cleanupTrashOriginals();
+assert.equal(fs.existsSync(path.join(root, "own.jpg")), false, "owned file deleted");
+assert.equal(fs.existsSync(path.join(root, "shared.jpg")), true, "shared file kept");
+assert.equal(fs.existsSync(path.join(other, "own.jpg")), true, "opted-out storage kept");
+assert.equal((d.prepare("SELECT COUNT(*) n FROM trash_original_cleanup").get() as {n:number}).n, 0);
+// Failure keeps the row for retry; success later clears it.
+fs.writeFileSync(path.join(root, "locked.jpg"), "x");
+d.prepare("INSERT INTO trash_original_cleanup(storage_id,path) VALUES(3,'locked.jpg')").run();
+fs.chmodSync(root, 0o500); await cleanupTrashOriginals();
+if (process.getuid?.() !== 0) { assert.ok(d.prepare("SELECT error FROM trash_original_cleanup").get()); fs.chmodSync(root, 0o700); await cleanupTrashOriginals(); }
+assert.equal(fs.existsSync(path.join(root, "locked.jpg")), false);
+// Raw SNS snapshot is removed with the source.
+fs.mkdirSync(path.join(process.env.ARCHIVE_DATA_DIR!, "raw/x"), { recursive: true }); fs.writeFileSync(path.join(process.env.ARCHIVE_DATA_DIR!, "raw/x/1.html"), "h");
+d.prepare("INSERT INTO source(platform,native_id,canonical_url,first_seen_at) VALUES('x','raw','https://example.test/raw',?)").run(now);
+const rawSource = (d.prepare("SELECT id FROM source WHERE native_id='raw'").get() as {id:number}).id;
+d.prepare("INSERT INTO snapshot(source_id,fetched_at,body_path) VALUES(?,?,'x/1.html')").run(rawSource, now);
+d.prepare("INSERT INTO library_item(storage_id,external_id,source_id,title,created_at,updated_at,deleted_at) VALUES(1,'source:raw',?,'raw',?,?,'2000-01-01T00:00:00.000Z')").run(rawSource, now, now); purgeExpired(); await cleanupTrashOriginals();
+assert.equal(fs.existsSync(path.join(process.env.ARCHIVE_DATA_DIR!, "raw/x/1.html")), false);
 console.log("trash lifecycle, history invalidation and media cleanup passed");
