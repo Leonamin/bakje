@@ -3,7 +3,7 @@ type: Concept
 title: "운영과 배포"
 description: "/opt 릴리스 구조, 데이터 분리, Docker 실행과 접근 경로"
 tags: [deploy, docker, operations, release]
-timestamp: 2026-10-28
+timestamp: 2026-10-29
 ---
 
 # 운영과 배포
@@ -87,6 +87,22 @@ sudo가 있으면 `sudo ARCHIVE_UID=$(id -u) ./scripts/prepare-host.sh`.
 - `scripts/check-parsers.sh`가 이 경로를 호출하고, 실패하면 `scripts/alert.sh`로 알린다.
 - `scripts/alert.sh`: `BAKJE_ALERT_WEBHOOK`(Discord·Slack 웹훅)이 있으면 보낸다. 없으면 로그(`~/bakje-backup/*.log`)에만 남는다. crontab 위에 `BAKJE_ALERT_WEBHOOK=...` 줄을 넣어 켠다.
 - 파서 회귀 확인: `pnpm reparse -- --check`. 저장된 파트를 기대값으로 보고 스냅샷 재파싱 결과와 비교만 한다(쓰기 없음). 남의 게시글이라 스냅샷은 git에 넣지 않으므로 로컬·운영 데이터로 돌린다.
+
+## 웹 컨테이너 자동 재시작 (2026-10-29)
+
+- 장애: 2026-10-29 05:21(UTC)에 외부에서 SIGTERM이 왔고, `next-server`가 포트 3000을 닫은 채 프로세스만 남았다. Next 운영 모드의 종료 처리는 `server.close()` 뒤 열린 연결이 모두 끝나야 `process.exit`를 부른다. docker-proxy의 keep-alive 연결 3개가 남아 종료가 멈췄다. 프로세스가 살아 있어 `restart: unless-stopped`가 동작하지 않았고 컨테이너는 `unhealthy`로만 표시됐다. 호스트의 다른 세션이 imager 컨테이너를 정리하며 보냈을 가능성이 높지만 확인하지 못했다.
+- 대응: 서비스 사용자 crontab이 매분 `scripts/watchdog.sh`를 실행한다.
+
+```
+* * * * * /opt/bakje/current/scripts/watchdog.sh >> $HOME/bakje-backup/watchdog.log 2>&1
+```
+
+- `unhealthy`가 3번 연속일 때만 `docker restart -t 10 bakje-web-1`을 실행한다. 재생성하지 않으므로 사용자·볼륨·네트워크·재시작 정책이 그대로다. 기동 중·중지·없음 상태에는 손대지 않는다.
+- `scripts/deploy.sh`의 락(`/tmp/bakje-deploy.lock`)이 잡혀 있으면 건너뛴다.
+- 1시간에 3번까지만 재시작한다. 넘으면 알림을 한 번 보내고 멈춘다. 정상으로 돌아오면 풀린다.
+- 재시작과 포기는 `scripts/alert.sh`로 알린다. 상태 파일은 `~/bakje-backup/watchdog/`.
+- 검증: 가짜 `docker`로 임계값·상한·락·정상 복귀를 확인했다. 실제 장애에서의 동작은 미검증.
+- 이 스크립트는 처음에 현재 릴리스 디렉터리에 직접 복사했다. 다음 배포부터는 릴리스에 포함된다.
 
 ## 확인된 것
 
