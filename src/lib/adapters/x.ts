@@ -257,10 +257,31 @@ export function extractArticle(html: string): string | null {
       /* 해당 블록은 건너뛴다 */
     }
   }
+  const art = articleResult(html);
+  const ranges: any[][] = (art?.content_state?.blocks ?? []).map((b: any) => b.entity_ranges ?? []);
+  const entities = new Map<string, any>((art?.content_state?.entity_map ?? []).map((e: any) => [String(e.key), e.value]));
+  const mediaUrls = new Map<string, string>((art?.media_entities ?? []).map((m: any) => [String(m.media_id), articleMediaOf(m.media_info)?.remoteUrl]).filter((e: any) => e[1]));
+  // 같은 줄 안의 링크는 [글자](주소)로, 이미지·영상·임베드 트윗은 블록 자리에 한 줄로 남긴다.
+  const inline = (i: number, text: string) => {
+    for (const r of [...(ranges[i] ?? [])].sort((a, b) => b.offset - a.offset)) {
+      const e = entities.get(String(r.key));
+      if (e?.type !== "LINK" || !e.data?.url) continue;
+      text = `${text.slice(0, r.offset)}[${text.slice(r.offset, r.offset + r.length)}](${e.data.url})${text.slice(r.offset + r.length)}`;
+    }
+    return text;
+  };
+  const atomic = (i: number) => {
+    const e = entities.get(String(ranges[i]?.[0]?.key));
+    if (e?.type === "MEDIA") {
+      return (e.data?.media_items ?? []).map((it: any) => mediaUrls.get(String(it.media_id))).filter(Boolean).map((u: string) => `![](${u})`).join("\n");
+    }
+    return e?.type === "TWEET" && e.data?.tweet_id ? `https://x.com/i/status/${e.data.tweet_id}` : "";
+  };
   let n = 0;
   return blocks
-    .map(([, type, text], i) => {
-      if (type === "atomic") return code.get(i) ?? "";
+    .map(([, type, raw], i) => {
+      if (type === "atomic") return code.get(i) || atomic(i);
+      const text = inline(i, raw);
       if (type === "header-one" || type === "header-two") return `## ${text}`;
       if (type === "header-three") return `### ${text}`;
       if (type === "unordered-list-item") return `- ${text}`;
@@ -271,35 +292,39 @@ export function extractArticle(html: string): string | null {
     .join("\n\n");
 }
 
-/** Article 안의 이미지·영상. 본문과 달리 `ArticleByTweetId` 응답에만 실려 있다. */
-export function extractArticleMedia(html: string): MediaRef[] {
+/** `ArticleByTweetId` 응답의 Article. 링크·미디어 자리 정보(entity_map)와 미디어 목록이 여기에만 있다. */
+function articleResult(html: string): any | null {
   const at = html.indexOf('name:"ArticleByTweetId"');
   const v = at < 0 ? -1 : html.indexOf('value:"', at);
   const lit = v < 0 ? null : readJsString(html, v + 6);
-  if (!lit) return [];
-  let list: any[] = [];
+  if (!lit) return null;
   try {
-    list = JSON.parse(decodeLiteral(lit.body))?.data?.tweet_result_by_rest_id?.result?.article?.article_results?.result?.media_entities ?? [];
+    return JSON.parse(decodeLiteral(lit.body))?.data?.tweet_result_by_rest_id?.result?.article?.article_results?.result ?? null;
   } catch {
-    return [];
+    return null;
   }
+}
+
+function articleMediaOf(info: any): Pick<MediaRef, "kind" | "remoteUrl" | "width" | "height"> | null {
+  if (info?.__typename === "ApiImage" && info.original_img_url) {
+    return { kind: "image", remoteUrl: info.original_img_url, width: info.original_img_width ?? null, height: info.original_img_height ?? null };
+  }
+  const url = info?.variants ? bestVideoUrl(info) : null;
+  if (!url) return null;
+  return {
+    kind: info.__typename === "ApiGif" ? "gif" : "video",
+    remoteUrl: url,
+    width: info.preview_image?.original_img_width ?? null,
+    height: info.preview_image?.original_img_height ?? null,
+  };
+}
+
+/** Article 안의 이미지·영상. 본문과 달리 `ArticleByTweetId` 응답에만 실려 있다. */
+export function extractArticleMedia(html: string): MediaRef[] {
   const out: MediaRef[] = [];
-  list.forEach((m, i) => {
-    const info = m?.media_info;
-    if (info?.__typename === "ApiImage" && info.original_img_url) {
-      out.push({ kind: "image", remoteUrl: info.original_img_url, width: info.original_img_width ?? null, height: info.original_img_height ?? null, ordinal: i });
-    } else if (info?.variants) {
-      const url = bestVideoUrl(info);
-      if (url) {
-        out.push({
-          kind: info.__typename === "ApiGif" ? "gif" : "video",
-          remoteUrl: url,
-          width: info.preview_image?.original_img_width ?? null,
-          height: info.preview_image?.original_img_height ?? null,
-          ordinal: i,
-        });
-      }
-    }
+  (articleResult(html)?.media_entities ?? []).forEach((m: any, i: number) => {
+    const ref = articleMediaOf(m?.media_info);
+    if (ref) out.push({ ...ref, ordinal: i });
   });
   return out;
 }

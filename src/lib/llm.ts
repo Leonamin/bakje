@@ -97,7 +97,7 @@ const SYSTEM = [
   "Rules:",
   '- "parts" in your answer must have exactly the same number of items as the input, in the same order. Never merge, split, drop or reorder segments. An empty input segment stays "".',
   "- If a segment is already Korean, or has nothing to translate (only URLs, @handles, code), return it unchanged.",
-  "- Keep line breaks, lists and markdown structure.",
+  "- Keep line breaks, lists and markdown structure. Lines like ![](https://...) and the URL part of [text](https://...) must stay exactly as they are; translate only the link text.",
   "- Do not translate code, URLs, @handles, #hashtags, emoji, or names of products, companies, libraries and people. Keep them in their original spelling.",
   "- Preserve the author's tone and level of formality.",
   "- Never add commentary, notes, or explanations.",
