@@ -24,3 +24,4 @@ okf_version: "0.1"
 - [ios-shortcut.md](./ios-shortcut.md) — 공유 시트 단축어 수집, 텍스트 응답, iOS 27 도움말
 - [ui-system.md](./ui-system.md) — 수집 우선 모바일 IA, 타입 스케일, CSS 우선순위 함정, Goodcase 이식, 토큰
 - [operations.md](./operations.md) — 릴리스 배포, 데이터 경로, 백업
+- [gallery-site-import.md](./gallery-site-import.md) — ai-costume·ai-pose 갤러리 일회성 수집, 분류·성인 태그, 마운트 절차
