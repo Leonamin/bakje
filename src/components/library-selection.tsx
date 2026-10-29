@@ -55,7 +55,7 @@ export function LibrarySelection({ hits, view, mode }: { hits: LibraryHit[]; vie
     title={`${count}개 자료를 숨길까요?`} description={`${scope}목록과 검색에서 빠집니다. 필터의 ‘숨긴 자료’에서 다시 볼 수 있고 숨김을 해제할 수 있습니다.`}
     confirmLabel="숨기기" onConfirm={() => run("hide")} />;
   const confirmTrash = <ConfirmDialog trigger={<Button variant="secondary" className={compact} disabled={!count}>삭제</Button>}
-    title={`${count}개 자료를 휴지통으로 옮길까요?`} description={`${scope}7일 후 삭제됩니다. 관련 묶음 편집과 원본 정리 기록은 되돌릴 수 없게 됩니다.`}
+    title={`${count}개 자료를 휴지통으로 옮길까요?`} description={`${scope}7일 후 박제본의 내용과 보관 파일이 삭제됩니다(원본 삭제를 허용한 연결 폴더는 원본 파일도 삭제). 관련 묶음 편집과 원본 정리 기록은 되돌릴 수 없게 됩니다.`}
     confirmLabel="휴지통으로 이동" onConfirm={() => run("trash")} />;
   return <>
     {/* sticky: flush full-bleed on mobile; on md+ a rounded bar floating 16px under the 56px top bar (z-40) */}

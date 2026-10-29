@@ -22,6 +22,7 @@ const input = z.discriminatedUnion("action", [
   z.object({ action: z.literal("storage"), id, enabled: z.boolean() }),
   z.object({ action: z.literal("schedule"), storage_id: id, minutes: z.number().int().min(0).max(10080) }),
   z.object({ action: z.literal("bulk"), paused: z.boolean() }),
+  z.object({ action: z.literal("allow_delete"), storage_id: id, allow: z.boolean() }),
   z.object({ action: z.literal("retry_analysis"), storage_id: id.optional() }),
   z.object({ action: z.literal("export"), item_ids: z.array(id).min(1).max(100) }),
   z.object({ action: z.literal("edit"), id, revision: id, title: z.string().min(1).max(2000).optional(), note: z.string().max(50000).optional(), hidden: z.boolean().optional(), collections: z.array(z.string().min(1).max(200)).max(100).optional(), review_required: z.boolean().optional() }),
@@ -49,6 +50,7 @@ export async function POST(req: Request) {
         return Response.json({ ok: true });
       }
       case "schedule": db().prepare("UPDATE library_storage SET scan_interval_minutes=? WHERE id=? AND kind='linked'").run(body.minutes, body.storage_id); return Response.json({ ok: true });
+      case "allow_delete": db().prepare("UPDATE library_storage SET allow_delete=? WHERE id=? AND kind='linked'").run(Number(!!body.allow), body.storage_id); return Response.json({ ok: true });
       case "bulk": db().prepare("INSERT INTO setting(key,value) VALUES('library.bulk_paused',?) ON CONFLICT(key) DO UPDATE SET value=excluded.value").run(body.paused ? "1" : "0"); return Response.json({ ok: true });
       case "retry_analysis": retryAnalysis(body.storage_id); startEmbedSweep(); return Response.json({ ok: true });
       case "export": return Response.json(submitExport(body.item_ids));
