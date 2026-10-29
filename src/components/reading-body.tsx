@@ -23,16 +23,33 @@ function partLabels(parts: PartRow[]) {
   });
 }
 
+const LINK = /(\[[^\]\n]+\]\(https?:\/\/[^\s)]+\)|https?:\/\/[^\s<>"]+)/g;
+
 function linkify(text: string) {
-  return text.split(/(https?:\/\/[^\s<>"]+)/g).map((part, i) =>
-    /^https?:\/\//.test(part) ? (
-      <a key={i} href={part} target="_blank" rel="noreferrer noopener">
-        {part}
-      </a>
-    ) : (
-      <span key={i}>{part}</span>
-    ),
-  );
+  return text.split(LINK).map((part, i) => {
+    const md = /^\[([^\]]+)\]\((.+)\)$/.exec(part);
+    if (md || /^https?:\/\//.test(part)) {
+      return (
+        <a key={i} href={md ? md[2] : part} target="_blank" rel="noreferrer noopener">
+          {md ? md[1] : part}
+        </a>
+      );
+    }
+    return <span key={i}>{part}</span>;
+  });
+}
+
+/** Article 본문의 `![](원본 주소)` 줄을 저장된 미디어로 바꿔 원래 자리에 보여 준다. 못 찾으면 줄을 지운다. */
+function renderText(text: string, media: MediaRow[]) {
+  return text.split(/^!\[\]\((\S+)\)$/m).map((chunk, i) => {
+    if (i % 2 === 0) return <span key={i}>{linkify(chunk)}</span>;
+    const m = media.find((row) => row.remote_url === chunk);
+    return m ? (
+      <div key={i} className="my-4">
+        <MediaGallery {...splitMedia([m])} />
+      </div>
+    ) : null;
+  });
 }
 
 type TranslateState = { kind: "idle" } | { kind: "loading" } | { kind: "error"; message: string };
@@ -303,7 +320,7 @@ export function ReadingBody({
           const body = (
             <>
               <div className={`post-text text-[var(--ink)] ${part.kind === "parent_context" ? "text-[var(--muted)]" : ""}`}>
-                {text ? linkify(text) : <span className="text-[var(--muted)]">(본문 없음 — 미디어 게시글)</span>}
+                {text ? renderText(text, partMedia) : <span className="text-[var(--muted)]">(본문 없음 — 미디어 게시글)</span>}
               </div>
               {partMedia.length > 0 ? (
                 <div className="mt-4">
