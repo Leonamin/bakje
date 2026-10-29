@@ -3,6 +3,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/goodcase/basic/button";
+import { Switch } from "@/components/goodcase/basic/switch";
 import { TextField } from "@/components/goodcase/basic/text-field";
 export function LibraryItemEditor({ id, revision, title, note, collections, hidden, collectionsOnly = false }: { id: number; revision: number; title: string; note: string; collections: string[]; hidden: boolean; collectionsOnly?: boolean }) {
   const router = useRouter(), [busy, setBusy] = useState(false), [message, setMessage] = useState("");
@@ -16,7 +17,7 @@ export function LibraryItemEditor({ id, revision, title, note, collections, hidd
       {!collectionsOnly ? <><TextField label="제목" name="title" defaultValue={title} required /><TextField label="메모" name="note" defaultValue={note} /></> : null}<TextField label="컬렉션" name="collections" defaultValue={collections.join(", ")} description="쉼표로 구분합니다. 저장 위치와 무관하게 분류합니다." />
       <Button type="submit" isLoading={busy}>정리 저장</Button>
     </form>
-    {!collectionsOnly ? <div className="mt-4 flex flex-wrap gap-2"><Button variant="secondary" disabled={busy} onClick={() => send({ action: "edit", id, revision, hidden: !hidden })}>{hidden ? "숨김 해제" : "자료 숨기기"}</Button><Button variant="secondary" disabled={busy} onClick={() => send({ action: "export", item_ids: [id] })}>규격으로 사본 내보내기</Button><Link href="/library" className="gc-button gc-button-secondary">작업 확인</Link></div> : null}
+    {!collectionsOnly ? <div className="mt-4 flex flex-wrap gap-2"><Switch label="목록에서 숨김" isChecked={!!hidden} isDisabled={busy} onCheckedChange={on => send({ action: "edit", id, revision, hidden: on })} /><Button variant="secondary" disabled={busy} onClick={() => send({ action: "export", item_ids: [id] })}>규격으로 사본 내보내기</Button><Link href="/library" className="gc-button gc-button-secondary">작업 확인</Link></div> : null}
     {message ? <p role="status" className="label mt-3">{message}</p> : null}
   </section>;
 }
