@@ -8,6 +8,8 @@ okf_version: "0.1"
 
 # Logs
 
+- [2026-10-29-gallery-site-import.md](./2026-10-29-gallery-site-import.md) — ai-costume·ai-pose 갤러리 박제와 연결
+
 - [2026-10-29-manual-capture-folder.md](./2026-10-29-manual-capture-folder.md) — 수동 박제 업로드 대신 자유 공유폴더 결정
 
 - [2026-10-29-bakjebon-term.md](./2026-10-29-bakjebon-term.md) — 박제본 정의와 삭제 목표
