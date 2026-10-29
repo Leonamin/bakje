@@ -23,5 +23,5 @@ okf_version: "0.1"
 - [capture-queue.md](./capture-queue.md) — 작업 상태, 중복 링크 재수집 승인·거부, 서버 재시도·자동 재개, 브라우저 대기열, 오프라인 수집 화면
 - [ios-shortcut.md](./ios-shortcut.md) — 공유 시트 단축어 수집, 텍스트 응답, iOS 27 도움말
 - [ui-system.md](./ui-system.md) — 수집 우선 모바일 IA, 타입 스케일, CSS 우선순위 함정, Goodcase 이식, 토큰
-- [operations.md](./operations.md) — 릴리스 배포, 데이터 경로, 백업
+- [operations.md](./operations.md) — 릴리스 배포, 데이터 경로, 백업, 파서 점검, 웹 컨테이너 자동 재시작
 - [gallery-site-import.md](./gallery-site-import.md) — ai-costume·ai-pose 갤러리 일회성 수집, 분류·성인 태그, 마운트 절차

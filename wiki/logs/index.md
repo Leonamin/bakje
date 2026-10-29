@@ -8,6 +8,8 @@ okf_version: "0.1"
 
 # Logs
 
+- [2026-10-29-web-watchdog.md](./2026-10-29-web-watchdog.md) — 웹 컨테이너가 포트를 닫은 채 멈춘 원인과 자동 재시작 watchdog
+
 - [2026-10-29-gallery-site-import.md](./2026-10-29-gallery-site-import.md) — ai-costume·ai-pose 갤러리 박제와 연결
 
 - [2026-10-29-manual-capture-folder.md](./2026-10-29-manual-capture-folder.md) — 수동 박제 업로드 대신 자유 공유폴더 결정
