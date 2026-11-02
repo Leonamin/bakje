@@ -5,7 +5,7 @@
  */
 import assert from "node:assert/strict";
 import { frameTimes } from "../src/lib/media";
-import { chunkText, rrf, withTitle } from "../src/lib/embed";
+import { chunkText, minus, rrf, withTitle } from "../src/lib/embed";
 
 assert.deepEqual(chunkText("a\n\nb\n\nc", 100), ["a\n\nb\n\nc"]);
 assert.deepEqual(chunkText("aaa\n\nbbb\n\nccc", 8), ["aaa\n\nbbb", "ccc"]);
@@ -23,5 +23,8 @@ assert.equal(frameTimes(8).length, 3);
 assert.equal(frameTimes(2).length, 1);
 assert.equal(frameTimes(600).length, 8);
 assert.ok(frameTimes(600).at(-1)! > 500); // long clips are covered to the end
+
+const m = minus(Float32Array.from([1, 1]), Float32Array.from([0, 1]));
+assert.ok(Math.abs(m[0] - 1) < 1e-6 && Math.abs(m[1]) < 1e-6); // the excluded direction is removed
 
 console.log("embed ok");
