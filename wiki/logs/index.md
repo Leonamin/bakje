@@ -8,6 +8,7 @@ okf_version: "0.1"
 
 # Logs
 
+- [2026-11-02-code-profile-and-embed-flag.md](./2026-11-02-code-profile-and-embed-flag.md) — 코드 항목 profile 요약 틀, embed 제외 표시와 편집, freshness 출력
 - [2026-11-02-embedding-chunk-and-video-frames.md](./2026-11-02-embedding-chunk-and-video-frames.md) — 청크 제목 접두, 영상 포스터 복구·키프레임 임베딩, 연결 폴더 검색 쏠림 원인
 - [2026-10-29-web-watchdog.md](./2026-10-29-web-watchdog.md) — 웹 컨테이너가 포트를 닫은 채 멈춘 원인과 자동 재시작 watchdog
 

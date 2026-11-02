@@ -51,3 +51,7 @@ timestamp: 2026-11-02
 - 재귀 분할·겹침, 이미지 속 글자 검색(VLM·OCR), 연결 폴더 영상 키프레임(613건, 약 75분 CPU), 관련 항목의 프레임 반영, 벡터 인덱스.
 - 다시 검토할 때: 검색해도 안 나온다는 구체적 사례가 생기거나 긴 글·글자 위주 이미지가 크게 늘었을 때.
 - 검토한 오픈소스: [LangChain 재귀 분할](https://python.langchain.com/docs/how_to/recursive_text_splitter), [semchunk](https://pypi.org/project/semchunk/), [Chonkie](https://github.com/chonkie-inc/chonkie), [jina late chunking](https://github.com/jina-ai/late-chunking), [Anthropic Contextual Retrieval](https://anthropic.com/news/contextual-retrieval), [Immich 스마트 검색](https://docs.immich.app/features/search). 벤치마크 수치는 각 프로젝트의 주장이며 직접 검증하지 않았다.
+
+## 코드 항목 (kind=code)
+
+- 코드 본문 구성요소는 `metadata.embed=false`라서 임베딩하지 않고 FTS에만 들어간다. `role=profile` 요약과 결과물 이미지는 임베딩한다. 기본 규칙과 변경 방법은 [020](../decisions/020-code-profile-and-embed-flag.md)에 있다.
