@@ -23,8 +23,10 @@ LLM 위키 사례를 조사한 뒤 박제를 강화하는 쪽으로 정했다. �
 
 후속 변경(같은 날): 코드 등록은 연결 폴더에만 된다는 점을 확인했다. 사용자가 정리 문서를 코드와 함께 올리는 방식이라, 임베딩 제외 기본 규칙을 "profile 외 모두"에서 "설명 역할(profile·doc·guide·pseudo·note·readme) 외 모두"로 고쳤다. `metadata.fidelity`를 추가하고 `PROFILE_VERSION`을 2로 올렸으며, 요약 틀에 구현 문서 구조와 첨부 파일 규칙(`kind=file`, `role=attachment`, 임베딩 안 함)을 넣었다. 자기 점검은 `console.assert` 대신 `node:assert`로 바꿨다. 앞서 쓴 `console.assert`는 실패해도 종료 코드가 바뀌지 않는 약한 검사였다.
 
+MCP 컨텍스트 절감: 요약 틀 약 2,050자가 `register_library_items` 설명에 들어가 있었다(다른 도구 설명 합계 약 5,600자). 전체 틀을 스킬로 옮기고 MCP에는 `PROFILE_HINT` 한 줄만 남겼다. 호스트의 `/library`는 `BAKJE_LIBRARY_ROOT`를 읽기 전용으로 마운트한 것이며, 현재 연결 폴더는 opennana·ai-costume·ai-pose뿐이고 코드용 폴더는 없다.
+
 남은 일: 실제 코드 항목 등록 시험, 에이전트 쪽 AGENTS.md에 "구현 전에 박제를 먼저 검색" 규칙과 신선도 규칙 추가, 재등록 시 `embed` 값 유지, 프롬프트 개선과 일괄 재작성.
 
 - 추가: `decisions/020-code-profile-and-embed-flag.md`
 - 갱신: `concepts/embedding-pipeline.md`, `decisions/index.md`, `logs/index.md`
-- 추가: `logs/2026-11-02-code-profile-and-embed-flag.md`
+- 추가: `logs/2026-11-02-code-profile-and-embed-flag.md`, `.agents/skills/bakje-register-code/SKILL.md`

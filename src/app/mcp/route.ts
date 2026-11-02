@@ -13,7 +13,7 @@ import { submitManifest, submitManifestFile, submitOpenNana, getRun, controlRun,
 import { updateComponents, splitItem, mergeItems, undoStructure } from "@/lib/library-structure";
 import { createOrganization, organizationView, controlOrganization } from "@/lib/library-organization";
 import { analysisStatus, retryAnalysis } from "@/lib/analysis-jobs";
-import { PROFILE_GUIDE, freshness } from "@/lib/profile-guide";
+import { PROFILE_HINT, freshness } from "@/lib/profile-guide";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -103,7 +103,7 @@ function buildServer() {
   );
 
   server.registerTool("search_library", {
-    description: "Query syntax: spaces = AND, `|` = OR, leading `-` = NOT (e.g. `cat | dog -black`). from/to = saved date, YYYY-MM-DD inclusive. Search all catalog items, including linked folders and SNS posts. Origin is independent of physical storage and collections. Filter kind=code to find reusable code. Each hit has freshness: timeless = use as is; versioned = compare depends_on with the project lockfile, and if stale/mismatch check the official docs first and treat the code as a structure reference only; unknown = treat as versioned. Results use stable catalog item IDs; use get_library_item to read them.",
+    description: "Query syntax: spaces = AND, `|` = OR, leading `-` = NOT (e.g. `cat | dog -black`). from/to = saved date, YYYY-MM-DD inclusive. Search all catalog items, including linked folders and SNS posts. Origin is independent of physical storage and collections. Filter kind=code for reusable code; search it before the web. Each hit has freshness and fidelity: versioned+stale/unknown = check official docs first, use as structure reference only; pseudo = do not copy. Results use stable catalog item IDs; use get_library_item to read them.",
     inputSchema: { q: z.string().optional(), kind: z.string().optional(), origin: z.string().optional(), storage: z.number().int().positive().optional(), collection: z.string().optional(), folder: z.string().optional(), from: z.string().optional(), to: z.string().optional(), limit: z.number().int().min(1).max(100).optional(), offset: z.number().int().min(0).optional() },
   }, async args => {
     const result = await searchLibrary(args);
@@ -138,7 +138,7 @@ function buildServer() {
     return { content: [{ type: "image" as const, mimeType: "image/jpeg", data: jpeg.toString("base64") }] };
   });
   server.registerTool("register_library_items", {
-    description: "Submit 1-100 AI-interpreted groups to a durable import job. Supply the user's grouping criterion, stable external_id per group, explicit component keys/roles and relative paths. Set review_required for uncertain groups. Repeating IDs updates rather than duplicates. User-edited items are preserved unless expected_revision is supplied. Registration and analysis continue after the agent exits; poll get_library_job. Never reorganizes originals.\n\n" + PROFILE_GUIDE,
+    description: "Submit 1-100 AI-interpreted groups to a durable import job. Supply the user's grouping criterion, stable external_id per group, explicit component keys/roles and relative paths. Set review_required for uncertain groups. Repeating IDs updates rather than duplicates. User-edited items are preserved unless expected_revision is supplied. Registration and analysis continue after the agent exits; poll get_library_job. Never reorganizes originals. " + PROFILE_HINT,
     inputSchema: { storage_id: z.number().int().positive(), grouping_rule: z.string().min(1).max(5000), items: z.array(itemManifestSchema).min(1).max(100) },
   }, async ({ storage_id, grouping_rule, items }) => text(submitManifest(storage_id, grouping_rule, items)));
   server.registerTool("import_opennana", {

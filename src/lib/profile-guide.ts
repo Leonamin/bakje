@@ -4,7 +4,7 @@ import { z } from "zod";
 /**
  * Item profile: the short card an agent writes when it registers reusable code, a skill or an idea.
  * The card and the explanatory docs are what get embedded; code bodies stay in keyword search only.
- * ponytail: single prompt, agent-authored. Bump PROFILE_VERSION when the text changes; old items keep their version.
+ * ponytail: single prompt, agent-authored, kept in the skill file. Bump PROFILE_VERSION (here and in SKILL.md) when it changes; old items keep their version.
  * Upgrade path: a server-side pass that rewrites profiles whose metadata.profile_version is older.
  */
 export const PROFILE_VERSION = 2;
@@ -14,26 +14,8 @@ export const DOC_ROLES = new Set(["profile", "doc", "guide", "pseudo", "note", "
 /** Default for metadata.embed when the manifest does not say. An explicit value always wins. */
 export const defaultEmbed = (itemKind: string, c: { kind: string; role: string }) => !(itemKind === "code" && c.kind === "text" && !DOC_ROLES.has(c.role));
 
-export const PROFILE_GUIDE = `PROFILE (v${PROFILE_VERSION}) — for kind=code|skill|idea. Goal: a reader who sees only what you registered can implement it.
-1. Files. Put every file in the linked folder first (a managed storage cannot hold items). Keep the original tree. One component per file.
- Text roles: profile (the card below, required), doc (the implementation guide), guide, pseudo, note, readme = embedded. Any other text role (entry, helper, config, test) = code = keyword search only.
- Images: role diagram | result | screenshot. Other files (html, pdf, zip, data): kind=file, role=attachment. Attachments are never embedded.
-2. profile (component {key:"profile", kind:"text", role:"profile"}), Korean, short plain sentences, exactly these headings:
- 무엇: What it does, one sentence. Name the service or library.
- 언제 쓰나: The task or search phrase that should find this. Give 2-3 ways a user might ask for it.
- 적용 방법: Entry file, what each file does, how to connect it to a project. Do not copy code.
- 주의: Known limits, required keys, things that break.
- 결과물: What a correct run shows (output, screenshot, log line), and which attachments exist. Skip if none.
-3. doc (component role=doc, markdown). Write it so the reader needs no other source. Use these sections in order:
- 목표 / 전제 (versions, keys, environment) / 구현 단계 (numbered) / 코드 또는 슈도코드 / 함정 (what broke and why) / 확인 방법.
- Mark each code block as runnable, partial or pseudo. Never present pseudo code as working code.
-4. Never paste code into the profile. No praise. No guessing: write "미확인" for anything you did not check.
-5. metadata (required for kind=code):
- fidelity: "runnable" (runs as is) | "partial" (key part only, needs glue) | "pseudo" (idea level). Use the lowest level that applies to the whole item.
- durability: "timeless" (algorithm, pattern, no external API) or "versioned" (depends on a service, library or API). If unsure, use "versioned".
- depends_on: for versioned, list like ["openai-sdk@4.x","api:2026-03"]. Else [].
- verified_at: YYYY-MM-DD when you last saw it work. If never run, omit it.
- profile_version: ${PROFILE_VERSION}`;
+/** Short MCP hint. The full guide lives in .agents/skills/bakje-register-code/SKILL.md so the tool list stays small. */
+export const PROFILE_HINT = `For kind=code|skill|idea follow the bakje-register-code skill (PROFILE v${PROFILE_VERSION}). Needs a role=profile text component and metadata {fidelity,durability,depends_on,verified_at?,profile_version}. Code items need a linked folder, not managed storage.`;
 
 export const profileMetadataSchema = z.object({
   fidelity: z.enum(["runnable", "partial", "pseudo"]),
@@ -47,7 +29,7 @@ export const profileMetadataSchema = z.object({
 export function profileWarnings(item: { kind: string; metadata: Record<string, unknown>; components: { role: string }[] }): string[] {
   if (item.kind !== "code") return [];
   const out: string[] = [];
-  if (!item.components.some(c => c.role === "profile")) out.push("profile 구성요소가 없습니다. 검색에 걸리지 않습니다.");
+  if (!item.components.some(c => c.role === "profile")) out.push("profile 구성요소가 없습니다. 검색에 걸리지 않습니다. bakje-register-code 스킬을 확인하세요.");
   if (!profileMetadataSchema.safeParse(item.metadata).success) out.push("metadata에 fidelity/durability/depends_on/profile_version이 없거나 형식이 틀립니다.");
   return out;
 }
