@@ -34,7 +34,7 @@ puri·nanuri와 같은 방식이다. **데이터는 릴리스 밖에** 있으므
 
 ## 컨테이너
 
-- 베이스: `mcr.microsoft.com/playwright:v1.64.1-noble` — Chromium과 ffmpeg 포함
+- 베이스: `mcr.microsoft.com/playwright:v1.64.1-noble` — Chromium 포함. Playwright가 번들한 ffmpeg는 PATH에 없고 mp4 디코더가 없어서, runner 이미지에 배포판 `ffmpeg`(6.1.1)를 따로 설치한다(2026-11-02)
 - `user: 1000:1000`, `read_only: true`, `/tmp`만 tmpfs 512MB
 - `ARCHIVE_NO_SANDBOX=1`로 Chromium을 `--no-sandbox`로 띄운다(컨테이너에 user namespace가 없다)
 - 포트: `127.0.0.1:3020 → 3000`
