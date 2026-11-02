@@ -206,6 +206,12 @@ export function markStale(sourceId: number) {
   if (embedderEnabled) startEmbedSweep();
 }
 export interface SemanticHit { id: number; score: number; via: "text" | "image" }
+/** `-단어` in a query: push the query vector away from the excluded term, then re-normalise. */
+export function minus(query: Float32Array, excluded: Float32Array) {
+  const out = query.map((v, i) => v - excluded[i]);
+  const norm = Math.hypot(...out) || 1;
+  return out.map(v => v / norm);
+}
 export function cosine(vec: Buffer, query: Float32Array) {
   if (vec.length !== query.length * 4) return -1;
   let dot = 0;

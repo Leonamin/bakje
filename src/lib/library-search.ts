@@ -1,6 +1,6 @@
 import { db } from "./db";
 import { MODEL_KEY } from "./analysis-jobs";
-import { cosine, rrf } from "./embed";
+import { cosine, minus, rrf } from "./embed";
 import { embedderEnabled, queryVector } from "./embedding-client";
 import type { LibraryItem } from "./library-catalog";
 import { thumbUrl } from "./format";
@@ -121,7 +121,10 @@ export async function searchLibrary(p: LibrarySearchParams = {}) {
   if (!q || !embedderEnabled) return { hits: rows.map(r => hydrate(r, q)), total };
   try {
     // One vector per OR group; a candidate scores its best group.
-    const queries = await Promise.all(groups.map(g => queryVector(g.join(" "))));
+    const excluded = not.length ? await queryVector(not.join(" ")) : null;
+    const queries = await Promise.all(groups.map(async g => { const v = await queryVector(g.join(" ")); return excluded ? minus(v, excluded) : v; }));
+    // A subtracted vector has a different score scale, so the 0.7 floor only applies to plain queries; rank decides instead.
+    const floor = excluded ? -1 : 0.7;
     const candidates = db().prepare(`WITH eligible AS (SELECT i.id,i.source_id ${JOINS} WHERE ${where})
       SELECT e.id,v.vec,c.kind AS via,c.id AS component FROM library_vector v JOIN library_component c ON c.id=v.component_id
       JOIN eligible e ON e.id=c.item_id WHERE v.model_key=? AND v.input_hash=c.input_hash
@@ -137,7 +140,7 @@ export async function searchLibrary(p: LibrarySearchParams = {}) {
     for (const c of candidates) {
       const score = Math.max(...queries.map(query => cosine(c.vec, query)));
       const seen = byModality[c.via];
-      if (score >= 0.7 && score > (seen.get(c.id)?.score ?? -1)) seen.set(c.id, { score, via: c.via, component: c.component });
+      if (score >= floor && score > (seen.get(c.id)?.score ?? -2)) seen.set(c.id, { score, via: c.via, component: c.component });
     }
     const ranked = (m: Map<number, Match>) => [...m].sort((a, b) => b[1].score - a[1].score).slice(0, 300).map(([id]) => id);
     const imageRank = ranked(byModality.image), textRank = ranked(byModality.text);
