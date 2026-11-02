@@ -44,7 +44,7 @@ function enqueueSource(id: number) {
 }
 function reconcileLegacy() {
   const components = db().prepare(`SELECT c.id,c.kind,c.input_hash FROM library_component c JOIN library_item i ON i.id=c.item_id
-    JOIN library_storage s ON s.id=i.storage_id WHERE s.enabled=1 AND c.kind IN ('text','image') AND NOT EXISTS
+    JOIN library_storage s ON s.id=i.storage_id WHERE s.enabled=1 AND c.kind IN ('text','image') AND COALESCE(CASE WHEN json_valid(c.metadata) THEN json_extract(c.metadata,'$.embed') END,1)<>0 AND NOT EXISTS
     (SELECT 1 FROM analysis_job j WHERE j.target_type='component' AND j.target_id=c.id AND j.input_hash=c.input_hash AND j.model_key=?) LIMIT 100`)
     .all(MODEL_KEY) as { id: number; kind: string; input_hash: string }[];
   components.forEach(c => enqueueAnalysis("component", c.id, c.input_hash, { kind: c.kind }, 50));
@@ -123,7 +123,7 @@ async function execute(job: AnalysisJob) {
       if (after.size !== before.size || after.mtimeMs !== before.mtimeMs) throw new Error("분석 중 원본이 변경되었습니다.");
       db().prepare("UPDATE library_asset SET sha256=?,state='available' WHERE id=? AND byte_size=? AND mtime_ms=?").run(sha, c.asset_id, c.byte_size, c.mtime_ms);
     }
-    stillCurrent = () => !!db().prepare("SELECT 1 FROM library_component c JOIN library_item i ON i.id=c.item_id JOIN library_storage s ON s.id=i.storage_id WHERE c.id=? AND c.input_hash=? AND s.enabled=1").get(job.target_id, job.input_hash);
+    stillCurrent = () => !!db().prepare("SELECT 1 FROM library_component c JOIN library_item i ON i.id=c.item_id JOIN library_storage s ON s.id=i.storage_id WHERE c.id=? AND c.input_hash=? AND s.enabled=1 AND COALESCE(CASE WHEN json_valid(c.metadata) THEN json_extract(c.metadata,'$.embed') END,1)<>0").get(job.target_id, job.input_hash);
   }
   return db().transaction(() => {
     if (!db().prepare("SELECT 1 FROM analysis_job WHERE id=? AND claim_token=? AND state='running'").get(job.id, job.claim_token) || !stillCurrent()) return "superseded";

@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { db } from "./db";
 import { getLibraryItem, type LibraryItem, type ComponentRow } from "./library-catalog";
+import { enqueueAnalysis } from "./analysis-jobs";
 import { assertStorageUnlocked } from "./library-lock";
 
 type Snapshot = { item: LibraryItem; components: ComponentRow[]; collections: string[] };
@@ -29,13 +30,21 @@ function record(kind: string, description: string, before: Snapshot[], after: Sn
   for (const id of new Set([...before, ...after].map(s => s.item.id))) db().prepare("INSERT INTO library_change_item VALUES(?,?)").run(change, id);
   return change;
 }
-export function updateComponents(id: number, revision: number, values: { id: number; role: string; language?: string | null }[]) {
+/** User/agent choice wins over the register-time default. Off removes vectors and queued work; on queues the component again. */
+function setEmbed(c: { id: number; kind: string; input_hash: string }, embed: boolean) {
+  db().prepare("UPDATE library_component SET metadata=json_set(CASE WHEN json_valid(metadata) THEN metadata ELSE '{}' END,'$.embed',json(?)) WHERE id=?").run(String(embed), c.id);
+  if (embed) { if (c.kind === "text" || c.kind === "image") enqueueAnalysis("component", c.id, c.input_hash, { kind: c.kind }, 50); return; }
+  db().prepare("DELETE FROM library_vector WHERE component_id=?").run(c.id);
+  db().prepare("UPDATE analysis_job SET state='superseded',updated_at=? WHERE target_type='component' AND target_id=? AND state IN ('pending','failed')").run(now(), c.id);
+}
+export function updateComponents(id: number, revision: number, values: { id: number; role: string; language?: string | null; embed?: boolean }[]) {
   return db().transaction(() => {
     const got = itemForEdit(id, revision), before = snapshot(id);
     if (values.length !== got.components.length || new Set(values.map(c => c.id)).size !== values.length || values.some(c => !got.components.some(old => old.id === c.id))) throw new Error("현재 자료의 구성요소를 빠짐없이 한 번씩 전달하세요.");
     for (const [ordinal, c] of values.entries()) {
       if (!c.role.trim() || c.role.length > 100 || (c.language?.length ?? 0) > 30) throw new Error("역할 또는 언어 형식을 확인하세요.");
       db().prepare("UPDATE library_component SET role=?,language=?,ordinal=? WHERE id=? AND item_id=?").run(c.role.trim(), c.language || null, ordinal, c.id, id);
+      if (c.embed !== undefined) setEmbed(got.components.find(old => old.id === c.id)!, c.embed);
     }
     refreshItem(id);
     const change_id = record("components", "구성요소 역할·순서 변경", [before], [snapshot(id)]);
