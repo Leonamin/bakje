@@ -8,7 +8,7 @@ okf_version: "0.1"
 
 # 임베딩 점검
 
-임베딩 원리를 점검하고 세 가지와 네 번째는 원인을 확인하고 수정해 배포했다.
+임베딩 원리를 점검하고 네 가지를 개선해 배포했다.
 
 1. **2번째 이후 청크에 제목 접두** ([#18](https://github.com/Leonamin/bakje/pull/18)). 박제 글 75건 중 21건이 다중 청크다. 영향받는 글의 `embed_state`를 지워 재임베딩했다. 배포 전 DB 백업: `~/bakje-backup/db/chunk-title-predeploy-20261102T034719Z.db.gz`.
 2. **웹 컨테이너 ffmpeg 설치** ([#19](https://github.com/Leonamin/bakje/pull/19)). 컨테이너에 `ffmpeg`가 없어 영상 31건의 포스터가 없었고 이미지 벡터가 빈 값(14건)이거나 실패(17건)였다. 설치 후 포스터 31건을 만들고 임베딩 작업을 초기화해 복구했다.
