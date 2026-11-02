@@ -157,6 +157,15 @@ CREATE TABLE IF NOT EXISTS media_embedding (
   vec BLOB NOT NULL
 );
 
+-- Extra keyframe vectors for video (the poster vector stays in media_embedding).
+CREATE TABLE IF NOT EXISTS media_frame_embedding (
+  media_id INTEGER NOT NULL REFERENCES media(id) ON DELETE CASCADE,
+  frame INTEGER NOT NULL,
+  vec BLOB NOT NULL,
+  model_key TEXT NOT NULL,
+  PRIMARY KEY (media_id, frame)
+);
+
 CREATE VIRTUAL TABLE IF NOT EXISTS search_fts USING fts5(
   title, body, body_ko, summary, author, tags,
   tokenize = 'trigram'
