@@ -1,6 +1,7 @@
-# Playwright's image already carries Chromium and ffmpeg, which this app needs
-# at runtime. Building on the same tag keeps the browser and the client library
-# in lockstep.
+# Playwright's image already carries Chromium, which this app needs at runtime.
+# Building on the same tag keeps the browser and the client library in lockstep.
+# Its bundled ffmpeg is a minimal build without an mp4 decoder and is not on PATH,
+# so the runner installs the distro ffmpeg for video posters.
 FROM mcr.microsoft.com/playwright:v1.64.1-noble AS deps
 WORKDIR /app
 # better-sqlite3 ships native bindings; compile them against this image's Node.
@@ -22,6 +23,10 @@ ENV NODE_ENV=production \
     PORT=3000 \
     HOSTNAME=0.0.0.0 \
     HOME=/tmp
+
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends ffmpeg \
+ && rm -rf /var/lib/apt/lists/*
 
 # next start needs the app, the build output and the runtime dependencies.
 COPY --from=builder /app/node_modules ./node_modules
