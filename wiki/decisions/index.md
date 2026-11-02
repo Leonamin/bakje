@@ -27,4 +27,4 @@ okf_version: "0.1"
 - [017-x-age-restricted-cookie.md](./017-x-age-restricted-cookie.md) — 연령 제한 X 게시글만 전용 계정 쿠키+Playwright로 수집
 - [018-linked-root-allowlist.md](./018-linked-root-allowlist.md) — 연결 폴더를 허용 루트 아래로 제한, MCP 토큰 분리는 후속 과제
 - [019-no-manual-upload-free-folder.md](./019-no-manual-upload-free-folder.md) — 수동 박제 업로드 화면 대신 AI가 관리하는 자유 공유폴더
-- [020-code-profile-and-embed-flag.md](./020-code-profile-and-embed-flag.md) — 코드 항목은 profile 요약만 임베딩, 본문은 FTS만, 신선도 출력
+- [020-code-profile-and-embed-flag.md](./020-code-profile-and-embed-flag.md) — 코드 항목은 설명(요약·문서)만 임베딩, 코드 본문은 FTS만, 신선도·fidelity 출력

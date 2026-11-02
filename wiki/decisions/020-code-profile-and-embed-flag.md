@@ -1,12 +1,12 @@
 ---
 type: Decision
-title: "020. 코드 항목은 요약(profile)만 임베딩하고 본문은 키워드 검색만"
+title: "020. 코드 항목은 설명(요약·문서)만 임베딩하고 코드 본문은 키워드 검색만"
 description: "재활용 코드를 에이전트가 찾아 쓰도록 profile 요약·embed 표시·fidelity·신선도 출력을 둔 결정"
 tags: [library, code, embedding, freshness, mcp]
 timestamp: 2026-11-02
 ---
 
-# 020. 코드 항목은 요약(profile)만 임베딩하고 본문은 키워드 검색만
+# 020. 코드 항목은 설명(요약·문서)만 임베딩하고 코드 본문은 키워드 검색만
 
 ## Context
 
