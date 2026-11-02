@@ -5,6 +5,7 @@ import sharp from "sharp";
 import { MEDIA_DIR, db } from "./db";
 import { enqueueAnalysis, hashInput, MODEL_KEY } from "./analysis-jobs";
 import { resolveFile, fileHash } from "./library-files";
+import { videoFrames } from "./media";
 import { embedTexts, embedImage, queryVector, embedderEnabled } from "./embedding-client";
 export { embedderEnabled } from "./embedding-client";
 
@@ -77,7 +78,7 @@ async function cachedText(text: string, title = "") {
   }
   return result;
 }
-async function cachedImage(file: string) {
+async function cachedImage(file: string | Buffer) {
   const jpeg = await sharp(file).rotate().resize({ width: 896, height: 896, fit: "inside", withoutEnlargement: true }).jpeg({ quality: 85 }).toBuffer();
   const hash = hashInput(jpeg);
   const cached = db().prepare("SELECT vec FROM embedding_cache WHERE input_hash=? AND model_key=?").get(hash, MODEL_KEY) as { vec: Buffer } | undefined;
@@ -91,6 +92,7 @@ async function execute(job: AnalysisJob) {
   const payload = JSON.parse(job.payload);
   let vectors: Buffer[];
   let stillCurrent: () => boolean;
+  const frames: Buffer[] = [];
   if (job.target_type === "source") {
     const doc = db().prepare("SELECT title FROM search_doc WHERE source_id=?").get(job.target_id) as { title: string } | undefined;
     vectors = await cachedText(payload.text, doc?.title);
@@ -99,6 +101,11 @@ async function execute(job: AnalysisJob) {
     const abs = path.resolve(MEDIA_DIR, payload.file);
     if (!payload.file || !abs.startsWith(MEDIA_DIR + path.sep)) throw new Error("미디어 경로 없음");
     vectors = [await cachedImage(abs)];
+    const media = db().prepare("SELECT kind,local_path FROM media WHERE id=?").get(job.target_id) as { kind: string; local_path: string | null } | undefined;
+    if (media?.kind === "video" && media.local_path) {
+      const video = path.resolve(MEDIA_DIR, media.local_path);
+      if (video.startsWith(MEDIA_DIR + path.sep)) for (const jpeg of await videoFrames(video)) frames.push(await cachedImage(jpeg));
+    }
     stillCurrent = () => !!db().prepare("SELECT 1 FROM media WHERE id=? AND status='ok'").get(job.target_id);
   } else {
     const c = db().prepare(`SELECT c.*,i.storage_id,a.relative_path,a.byte_size,a.mtime_ms FROM library_component c
@@ -125,8 +132,12 @@ async function execute(job: AnalysisJob) {
       const put = db().prepare("INSERT INTO embedding(source_id,chunk,vec,model_key) VALUES(?,?,?,?)");
       vectors.forEach((v, i) => put.run(job.target_id, i, v, MODEL_KEY));
       db().prepare("INSERT OR REPLACE INTO embed_state(source_id,model_key) VALUES(?,?)").run(job.target_id, MODEL_KEY);
-    } else if (job.target_type === "media") db().prepare("INSERT OR REPLACE INTO media_embedding(media_id,vec,model_key) VALUES(?,?,?)").run(job.target_id, vectors[0], MODEL_KEY);
-    else {
+    } else if (job.target_type === "media") {
+      db().prepare("INSERT OR REPLACE INTO media_embedding(media_id,vec,model_key) VALUES(?,?,?)").run(job.target_id, vectors[0], MODEL_KEY);
+      db().prepare("DELETE FROM media_frame_embedding WHERE media_id=?").run(job.target_id);
+      const put = db().prepare("INSERT INTO media_frame_embedding(media_id,frame,vec,model_key) VALUES(?,?,?,?)");
+      frames.forEach((v, i) => put.run(job.target_id, i, v, MODEL_KEY));
+    } else {
       db().prepare("DELETE FROM library_vector WHERE component_id=? AND model_key=?").run(job.target_id, MODEL_KEY);
       const put = db().prepare("INSERT INTO library_vector VALUES(?,?,?,?,?)");
       vectors.forEach((v, i) => put.run(job.target_id, i, job.input_hash, MODEL_KEY, v));
@@ -206,7 +217,8 @@ export async function semanticHits(q: string, minScore: number, limit: number): 
   try {
     const qv = await queryVector(q);
     const best = new Map<number, SemanticHit>();
-    const rows = db().prepare("SELECT source_id,vec,'text' AS via FROM embedding WHERE model_key=? UNION ALL SELECT m.source_id,e.vec,'image' FROM media_embedding e JOIN media m ON m.id=e.media_id WHERE e.model_key=?").iterate(MODEL_KEY, MODEL_KEY) as Iterable<{ source_id: number; vec: Buffer; via: "text" | "image" }>;
+    const rows = db().prepare(`SELECT source_id,vec,'text' AS via FROM embedding WHERE model_key=? UNION ALL SELECT m.source_id,e.vec,'image' FROM media_embedding e JOIN media m ON m.id=e.media_id WHERE e.model_key=?
+      UNION ALL SELECT m.source_id,f.vec,'image' FROM media_frame_embedding f JOIN media m ON m.id=f.media_id WHERE f.model_key=?`).iterate(MODEL_KEY, MODEL_KEY, MODEL_KEY) as Iterable<{ source_id: number; vec: Buffer; via: "text" | "image" }>;
     for (const row of rows) {
       const score = cosine(row.vec, qv);
       if (score >= minScore && score > (best.get(row.source_id)?.score ?? -1)) best.set(row.source_id, { id: row.source_id, score, via: row.via });

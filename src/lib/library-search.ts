@@ -126,8 +126,9 @@ export async function searchLibrary(p: LibrarySearchParams = {}) {
       SELECT e.id,v.vec,c.kind AS via,c.id AS component FROM library_vector v JOIN library_component c ON c.id=v.component_id
       JOIN eligible e ON e.id=c.item_id WHERE v.model_key=? AND v.input_hash=c.input_hash
       UNION ALL SELECT e.id,v.vec,'text',NULL FROM embedding v JOIN eligible e ON e.source_id=v.source_id WHERE v.model_key=?
-      UNION ALL SELECT e.id,v.vec,'image',NULL FROM media_embedding v JOIN media m ON m.id=v.media_id JOIN eligible e ON e.source_id=m.source_id WHERE v.model_key=?`)
-      .iterate(...args, MODEL_KEY, MODEL_KEY, MODEL_KEY) as Iterable<{ id: number; vec: Buffer; via: "text" | "image"; component: number | null }>;
+      UNION ALL SELECT e.id,v.vec,'image',NULL FROM media_embedding v JOIN media m ON m.id=v.media_id JOIN eligible e ON e.source_id=m.source_id WHERE v.model_key=?
+      UNION ALL SELECT e.id,v.vec,'image',NULL FROM media_frame_embedding v JOIN media m ON m.id=v.media_id JOIN eligible e ON e.source_id=m.source_id WHERE v.model_key=?`)
+      .iterate(...args, MODEL_KEY, MODEL_KEY, MODEL_KEY, MODEL_KEY) as Iterable<{ id: number; vec: Buffer; via: "text" | "image"; component: number | null }>;
     const best = new Map<number, { score: number; via: "text" | "image"; component: number | null }>();
     // Synchronous on purpose: awaiting while iterate() is open makes every other write on this connection fail ("database connection is busy").
     for (const c of candidates) {

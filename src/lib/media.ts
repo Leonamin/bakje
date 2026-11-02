@@ -2,7 +2,8 @@ import crypto from "node:crypto";
 import fs from "node:fs";
 import fsp from "node:fs/promises";
 import path from "node:path";
-import { spawn } from "node:child_process";
+import os from "node:os";
+import { execFile, spawn } from "node:child_process";
 import { MEDIA_DIR, db } from "./db";
 import type { MediaRef } from "./types";
 
@@ -49,6 +50,32 @@ function run(cmd: string, args: string[], timeoutMs = 120_000): Promise<{ code: 
       resolve({ code: code ?? -1, stderr });
     });
   });
+}
+
+const FRAME_MAX = 8;
+const FRAME_STEP = 3;
+/** Frame times spread over the whole clip: one every 3s, at most 8, so a long clip is still covered end to end. */
+export function frameTimes(duration: number): number[] {
+  if (!(duration > 0)) return [];
+  const n = Math.min(FRAME_MAX, Math.max(1, Math.ceil(duration / FRAME_STEP)));
+  return Array.from({ length: n }, (_, i) => ((i + 0.5) * duration) / n);
+}
+
+/** JPEG keyframes for embedding only; nothing is kept on disk. Returns [] when the clip cannot be read. */
+export async function videoFrames(abs: string): Promise<Buffer[]> {
+  const duration = await new Promise<number>((resolve) =>
+    execFile("ffprobe", ["-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", abs], { timeout: 30_000 },
+      (err, out) => resolve(err ? 0 : Number(String(out).trim()))));
+  const dir = await fsp.mkdtemp(path.join(os.tmpdir(), "frames-"));
+  try {
+    const frames: Buffer[] = [];
+    for (const [i, t] of frameTimes(duration).entries()) {
+      const out = path.join(dir, `${i}.jpg`);
+      const res = await run("ffmpeg", ["-y", "-loglevel", "error", "-ss", t.toFixed(2), "-i", abs, "-frames:v", "1", "-q:v", "4", out]);
+      if (res.code === 0 && fs.existsSync(out)) frames.push(await fsp.readFile(out));
+    }
+    return frames;
+  } finally { await fsp.rm(dir, { recursive: true, force: true }); }
 }
 
 function sha256File(abs: string): string {
