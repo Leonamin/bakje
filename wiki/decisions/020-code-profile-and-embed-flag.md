@@ -15,7 +15,7 @@ timestamp: 2026-11-02
 ## Decision
 
 1. **항목 종류는 기존 `library_item.kind`에 `code`를 쓴다.** 새 테이블·컬럼은 없다. 파일이 여러 개면 구성요소를 파일별로 두어 원래 폴더 구조를 보존한다.
-2. **요약은 등록하는 에이전트가 쓴다.** 서버는 LLM을 새로 호출하지 않는다. 전체 틀은 스킬 `.agents/skills/bakje-register-code/SKILL.md`에 있다. MCP 도구 설명은 컨텍스트를 아끼려고 `PROFILE_HINT`(약 300자) 한 줄만 둔다. 제목은 `무엇 / 언제 쓰나 / 적용 방법 / 주의 / 결과물`이다. 요약은 `role: "profile"` 텍스트 구성요소로 저장되어 기존 임베딩·FTS를 탄다.
+2. **요약은 등록하는 에이전트가 쓴다.** 서버는 LLM을 새로 호출하지 않는다. 전체 틀은 스킬 `bakje-register-code`에 있다. 원본은 별도 저장소 `leonamin-skills`(`bakje-register-code/SKILL.md`)에서 관리하며 박제 저장소에는 두지 않는다. MCP 도구 설명은 컨텍스트를 아끼려고 `PROFILE_HINT`(약 300자) 한 줄만 둔다. 제목은 `무엇 / 언제 쓰나 / 적용 방법 / 주의 / 결과물`이다. 요약은 `role: "profile"` 텍스트 구성요소로 저장되어 기존 임베딩·FTS를 탄다.
 3. **코드 본문은 FTS에만 넣는다.** 구성요소 `metadata.embed=false`가 표시다. `kind=code`의 텍스트 구성요소는 설명 역할(`profile`, `doc`, `guide`, `pseudo`, `note`, `readme`)이 아니면 등록 시 자동으로 붙는다. 설명 문서(`doc`)는 임베딩한다. 첨부 파일(`kind=file`, `role=attachment`)은 원래 임베딩 대상이 아니다. 이미지(`diagram`, `result`)는 임베딩하며 필요하면 `embed=false`로 끈다. 등록 시점과 `embed.ts`의 `reconcileLegacy`, 실행 중 작업의 `stillCurrent` 세 곳에서 확인한다.
 4. **통제권 순서는 사용자·에이전트의 `edit_library_components` `embed` 값, 매니페스트 명시값, 서버 기본 규칙 순이다.** 끄면 벡터와 대기 작업을 지우고, 켜면 큐에 다시 넣는다.
 5. **`metadata.fidelity`(runnable/partial/pseudo)로 코드가 그대로 도는지, 일부인지, 슈도코드인지 표시한다.** 슈도코드를 실동작 코드로 복사하지 않게 하려는 것이며 `freshness` 출력에 함께 나온다. `PROFILE_VERSION`은 2다.
@@ -26,7 +26,7 @@ timestamp: 2026-11-02
 ## Consequences
 
 - `kind=code`에 `profile` 구성요소나 `metadata`가 없으면 `register_library_items` 결과에 `warnings`가 나오지만 등록은 막지 않는다.
-- 요약 품질이 곧 검색 품질이다. 프롬프트 개선은 SKILL.md와 `PROFILE_VERSION`(코드와 SKILL.md 두 곳)을 고치는 것으로 시작한다. 스킬이 없는 환경의 에이전트는 틀을 읽지 못하므로 `warnings`가 스킬 이름을 알려 준다. 낮은 버전 항목을 일괄 재작성하는 서버 작업은 만들지 않았다.
+- 요약 품질이 곧 검색 품질이다. 프롬프트 개선은 SKILL.md와 `PROFILE_VERSION`(박제 코드와 leonamin-skills 두 저장소)을 고치는 것으로 시작한다. 스킬이 없는 환경의 에이전트는 틀을 읽지 못하므로 `warnings`가 스킬 이름을 알려 준다. 낮은 버전 항목을 일괄 재작성하는 서버 작업은 만들지 않았다.
 - `depends_on`과 프로젝트 lockfile의 비교는 에이전트가 한다. 서버는 비교하지 않는다.
 - 180일(`STALE_DAYS`)은 임의로 정한 값이다.
 - 사용자가 말한 사용 방식: "OpenAI 호환 API 코드와 OpenCode Go 주의사항을 정리해 그것만 봐도 구현할 수 있는 문서"를 코드와 함께 등록한다. 실동작 코드부터 슈도코드까지 섞이고, 다이어그램(예: [stack-diagram](https://github.com/caru-ini/stack-diagram)의 HTML·PNG) 같은 첨부 파일이 여러 가지 붙는다. stack-diagram은 README 요약만 확인했다.
