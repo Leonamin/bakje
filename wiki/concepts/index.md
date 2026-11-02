@@ -17,6 +17,7 @@ okf_version: "0.1"
 - [collection-rules.md](./collection-rules.md) — 작성자 연속 사슬만 수집하는 규칙
 - [platform-adapters.md](./platform-adapters.md) — X·Threads·Reddit 수집 경로와 실패 모드
 - [data-model.md](./data-model.md) — SQLite 스키마, 파일 레이아웃, 스냅샷
+- [embedding-pipeline.md](./embedding-pipeline.md) — 텍스트 청킹·제목 접두, 이미지·영상 키프레임 임베딩, 측정 결과와 보류한 개선
 - [korean-search.md](./korean-search.md) — trigram FTS와 2글자 이하 폴백
 - [media-pipeline.md](./media-pipeline.md) — 30MB 상한, HLS 처리, 포스터, 카드 썸네일, 정리
 - [translation.md](./translation.md) — OpenAI 호환 번역·요약, 접는 요약카드, AI 질문 프롬프트, 실패 격리
