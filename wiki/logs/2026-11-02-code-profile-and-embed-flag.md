@@ -21,6 +21,8 @@ LLM 위키 사례를 조사한 뒤 박제를 강화하는 쪽으로 정했다. �
 
 작업 중 명령에 불필요한 `cat >> /tmp/x`를 넣어 멈춘 일이 있었다. 만들어진 빈 파일은 지웠고 프로젝트 파일에는 영향이 없었다.
 
+후속 변경(같은 날): 코드 등록은 연결 폴더에만 된다는 점을 확인했다. 사용자가 정리 문서를 코드와 함께 올리는 방식이라, 임베딩 제외 기본 규칙을 "profile 외 모두"에서 "설명 역할(profile·doc·guide·pseudo·note·readme) 외 모두"로 고쳤다. `metadata.fidelity`를 추가하고 `PROFILE_VERSION`을 2로 올렸으며, 요약 틀에 구현 문서 구조와 첨부 파일 규칙(`kind=file`, `role=attachment`, 임베딩 안 함)을 넣었다. 자기 점검은 `console.assert` 대신 `node:assert`로 바꿨다. 앞서 쓴 `console.assert`는 실패해도 종료 코드가 바뀌지 않는 약한 검사였다.
+
 남은 일: 실제 코드 항목 등록 시험, 에이전트 쪽 AGENTS.md에 "구현 전에 박제를 먼저 검색" 규칙과 신선도 규칙 추가, 재등록 시 `embed` 값 유지, 프롬프트 개선과 일괄 재작성.
 
 - 추가: `decisions/020-code-profile-and-embed-flag.md`

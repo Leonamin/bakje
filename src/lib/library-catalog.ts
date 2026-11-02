@@ -4,6 +4,7 @@ import { z } from "zod";
 import { db } from "./db";
 import { assertStorageUnlocked } from "./library-lock";
 import { enqueueAnalysis, hashInput } from "./analysis-jobs";
+import { defaultEmbed } from "./profile-guide";
 import { fileMime, relativePath, resolveFile, storage, readFolderText } from "./library-files";
 
 export const componentSchema = z.object({
@@ -72,7 +73,7 @@ export async function registerItem(storageId: number, raw: unknown, groupingRule
     }
     const fingerprint = hashInput(JSON.stringify({ kind: c.kind, text, file }));
     // Code bodies go to FTS only; the profile carries the meaning. metadata.embed=false is the marker, and an explicit value wins.
-    const metadata = manifest.kind === "code" && c.kind === "text" && c.role !== "profile" && c.metadata.embed === undefined ? { ...c.metadata, embed: false } : c.metadata;
+    const metadata = c.metadata.embed === undefined && !defaultEmbed(manifest.kind, c) ? { ...c.metadata, embed: false } : c.metadata;
     prepared.push({ ...c, metadata, text, file, fingerprint });
   }
   const contentHash = hashInput(JSON.stringify({ ...manifest, expected_revision: undefined, prepared }));
