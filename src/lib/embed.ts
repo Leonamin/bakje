@@ -20,6 +20,10 @@ export function chunkText(text: string, size = 1500): string[] {
   if (current) out.push(current);
   return out;
 }
+/** Chunk 0 already starts with the title; later chunks get it too so they keep the topic. */
+export function withTitle(chunks: string[], title: string): string[] {
+  return title ? chunks.map((c, i) => (i ? `${title}\n\n${c}` : c)) : chunks;
+}
 export function rrf(lists: number[][], k = 60) {
   const scores = new Map<number, number>();
   for (const list of lists) list.forEach((id, i) => scores.set(id, (scores.get(id) ?? 0) + 1 / (k + i + 1)));
@@ -56,9 +60,9 @@ interface AnalysisJob {
   attempts: number; claim_token: string;
 }
 class AnalysisYield extends Error {}
-async function cachedText(text: string) {
+async function cachedText(text: string, title = "") {
   let generated = 0;
-  const chunks = chunkText(text); // Preserve all text; long components are chunked rather than silently truncated.
+  const chunks = withTitle(chunkText(text), title); // Preserve all text; long components are chunked rather than silently truncated.
   const result: Buffer[] = [];
   for (const chunk of chunks) {
     const hash = hashInput(`text:${chunk}`);
@@ -88,7 +92,8 @@ async function execute(job: AnalysisJob) {
   let vectors: Buffer[];
   let stillCurrent: () => boolean;
   if (job.target_type === "source") {
-    vectors = await cachedText(payload.text);
+    const doc = db().prepare("SELECT title FROM search_doc WHERE source_id=?").get(job.target_id) as { title: string } | undefined;
+    vectors = await cachedText(payload.text, doc?.title);
     stillCurrent = () => sourceInput(job.target_id) !== null && hashInput(sourceInput(job.target_id)!) === job.input_hash;
   } else if (job.target_type === "media") {
     const abs = path.resolve(MEDIA_DIR, payload.file);
