@@ -129,13 +129,23 @@ export async function searchLibrary(p: LibrarySearchParams = {}) {
       UNION ALL SELECT e.id,v.vec,'image',NULL FROM media_embedding v JOIN media m ON m.id=v.media_id JOIN eligible e ON e.source_id=m.source_id WHERE v.model_key=?
       UNION ALL SELECT e.id,v.vec,'image',NULL FROM media_frame_embedding v JOIN media m ON m.id=v.media_id JOIN eligible e ON e.source_id=m.source_id WHERE v.model_key=?`)
       .iterate(...args, MODEL_KEY, MODEL_KEY, MODEL_KEY, MODEL_KEY) as Iterable<{ id: number; vec: Buffer; via: "text" | "image"; component: number | null }>;
-    const best = new Map<number, { score: number; via: "text" | "image"; component: number | null }>();
+    type Match = { score: number; via: "text" | "image"; component: number | null };
+    // Long prompt text scores higher against a short query than any image does, so one shared score ranking buries images.
+    // Rank each modality on its own, then fuse by rank.
+    const byModality = { text: new Map<number, Match>(), image: new Map<number, Match>() };
     // Synchronous on purpose: awaiting while iterate() is open makes every other write on this connection fail ("database connection is busy").
     for (const c of candidates) {
       const score = Math.max(...queries.map(query => cosine(c.vec, query)));
-      if (score >= 0.7 && score > (best.get(c.id)?.score ?? -1)) best.set(c.id, { score, via: c.via, component: c.component });
+      const seen = byModality[c.via];
+      if (score >= 0.7 && score > (seen.get(c.id)?.score ?? -1)) seen.set(c.id, { score, via: c.via, component: c.component });
     }
-    const semantic = [...best].sort((a, b) => b[1].score - a[1].score).slice(0, 300).map(([id]) => id);
+    const ranked = (m: Map<number, Match>) => [...m].sort((a, b) => b[1].score - a[1].score).slice(0, 300).map(([id]) => id);
+    const imageRank = ranked(byModality.image), textRank = ranked(byModality.text);
+    const semantic = rrf([imageRank, textRank]).slice(0, 300);
+    const best = new Map<number, Match>(semantic.map(id => {
+      const at = (list: number[]) => { const i = list.indexOf(id); return i < 0 ? Infinity : i; };
+      return [id, (at(imageRank) <= at(textRank) ? byModality.image : byModality.text).get(id)!];
+    }));
     if (!semantic.length) return { hits: rows.map(r => hydrate(r, q)), total };
     const keywordIds = db().prepare(`SELECT i.id ${keywordJoins} WHERE ${where}${keywordSql} ORDER BY ${keywordOrder}`)
       .all(...keywordArgs, ...orderArgs) as { id: number }[];
