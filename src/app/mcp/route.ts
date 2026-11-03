@@ -12,6 +12,7 @@ import { getLibraryItem, itemManifestSchema, editLibraryItem, patchLibraryItemSc
 import { submitManifest, submitManifestFile, submitOpenNana, getRun, controlRun, submitExport } from "@/lib/library-import";
 import { updateComponents, splitItem, mergeItems, undoStructure } from "@/lib/library-structure";
 import { createOrganization, organizationView, controlOrganization } from "@/lib/library-organization";
+import { manageItems } from "@/lib/library-trash";
 import { analysisStatus, retryAnalysis } from "@/lib/analysis-jobs";
 import { PROFILE_HINT, freshness } from "@/lib/profile-guide";
 
@@ -159,6 +160,10 @@ function buildServer() {
     description: "Edit a linked item's title, note, collection membership or review flag. Revision is required to prevent overwriting concurrent edits; manual changes are preserved during automatic rescans. Use edit_library_components, split_library_item or merge_library_items to change relationships while preserving component IDs and embeddings.",
     inputSchema: { id: z.number().int().positive(), revision: z.number().int().positive(), title: z.string().min(1).max(2000).optional(), note: z.string().max(50000).optional(), collections: z.array(z.string().min(1).max(200)).max(100).optional(), review_required: z.boolean().optional() },
   }, async ({ id, revision, ...patch }) => text(editLibraryItem(id, revision, patch)));
+  server.registerTool("manage_library_items", {
+    description: "Hide/unhide items from lists and search (reversible, originals untouched) or move them to / restore them from the 7-day trash. After 7 days a trashed item is purged; its original file is deleted only if the storage has 원본 삭제 허용 on (default off). All ids are applied together or none. Prefer hide; use trash only when the user asked to delete.",
+    inputSchema: { ids: z.array(z.number().int().positive()).min(1).max(100), action: z.enum(["hide", "unhide", "trash", "restore"]) },
+  }, async ({ ids, action }) => { manageItems(ids, action); return text({ ok: true, action, ids }); });
   server.registerTool("export_library_items", {
     description: "Copy up to 100 linked items into Bakje's v1 grouped folder format with item.json and items.jsonl. Keeps all originals unchanged. Poll job status; completed copies download from /api/library/runs/ID/export.",
     inputSchema: { item_ids: z.array(z.number().int().positive()).min(1).max(100) },

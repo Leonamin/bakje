@@ -30,3 +30,7 @@ description: 코드·UX 사례·문서·아이디어를 박제(bakje)에 수집�
 - 응답 뒤 get_library_item과 search_library로 보존·수정 결과 및 analysis 상태를 확인한다. 오래 걸리면 대기 상태를 보고한다.
 
 register_library_items의 동일 external_id 재등록은 전체 교체다. 일부만 보내면 빠진 구성요소를 삭제하므로 부분 수정에 사용하지 않는다. 컬렉션과 review flag는 edit_library_item, 역할·순서·언어·embed만 수정할 때는 edit_library_components를 쓴다.
+
+## 숨김과 삭제
+
+`manage_library_items`로 항목을 숨기거나(hide) 해제하고(unhide), 휴지통에 넣거나(trash) 되돌린다(restore). 숨김은 목록·검색에서만 빠지며 되돌릴 수 있다. 대체한 옛 자료는 숨김으로 정리한다. 휴지통은 사용자가 삭제를 요청했을 때만 쓴다. 7일 뒤 박제본이 지워지고, 원본 파일은 저장소의 **원본 삭제 허용**이 켜진 경우에만 지워진다.
