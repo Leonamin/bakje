@@ -8,7 +8,7 @@ import { getSource, searchHybrid, topTags } from "@/lib/search";
 import sharp from "sharp";
 import { connectStorage, storages, listFiles, readFolderText, resolveFile } from "@/lib/library-files";
 import { searchLibrary } from "@/lib/library-search";
-import { getLibraryItem, itemManifestSchema, editLibraryItem } from "@/lib/library-catalog";
+import { getLibraryItem, itemManifestSchema, editLibraryItem, patchLibraryItemSchema, patchLibraryItem } from "@/lib/library-catalog";
 import { submitManifest, submitManifestFile, submitOpenNana, getRun, controlRun, submitExport } from "@/lib/library-import";
 import { updateComponents, splitItem, mergeItems, undoStructure } from "@/lib/library-structure";
 import { createOrganization, organizationView, controlOrganization } from "@/lib/library-organization";
@@ -151,6 +151,10 @@ function buildServer() {
   }, async ({ storage_id, path, grouping_rule }) => text(await submitManifestFile(storage_id, path, grouping_rule)));
   server.registerTool("get_library_job", { description: "Read persistent registration/export progress and per-record errors. Analysis is separate and may still be pending after registration completes.", inputSchema: { id: z.number().int().positive() } }, async ({ id }) => text(getRun(id)));
   server.registerTool("control_library_job", { description: "Pause/resume a registration or export job, or retry failed/partial work. Originals and registered items are retained.", inputSchema: { id: z.number().int().positive(), action: z.enum(["pause", "resume", "retry"]) } }, async ({ id, action }) => text(controlRun(id, action)));
+  server.registerTool("patch_library_item", {
+    description: "Partially update a linked item with its current revision. Omitted components are retained. upsert_components supplies complete replacements by stable key (metadata shallow-merges); remove_component_keys explicitly removes components. Text/path omitted from a replacement is cleared. Updates keyword search immediately and queues changed text/images for embedding, removing obsolete vectors. Never writes original files. Existing register_library_items remains full replacement.",
+    inputSchema: patchLibraryItemSchema.shape,
+  }, async (patch) => text(await patchLibraryItem(patch)));
   server.registerTool("edit_library_item", {
     description: "Edit a linked item's title, note, collection membership or review flag. Revision is required to prevent overwriting concurrent edits; manual changes are preserved during automatic rescans. Use edit_library_components, split_library_item or merge_library_items to change relationships while preserving component IDs and embeddings.",
     inputSchema: { id: z.number().int().positive(), revision: z.number().int().positive(), title: z.string().min(1).max(2000).optional(), note: z.string().max(50000).optional(), collections: z.array(z.string().min(1).max(200)).max(100).optional(), review_required: z.boolean().optional() },

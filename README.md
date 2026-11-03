@@ -242,3 +242,17 @@ SQLite는 WAL 모드이므로 서비스 중 백업하려면 `sqlite3 /var/lib/ba
 AI 에이전트는 기존 `/mcp` 인증을 사용해 폴더를 조사하고 `register_library_items`로 사용자 기준의 자료 묶음을 등록한다. 등록 후 임베딩은 지속 큐에서 실행하며, 분석 중에도 새 박제를 저장한다. `export_library_items`는 원본을 유지한 채 자료별 파일과 매니페스트 사본을 만든다.
 
 현재 동작·MCP 도구·자료 규격·남은 범위는 [통합 라이브러리 위키](wiki/concepts/unified-library.md)를 참고한다. 회귀 검증은 `pnpm test:library`, 실제 OpenNana 전체 연결 검증은 `pnpm check:library /path/to/opennana/data`로 실행한다. 검증 스크립트는 임시 DB를 사용한다.
+
+## 박제 수집 스킬
+
+`.agents/skills/bakje-collect`는 코드·UX·문서·아이디어의 검색·수집·부분 수정을 안내한다. 코드와 UX 작성 지침은 해당 스킬의 references/에 있다. 실행 중인 박제 서비스와 인증된 bakje MCP 연결이 필요하다.
+
+GitHub에서 바로 설치한다. `skills` CLI가 저장소의 `.agents/skills/`를 찾는다.
+
+```sh
+pnpm dlx skills add Leonamin/bakje -g -a codex --skill bakje-collect -y
+```
+
+설치 전 목록만 보려면 `pnpm dlx skills add Leonamin/bakje --list`를 실행한다. 로컬 사본에서 설치하려면 저장소 폴더에서 `Leonamin/bakje` 대신 `.`을 쓴다.
+
+스킬 정본은 이 저장소에서 관리한다. UX 진단·개선·검증 스킬 ux-solve는 별도의 leonamin-skills 저장소에서 관리한다.

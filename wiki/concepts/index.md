@@ -8,6 +8,8 @@ okf_version: "0.1"
 
 # Concepts
 
+- [bakje-collect-plan.md](./bakje-collect-plan.md) — 박제 수집 스킬 통합, 부분 수정·검색 갱신 구현과 UX 자료 전환 범위
+
 - [library-organization.md](./library-organization.md) — 묶음 역할·순서·분리·합치기, 원본 정리 계획·실행·되돌리기와 중단 복구
 
 - [unified-library.md](./unified-library.md) — 통합 목록, 출처·저장소·컬렉션, AI 묶음 등록 MCP, 지속 분석 큐와 규격 사본 내보내기
