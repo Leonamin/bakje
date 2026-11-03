@@ -178,3 +178,17 @@ services:
 - DB 백업은 스키마·데이터 로직이 바뀐 `20261028T135641Z` 앞에서만 했다: `~/bakje-backup/db/review-fixes-predeploy-20261028T135610Z.db.gz`(약 250MB). 호스트에 `sqlite3`가 없어서 저장소의 better-sqlite3 온라인 백업 API로 운영 DB를 **읽기 전용으로 열어** 복사했고, 사본에서 `integrity_check`가 `ok`, 자료 18,192건·SNS 글 50건, `gzip -t` 통과를 확인했다. 나머지 UI만 바뀐 배포는 직전 백업을 그대로 기준으로 삼았다.
 - 배포 뒤에는 컨테이너 `healthy`, `/`·상세·`/search`·`/library`의 200 응답, 최근 로그의 `error`·`busy` 0건을 확인했다.
 - **운영에서 직접 검증하지 못한 것**: 검색 중 쓰기 실패 수정(`busy` 오류가 다시 나오는지 로그로 지켜볼 것), 실제 터치 기기의 선택·로딩 감각.
+
+
+### 수집 통합·부분 수정 배포와 UX 이전 (2026-11-03)
+
+릴리스 `20261103T044207Z`를 `ARCHIVE_DEPLOY_WEB_ONLY=1`로 배포했다. 웹 health가 healthy이고 기존 embedder ID·UID/GID 1000:1000·bakje_default 네트워크·unless-stopped·기존 5개 마운트를 유지했다. 실제 현행 마운트는 기존 연결 폴더들이 읽기/쓰기이며 이를 변경하지 않았다. 새 UX 사본 폴더 `~/Library/ux-notes`는 `/library/ux-notes`에 읽기 전용으로 마운트했다. 원본 삭제 허용은 기본 꺼짐이다.
+
+- 이전 릴리스: `/opt/bakje/releases/20261103T021831Z`.
+- 롤백 이미지: `bakje-web:pre-collect-20261103T044207Z`.
+- 배포 전 일관된 DB 백업: `/home/leonamin/bakje-backup/db/collect-predeploy-20261103T044155Z.db`. 온라인 backup 후 integrity_check=ok.
+- 설정 백업: `/etc/bakje/compose.override.yml.pre-ux-*` 중 이번 실행본.
+- 자료 보존: 기존 19,916건+UX 8건=19,924건, SNS 78건. DB quick_check=ok.
+- 운영 MCP 도구 목록·부분 수정·검색, 상세 HTTP 200, 첨부 파일 응답 해시 확인. 새 UX 실제 분석 20개 done, 벡터 22개. 현재 웹 로그 오류 없음.
+
+이전 생성기는 개발 저장소 `scripts/migrate-ux-library.py`다. 실제 자료는 Git에 넣지 않으며 `~/Library/ux-notes/items.jsonl`로 재등록할 수 있다. 기존 UX 원본·CLI는 보존한다. 상세 전환 범위는 [수집 통합 계획](./bakje-collect-plan.md) 참조.

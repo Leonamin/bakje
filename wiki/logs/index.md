@@ -8,6 +8,10 @@ okf_version: "0.1"
 
 # Logs
 
+- [2026-11-03-collect-deploy-ux-migration.md](./2026-11-03-collect-deploy-ux-migration.md) — 운영 배포·UX 사례와 초안 규칙 이전·스킬 저장소 반영
+
+- [2026-11-03-bakje-collect-plan.md](./2026-11-03-bakje-collect-plan.md) — 박제 수집 스킬 통합·부분 수정 구현과 검증
+
 - [2026-11-03-bulk-hide-undo-toast.md](./2026-11-03-bulk-hide-undo-toast.md) — 일괄 숨김 확인창 제거와 되돌리기 토스트
 - [2026-11-03-architecture-diagram.md](./2026-11-03-architecture-diagram.md) — stack-diagram으로 만든 현재 동작 구조 그림과 설명 문서
 - [2026-11-02-code-profile-and-embed-flag.md](./2026-11-02-code-profile-and-embed-flag.md) — 코드 항목 profile 요약 틀, embed 제외 표시와 편집, freshness 출력

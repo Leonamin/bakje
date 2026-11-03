@@ -84,7 +84,7 @@ MCP 도구:
 | AI 해석 결과 등록 | `register_library_items` (요청당 1~100건) |
 | 기존 대량 데이터 등록 | `import_opennana`, `import_library_manifest` |
 | 작업 조회·제어 | `get_library_job`, `control_library_job`, `retry_library_analysis` |
-| 전체 자료 조회·수정 | `search_library`, `get_library_item`, `edit_library_item` |
+| 전체 자료 조회·수정 | `search_library`, `get_library_item`, `edit_library_item`, `patch_library_item` |
 | 구성요소 편집·분리·합치기·복구 | `edit_library_components`, `split_library_item`, `merge_library_items`, `undo_library_structure` |
 | 원본 정리 계획·조회·제어 | `plan_library_organization`, `get_library_organization`, `control_library_organization` |
 | 규격 사본 생성 | `export_library_items` |
@@ -158,3 +158,12 @@ Docker는 폴더를 먼저 읽기 전용으로 마운트해야 한다. 예시 `c
 ## 운영 배포 (2026-10-28)
 
 릴리스 `20261028T064802Z`로 배포했다. `/library`에서 연결 저장소를 등록한다. OpenNana 원본은 컨테이너의 `/library/opennana`에 읽기 전용으로 마운트했으며, 자료 등록과 전체 임베딩은 사용자가 등록 작업을 요청할 때 시작한다. 기존 SNS 46건·미디어 89건 보존과 실제 임베딩 질의 응답, MCP 도구와 tailnet 화면을 확인했다. 전체 연결 폴더 임베딩의 처리량·품질 측정은 아직 하지 않았다.
+
+
+## 박제본 부분 수정 (2026-11-03)
+
+MCP `patch_library_item`에 `id`, 최신 `revision`, 변경 필드와 `upsert_components`/`remove_component_keys`를 전달한다. 요청에 없는 구성요소는 파일 확인 없이 보존한다. upsert는 key별 완전한 구성요소 교체이며 metadata는 최상위 병합한다. 마지막 구성요소 삭제와 오래된 revision은 거부한다. 원본 파일은 수정하지 않고 수동 수정 잠금을 설정해 자동 스캔의 덮어쓰기를 방지한다.
+
+본문·제목·태그·메모의 키워드 색인을 갱신한다. 변경·삭제·embed 해제 시 예전 벡터를 제거하고 필요한 텍스트·이미지 분석만 예약한다. 제목·태그·메모 자체는 구성요소 임베딩 입력이 아니다. 기존 전체 재등록도 변경된 벡터를 즉시 무효화한다. `get_library_item`과 부분 수정 응답의 `analysis`는 현재 구성요소 hash·모델에 해당하는 작업 상태별 건수다. 부분 수정 응답은 코드 profile warnings도 제공한다.
+
+수집·수정 절차는 프로젝트 `.agents/skills/bakje-collect/SKILL.md`에 있다. 유형별 계약·전환 범위는 [수집 통합 계획](./bakje-collect-plan.md)을 참고한다.
