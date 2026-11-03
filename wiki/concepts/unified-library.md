@@ -85,6 +85,7 @@ MCP 도구:
 | 기존 대량 데이터 등록 | `import_opennana`, `import_library_manifest` |
 | 작업 조회·제어 | `get_library_job`, `control_library_job`, `retry_library_analysis` |
 | 전체 자료 조회·수정 | `search_library`, `get_library_item`, `edit_library_item`, `patch_library_item` |
+| 숨김·삭제 | `manage_library_items` (hide/unhide/trash/restore, 최대 100건, 전부 성공하거나 전부 실패) |
 | 구성요소 편집·분리·합치기·복구 | `edit_library_components`, `split_library_item`, `merge_library_items`, `undo_library_structure` |
 | 원본 정리 계획·조회·제어 | `plan_library_organization`, `get_library_organization`, `control_library_organization` |
 | 규격 사본 생성 | `export_library_items` |
