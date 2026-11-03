@@ -27,7 +27,9 @@ MCP 컨텍스트 절감: 요약 틀 약 2,050자가 `register_library_items` 설
 
 운영 반영(2026-11-02): 코드용 폴더 `/home/leonamin/Library/code-notes`를 만들고 `/etc/bakje/compose.override.yml`에 `/library/code-notes` 바인드 마운트를 추가한 뒤 웹 컨테이너만 재생성했다(백업 `compose.override.yml.bak-20261102`). 사용자 `1000:1000`, 재시작 정책 `unless-stopped`, 네트워크 `bakje_default`, 볼륨 4개(`/data`, opennana, ai-costume, ai-pose)는 전후가 같았다. 재생성은 새 빌드 없이 기존 이미지(`bakje-web:latest`)로 했으므로 운영 코드는 PR #26 이전이다. `connect_library_folder`로 저장소 5번 `code-notes`를 연결했다. 첫 예시 `openai-compatible-llm-client`(`src/lib/llm.ts` 발췌)의 파일은 폴더에 두었고 등록은 PR #26 배포 뒤로 미뤘다. 배포 전에는 `embed` 규칙이 없어 코드 파일이 임베딩되기 때문이다.
 
-남은 일: 실제 코드 항목 등록 시험, 에이전트 쪽 AGENTS.md에 "구현 전에 박제를 먼저 검색" 규칙과 신선도 규칙 추가, 재등록 시 `embed` 값 유지, 프롬프트 개선과 일괄 재작성.
+배포와 첫 등록(2026-11-03): PR #26을 병합하고 `scripts/deploy.sh`로 웹만 배포했다(릴리스 `20261103T011720Z`). 사용자 `1000:1000`, `unless-stopped`, `bakje_default`, 마운트 5개는 배포 전후가 같았고 healthy였다. 항목 19915 `openai-compatible-llm-client`를 저장소 5번에 `kind=code`로 등록했고 `warnings`는 없었다. 운영 DB에서 `entry`·`helper`는 `embed=false`에 벡터 0개, `profile`은 벡터 1개, `doc`은 벡터 2개임을 확인했다. "OpenCode Go OpenAI 호환 API 구현" 검색에서 1위(점수 0.85)였고 `freshness`가 `versioned`·`runnable`·`stale`(`verified_at` 없음)로 나왔다. 미확인: 실제 OpenCode 서버 호출(mock 서버로만 시험), `kind` 필터(세션의 MCP 도구 정의가 배포 전 상태여서 못 씀), 에이전트가 이 항목을 찾아 구현에 쓰는 흐름.
+
+남은 일: 실제 OpenCode 호출 성공 후 `verified_at` 기록, `kind` 필터 확인, 에이전트 쪽 AGENTS.md에 "구현 전에 박제를 먼저 검색" 규칙과 신선도 규칙 추가, 재등록 시 `embed` 값 유지, 프롬프트 개선과 일괄 재작성.
 
 - 추가: `decisions/020-code-profile-and-embed-flag.md`
 - 갱신: `concepts/embedding-pipeline.md`, `decisions/index.md`, `logs/index.md`

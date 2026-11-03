@@ -31,7 +31,7 @@ timestamp: 2026-11-02
 - 180일(`STALE_DAYS`)은 임의로 정한 값이다.
 - 사용자가 말한 사용 방식: "OpenAI 호환 API 코드와 OpenCode Go 주의사항을 정리해 그것만 봐도 구현할 수 있는 문서"를 코드와 함께 등록한다. 실동작 코드부터 슈도코드까지 섞이고, 다이어그램(예: [stack-diagram](https://github.com/caru-ini/stack-diagram)의 HTML·PNG) 같은 첨부 파일이 여러 가지 붙는다. stack-diagram은 README 요약만 확인했다.
 - 한계: `expected_revision`을 붙인 재등록은 `embed`를 기본 규칙으로 되돌릴 수 있다. 구조 변경 `undo`는 지워진 벡터를 복원하지 않는다. UI 토글은 없다.
-- 미검증: 실제 코드 항목을 등록해 에이전트가 요약을 잘 쓰고 검색에서 찾는지 확인하지 않았다. 자기 점검과 `scripts/test-embed-flag.ts`, 기존 라이브러리 시험만 통과했다.
+- 부분 검증(2026-11-03): 첫 예시를 운영에 등록해 코드 파일 벡터 0개, 설명 벡터 생성, 검색 1위, `freshness` 출력을 확인했다. 아직 미검증: 에이전트가 요약을 스스로 잘 쓰는지, 실제 구현에 쓰는 흐름. 자기 점검과 `scripts/test-embed-flag.ts`, 기존 라이브러리 시험만 통과했다.
 
 ## Status
 
