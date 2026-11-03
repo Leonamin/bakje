@@ -14,8 +14,8 @@ export const DOC_ROLES = new Set(["profile", "doc", "guide", "pseudo", "note", "
 /** Default for metadata.embed when the manifest does not say. An explicit value always wins. */
 export const defaultEmbed = (itemKind: string, c: { kind: string; role: string }) => !(itemKind === "code" && c.kind === "text" && !DOC_ROLES.has(c.role));
 
-/** Short MCP hint. The full guide lives in .agents/skills/bakje-code/SKILL.md so the tool list stays small. */
-export const PROFILE_HINT = `For kind=code|skill|idea follow the bakje-code skill (PROFILE v${PROFILE_VERSION}). Needs a role=profile text component and metadata {fidelity,durability,depends_on,verified_at?,profile_version}. Code items need a linked folder, not managed storage.`;
+/** Short MCP hint. The full guide lives in .agents/skills/bakje-collect/references/code.md so the tool list stays small. */
+export const PROFILE_HINT = `For kind=code follow the bakje-collect code guide (PROFILE v${PROFILE_VERSION}). Needs a role=profile text component and metadata {fidelity,durability,depends_on,verified_at?,profile_version}. Code items need a linked folder, not managed storage.`;
 
 export const profileMetadataSchema = z.object({
   fidelity: z.enum(["runnable", "partial", "pseudo"]),
@@ -29,7 +29,7 @@ export const profileMetadataSchema = z.object({
 export function profileWarnings(item: { kind: string; metadata: Record<string, unknown>; components: { role: string }[] }): string[] {
   if (item.kind !== "code") return [];
   const out: string[] = [];
-  if (!item.components.some(c => c.role === "profile")) out.push("profile 구성요소가 없습니다. 검색에 걸리지 않습니다. bakje-code 스킬을 확인하세요.");
+  if (!item.components.some(c => c.role === "profile")) out.push("profile 구성요소가 없습니다. 의미 검색 품질이 낮을 수 있습니다. bakje-collect 코드 지침을 확인하세요.");
   if (!profileMetadataSchema.safeParse(item.metadata).success) out.push("metadata에 fidelity/durability/depends_on/profile_version이 없거나 형식이 틀립니다.");
   return out;
 }

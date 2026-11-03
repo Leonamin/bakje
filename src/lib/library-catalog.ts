@@ -3,8 +3,8 @@ import path from "node:path";
 import { z } from "zod";
 import { db } from "./db";
 import { assertStorageUnlocked } from "./library-lock";
-import { enqueueAnalysis, hashInput } from "./analysis-jobs";
-import { defaultEmbed } from "./profile-guide";
+import { enqueueAnalysis, hashInput, MODEL_KEY } from "./analysis-jobs";
+import { defaultEmbed, profileWarnings } from "./profile-guide";
 import { fileMime, relativePath, resolveFile, storage, readFolderText } from "./library-files";
 
 export const componentSchema = z.object({
@@ -49,6 +49,10 @@ export function syncSourceToLibrary(sourceId: number) {
 
 /** Files are inspected outside the transaction. Catalog, components and queued work commit together. */
 export async function registerItem(storageId: number, raw: unknown, groupingRule: string, priority = 50) {
+  return registerManifest(storageId, raw, groupingRule, priority);
+}
+
+async function registerManifest(storageId: number, raw: unknown, groupingRule: string, priority: number, preserved = new Map<string, ComponentRow>()) {
   const manifest = itemManifestSchema.parse(raw);
   const s = storage(storageId);
   if (db().prepare("SELECT 1 FROM library_tombstone WHERE storage_id=? AND external_id=?").get(storageId, manifest.external_id)) return { id: 0, revision: 0, state: "preserved" as const };
@@ -61,6 +65,11 @@ export async function registerItem(storageId: number, raw: unknown, groupingRule
   if (manifest.folder_path) relativePath(manifest.folder_path);
   const prepared: (ItemManifest["components"][number] & { file: { relative: string; mime: string; size: number; mtime: number } | null; fingerprint: string })[] = [];
   for (const c of manifest.components) {
+    const kept = preserved.get(c.key);
+    if (kept) {
+      prepared.push({ ...c, text: kept.text_content ?? undefined, file: null, fingerprint: kept.input_hash });
+      continue;
+    }
     let file: { relative: string; mime: string; size: number; mtime: number } | null = null;
     let text = c.text;
     if (c.path) {
@@ -81,9 +90,10 @@ export async function registerItem(storageId: number, raw: unknown, groupingRule
   return db().transaction(() => {
     assertStorageUnlocked(storageId);
     const existing = db().prepare("SELECT * FROM library_item WHERE storage_id=? AND external_id=?").get(storageId, manifest.external_id) as LibraryItem | undefined;
+    if (existing?.deleted_at) throw new Error("휴지통의 자료는 수정할 수 없습니다.");
     if (manifest.expected_revision !== undefined && existing?.revision !== manifest.expected_revision) throw new Error("자료가 변경되었습니다. 최신 revision을 확인하세요.");
     if (existing?.user_locked && manifest.expected_revision === undefined) return { id: existing.id, state: "preserved" as const, revision: existing.revision };
-    if (existing?.content_hash === contentHash) return { id: existing.id, state: "unchanged" as const, revision: existing.revision };
+    if (existing?.content_hash === contentHash && manifest.expected_revision === undefined) return { id: existing.id, state: "unchanged" as const, revision: existing.revision };
     const row = db().prepare(`INSERT INTO library_item(storage_id,external_id,title,kind,origin,origin_url,folder_path,body,tags,note,metadata,grouping_rule,review_required,content_hash,created_at,updated_at)
       VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT(storage_id,external_id) DO UPDATE SET
       title=excluded.title,kind=excluded.kind,origin=excluded.origin,origin_url=excluded.origin_url,folder_path=excluded.folder_path,
@@ -97,6 +107,11 @@ export async function registerItem(storageId: number, raw: unknown, groupingRule
       (SELECT id FROM library_component WHERE item_id=? AND component_key NOT IN (${keys.map(() => "?").join(",")})) AND state IN ('pending','failed')`).run(row.id, ...keys);
     db().prepare(`DELETE FROM library_component WHERE item_id=? AND component_key NOT IN (${keys.map(() => "?").join(",")} )`).run(row.id, ...keys);
     for (const [ordinal, c] of prepared.entries()) {
+      const kept = preserved.get(c.key);
+      if (kept) {
+        db().prepare("UPDATE library_component SET ordinal=? WHERE id=? AND item_id=?").run(ordinal, kept.id, row.id);
+        continue;
+      }
       let assetId: number | null = null;
       if (c.file) {
         const a = db().prepare(`INSERT INTO library_asset(storage_id,relative_path,mime,byte_size,mtime_ms) VALUES(?,?,?,?,?)
@@ -109,6 +124,12 @@ export async function registerItem(storageId: number, raw: unknown, groupingRule
         VALUES(?,?,?,?,?,?,?,?,?,?) ON CONFLICT(item_id,component_key) DO UPDATE SET kind=excluded.kind,role=excluded.role,ordinal=excluded.ordinal,
         language=excluded.language,text_content=excluded.text_content,asset_id=excluded.asset_id,input_hash=excluded.input_hash,metadata=excluded.metadata RETURNING id`)
         .get(row.id, c.key, c.kind, c.role, ordinal, c.language ?? null, c.text ?? null, assetId, c.fingerprint, JSON.stringify(c.metadata)) as { id: number };
+      // Invalidate old vectors immediately; the worker checks the hash and claim before publishing.
+      db().prepare("DELETE FROM library_vector WHERE component_id=? AND (input_hash<>? OR ?=1)")
+        .run(component.id, c.fingerprint, Number(c.metadata.embed === false || !["text", "image"].includes(c.kind)));
+      if (c.metadata.embed === false || !["text", "image"].includes(c.kind)) {
+        db().prepare("UPDATE analysis_job SET state='superseded',updated_at=? WHERE target_type='component' AND target_id=? AND state IN ('pending','failed','running')").run(now, component.id);
+      }
       if ((c.kind === "text" || c.kind === "image") && c.metadata.embed !== false) enqueueAnalysis("component", component.id, c.fingerprint, { kind: c.kind }, priority);
     }
     // User classifications are additive; a rescan never removes a user's collection membership.
@@ -121,13 +142,62 @@ export async function registerItem(storageId: number, raw: unknown, groupingRule
   })();
 }
 
+/** Component upserts replace the named component; omitted keys are retained. Metadata is shallow-merged. */
+export const patchLibraryItemSchema = z.object({
+  id: z.number().int().positive(), revision: z.number().int().positive(),
+  title: z.string().min(1).max(2000).optional(), note: z.string().max(50000).optional(),
+  tags: z.array(z.string().max(200)).max(200).optional(),
+  metadata: z.record(z.string(), z.unknown()).optional(),
+  upsert_components: z.array(componentSchema).max(500).default([]),
+  remove_component_keys: z.array(z.string().min(1).max(200)).max(500).default([]),
+});
+export async function patchLibraryItem(raw: unknown) {
+  const patch = patchLibraryItemSchema.parse(raw);
+  const got = getLibraryItem(patch.id);
+  if (!got || got.item.deleted_at || got.item.source_id || !got.storage.enabled || got.storage.kind !== "linked") throw new Error("활성 연결 저장소의 자료를 선택하세요.");
+  assertStorageUnlocked(got.item.storage_id);
+  if (got.item.revision !== patch.revision) throw new Error("자료가 변경되었습니다. 최신 revision을 확인하세요.");
+  const changes = new Map(patch.upsert_components.map(c => [c.key, c]));
+  const removed = new Set(patch.remove_component_keys);
+  if (changes.size !== patch.upsert_components.length || removed.size !== patch.remove_component_keys.length || [...removed].some(k => changes.has(k))) throw new Error("구성요소 key가 중복되거나 수정·삭제 요청이 겹칩니다.");
+  if ([...removed].some(k => !got.components.some(c => c.component_key === k))) throw new Error("삭제할 구성요소를 찾을 수 없습니다.");
+  const preserved = new Map<string, ComponentRow>();
+  const components: ItemManifest["components"] = [];
+  for (const c of got.components) {
+    if (removed.has(c.component_key)) continue;
+    const change = changes.get(c.component_key);
+    if (change) {
+      components.push({ ...change, metadata: { ...JSON.parse(c.metadata), ...change.metadata } });
+      changes.delete(c.component_key);
+    } else {
+      preserved.set(c.component_key, c);
+      components.push({ key: c.component_key, kind: c.kind, role: c.role, language: c.language ?? undefined,
+        text: c.text_content ?? undefined, path: c.relative_path ?? undefined, metadata: JSON.parse(c.metadata) });
+    }
+  }
+  components.push(...changes.values());
+  const i = got.item;
+  const result = await registerManifest(i.storage_id, {
+    external_id: i.external_id, title: patch.title ?? i.title, kind: i.kind, origin: i.origin,
+    origin_url: i.origin_url ?? undefined, folder_path: i.folder_path, note: patch.note ?? i.note,
+    tags: patch.tags ?? JSON.parse(i.tags), metadata: { ...JSON.parse(i.metadata), ...patch.metadata },
+    collections: got.collections, review_required: !!i.review_required, components, expected_revision: patch.revision,
+  }, i.grouping_rule, 10, preserved);
+  return { ...result, analysis: getLibraryItem(result.id)!.analysis,
+    warnings: profileWarnings({ kind: i.kind, metadata: { ...JSON.parse(i.metadata), ...patch.metadata }, components }) };
+}
+
 export function getLibraryItem(id: number) {
   const item = db().prepare("SELECT * FROM library_item WHERE id=?").get(id) as LibraryItem | undefined;
   if (!item) return null;
   const components = db().prepare(`SELECT c.*,a.relative_path,a.mime,a.state FROM library_component c LEFT JOIN library_asset a ON a.id=c.asset_id
     WHERE c.item_id=? ORDER BY c.ordinal`).all(id) as ComponentRow[];
   const collections = db().prepare(`SELECT c.name FROM library_collection c JOIN library_collection_item ci ON ci.collection_id=c.id WHERE ci.item_id=?`).all(id) as { name: string }[];
-  return { item, components, collections: collections.map(c => c.name), storage: storage(item.storage_id) };
+  const analysis = db().prepare(`SELECT j.state,COUNT(*) AS count FROM analysis_job j
+    JOIN library_component c ON j.target_type='component' AND j.target_id=c.id
+    WHERE c.item_id=? AND j.input_hash=c.input_hash AND j.model_key=? GROUP BY j.state`)
+    .all(id, MODEL_KEY) as { state: string; count: number }[];
+  return { item, components, collections: collections.map(c => c.name), storage: storage(item.storage_id), analysis };
 }
 
 export function editLibraryItem(id: number, revision: number, patch: { title?: string; note?: string; hidden?: boolean; collections?: string[]; review_required?: boolean }) {
