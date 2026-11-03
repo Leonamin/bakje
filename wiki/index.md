@@ -39,6 +39,7 @@ X, Threads, Reddit 게시글을 링크 하나로 내 디스크에 복제하고 �
 
 - [concepts/index.md](./concepts/index.md) — 제품 범위, 수집 규칙, 데이터 모델, 검색, 미디어, 번역, UI, 운영
 - [decisions/index.md](./decisions/index.md) — 되돌리기 어려운 선택과 근거
+- [assets/index.md](./assets/index.md) — 문서가 쓰는 그림 자료(동작 구조 다이어그램)
 - [references/index.md](./references/index.md) — 플랫폼 수집 경로와 디자인 레퍼런스
 - [logs/index.md](./logs/index.md) — 변경 이력
 
