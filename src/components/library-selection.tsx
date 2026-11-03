@@ -5,6 +5,7 @@ import { Check, X } from "lucide-react";
 import { Button, IconButton } from "./goodcase/basic/button";
 import { ConfirmDialog } from "./goodcase/composed/confirm-dialog";
 import { SwipeHide } from "./swipe-hide";
+import { useToast } from "./goodcase/overlays/toast";
 import { useSelection } from "./selection-state";
 import { LibraryCard } from "./library-card";
 import type { LibraryHit } from "@/lib/library-search";
@@ -14,6 +15,7 @@ const MAX_SELECTED = 100; // POST /api/library accepts at most 100 ids per reque
 
 export function LibrarySelection({ hits, view, mode }: { hits: LibraryHit[]; view: "grid" | "list"; mode: "normal" | "hidden" | "trash" }) {
   const router = useRouter();
+  const { notify } = useToast();
   const { selecting, selected, setSelected, start, exit: exitSelection } = useSelection();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -39,8 +41,8 @@ export function LibrarySelection({ hits, view, mode }: { hits: LibraryHit[]; vie
   const otherPages = count - pageIds.filter(id => selected.includes(id)).length;
   const scope = otherPages ? `다른 쪽 ${otherPages}개를 포함합니다. ` : "";
   // Throws on failure so ConfirmDialog can show the message and stay open.
-  async function run(operation: Operation) {
-    const response = await fetch("/api/library", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "manage", ids, operation }) });
+  async function run(operation: Operation, target = ids) {
+    const response = await fetch("/api/library", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "manage", ids: target, operation }) });
     const result = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(result.error || "처리하지 못했습니다.");
     exit(); router.refresh();
@@ -51,9 +53,18 @@ export function LibrarySelection({ hits, view, mode }: { hits: LibraryHit[]; vie
     try { await run(operation); } catch (e) { setError(e instanceof Error ? e.message : "처리하지 못했습니다."); } finally { setBusy(false); }
   }
   const compact = "!min-h-10 !px-3";
-  const confirmHide = <ConfirmDialog trigger={<Button variant="secondary" className={compact} disabled={!count}>숨김</Button>}
-    title={`${count}개 자료를 숨길까요?`} description={`${scope}목록과 검색에서 빠집니다. 필터의 ‘숨긴 자료’에서 다시 볼 수 있고 숨김을 해제할 수 있습니다.`}
-    confirmLabel="숨기기" onConfirm={() => run("hide")} />;
+  // Hiding is reversible, so no dialog: hide now, offer undo in a toast.
+  async function hideNow() {
+    if (!count || busy) return;
+    const target = ids;
+    setBusy(true); setError("");
+    try { await run("hide", target); } catch (e) { setError(e instanceof Error ? e.message : "처리하지 못했습니다."); setBusy(false); return; }
+    setBusy(false);
+    notify({ title: `${target.length}개 자료를 숨겼습니다`, action: { label: "되돌리기", onClick: async () => {
+      try { await run("unhide", target); } catch { notify({ title: "처리하지 못했습니다", tone: "error" }); }
+    } } });
+  }
+  const confirmHide = <Button variant="secondary" className={compact} disabled={!count || busy} onClick={hideNow}>숨김</Button>;
   const confirmTrash = <ConfirmDialog trigger={<Button variant="secondary" className={compact} disabled={!count}>삭제</Button>}
     title={`${count}개 자료를 휴지통으로 옮길까요?`} description={`${scope}7일 후 박제본의 내용과 보관 파일이 삭제됩니다(원본 삭제를 허용한 연결 폴더는 원본 파일도 삭제). 관련 묶음 편집과 원본 정리 기록은 되돌릴 수 없게 됩니다.`}
     confirmLabel="휴지통으로 이동" onConfirm={() => run("trash")} />;
