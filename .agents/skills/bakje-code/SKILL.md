@@ -1,5 +1,5 @@
 ---
-name: bakje-register-code
+name: bakje-code
 description: 재활용할 코드·스킬·아이디어를 정리 문서와 함께 박제(bakje) 연결 폴더에 만들고 MCP로 등록할 때 사용한다. 박제에서 기존 사례를 먼저 찾아 구현에 쓰는 요청에도 사용한다.
 ---
 

@@ -35,4 +35,6 @@ MCP 컨텍스트 절감: 요약 틀 약 2,050자가 `register_library_items` 설
 
 - 추가: `decisions/020-code-profile-and-embed-flag.md`
 - 갱신: `concepts/embedding-pipeline.md`, `decisions/index.md`, `logs/index.md`
-- 추가: `logs/2026-11-02-code-profile-and-embed-flag.md`, `.agents/skills/bakje-register-code/SKILL.md`
+- 추가: `logs/2026-11-02-code-profile-and-embed-flag.md`, `.agents/skills/bakje-code/SKILL.md`
+
+스킬 이름 변경(2026-11-03): `bakje-register-code`를 `bakje-code`로 바꿨다. 이 스킬은 등록과 먼저 찾기를 모두 다루기 때문이다. 위 기록의 옛 이름은 모두 새 이름으로 고쳤다. MCP 힌트와 `warnings` 문구도 새 이름을 안내하며 웹 배포로 반영했다.
