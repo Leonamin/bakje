@@ -5,6 +5,7 @@ import { randomUUID } from "node:crypto";
 import { db, DATA_DIR } from "./db";
 import { itemManifestSchema, registerItem, getLibraryItem } from "./library-catalog";
 import { resolveFile, storage, relativePath } from "./library-files";
+import { profileWarnings } from "./profile-guide";
 
 export interface ImportRun {
   id: number; storage_id: number; kind: "manifest" | "opennana" | "export"; state: string;
@@ -34,7 +35,8 @@ export function submitManifest(storageId: number, rule: string, items: unknown[]
     return run;
   })();
   startLibraryWorker();
-  return getRun(id);
+  const warnings = parsed.flatMap(i => profileWarnings(i).map(w => `${i.external_id}: ${w}`));
+  return warnings.length ? { ...getRun(id), warnings } : getRun(id);
 }
 export async function submitOpenNana(storageId: number, promptPath = "prompts.jsonl", imagesManifest = "media/manifest-originals.jsonl", videoManifest = "media/manifest-videos.jsonl") {
   const promptStat = await fs.stat(await resolveFile(storageId, promptPath));

@@ -4,6 +4,7 @@ import { z } from "zod";
 import { db } from "./db";
 import { assertStorageUnlocked } from "./library-lock";
 import { enqueueAnalysis, hashInput } from "./analysis-jobs";
+import { defaultEmbed } from "./profile-guide";
 import { fileMime, relativePath, resolveFile, storage, readFolderText } from "./library-files";
 
 export const componentSchema = z.object({
@@ -71,7 +72,9 @@ export async function registerItem(storageId: number, raw: unknown, groupingRule
       if (c.kind === "text" && text === undefined) text = await readFolderText(storageId, relative);
     }
     const fingerprint = hashInput(JSON.stringify({ kind: c.kind, text, file }));
-    prepared.push({ ...c, text, file, fingerprint });
+    // Code bodies go to FTS only; the profile carries the meaning. metadata.embed=false is the marker, and an explicit value wins.
+    const metadata = c.metadata.embed === undefined && !defaultEmbed(manifest.kind, c) ? { ...c.metadata, embed: false } : c.metadata;
+    prepared.push({ ...c, metadata, text, file, fingerprint });
   }
   const contentHash = hashInput(JSON.stringify({ ...manifest, expected_revision: undefined, prepared }));
   const now = new Date().toISOString();
@@ -106,7 +109,7 @@ export async function registerItem(storageId: number, raw: unknown, groupingRule
         VALUES(?,?,?,?,?,?,?,?,?,?) ON CONFLICT(item_id,component_key) DO UPDATE SET kind=excluded.kind,role=excluded.role,ordinal=excluded.ordinal,
         language=excluded.language,text_content=excluded.text_content,asset_id=excluded.asset_id,input_hash=excluded.input_hash,metadata=excluded.metadata RETURNING id`)
         .get(row.id, c.key, c.kind, c.role, ordinal, c.language ?? null, c.text ?? null, assetId, c.fingerprint, JSON.stringify(c.metadata)) as { id: number };
-      if (c.kind === "text" || c.kind === "image") enqueueAnalysis("component", component.id, c.fingerprint, { kind: c.kind }, priority);
+      if ((c.kind === "text" || c.kind === "image") && c.metadata.embed !== false) enqueueAnalysis("component", component.id, c.fingerprint, { kind: c.kind }, priority);
     }
     // User classifications are additive; a rescan never removes a user's collection membership.
     for (const name of manifest.collections) {

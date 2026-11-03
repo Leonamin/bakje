@@ -7,7 +7,7 @@ import { thumbUrl } from "./format";
 
 export interface LibrarySearchParams {
   q?: string; origin?: string; storage?: number; scope?: "managed" | "linked"; folder?: string;
-  collection?: string; from?: string; to?: string; media?: string; tag?: string; hidden?: boolean; trash?: boolean; sort?: string; shuffle?: number; limit?: number; offset?: number;
+  collection?: string; kind?: string; from?: string; to?: string; media?: string; tag?: string; hidden?: boolean; trash?: boolean; sort?: string; shuffle?: number; limit?: number; offset?: number;
 }
 export interface LibraryHit extends LibraryItem {
   storage_name: string; storage_kind: "managed" | "linked"; storage_enabled: number;
@@ -39,6 +39,7 @@ function filters(p: LibrarySearchParams, not: string[] = []) {
   const sql = ["st.enabled=1", p.trash ? "i.deleted_at IS NOT NULL" : "i.deleted_at IS NULL", p.trash ? "1=1" : p.hidden ? "COALESCE(s.hidden_at,i.hidden_at) IS NOT NULL AND CASE WHEN json_valid(i.metadata) THEN json_extract(i.metadata,'$.merged_into') END IS NULL" : "COALESCE(s.hidden_at,i.hidden_at) IS NULL"];
   const args: (string | number)[] = [];
   if (p.origin) { sql.push("i.origin=?"); args.push(p.origin); }
+  if (p.kind) { sql.push("i.kind=?"); args.push(p.kind); }
   if (p.storage) { sql.push("i.storage_id=?"); args.push(p.storage); }
   if (p.scope) { sql.push("st.kind=?"); args.push(p.scope); }
   if (p.folder) {
