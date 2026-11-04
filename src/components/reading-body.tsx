@@ -53,7 +53,7 @@ function renderText(text: string, media: MediaRow[], markdown: boolean) {
   });
 }
 
-/** The page already shows the title as h1, so a leading `# title` line would repeat it. */
+/** Only when the page shows a title h1; otherwise this heading is the only title. */
 function withoutHeading(text: string) {
   return text.replace(/^\s*#\s.*\n+/, "");
 }
@@ -326,7 +326,7 @@ export function ReadingBody({
           const body = (
             <>
               <div className={`post-text text-[var(--ink)] ${part.format === "markdown" ? "!whitespace-normal" : ""} ${part.kind === "parent_context" ? "text-[var(--muted)]" : ""}`}>
-                {text ? renderText(part.kind === "main" && part.format === "markdown" ? withoutHeading(text) : text, partMedia, part.format === "markdown") : <span className="text-[var(--muted)]">(본문 없음 — 미디어 게시글)</span>}
+                {text ? renderText(part.kind === "main" && part.format === "markdown" && shownTitle ? withoutHeading(text) : text, partMedia, part.format === "markdown") : <span className="text-[var(--muted)]">(본문 없음 — 미디어 게시글)</span>}
               </div>
               {partMedia.length > 0 ? (
                 <div className="mt-4">
