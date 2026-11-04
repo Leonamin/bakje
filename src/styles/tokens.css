@@ -69,6 +69,19 @@
   --gc-accordion-easing: cubic-bezier(0.22, 0.68, 0.3, 1);
   --gc-slider-track-height: 6px;
   --gc-slider-thumb-size: 20px;
+  --gc-slider-thumb-active-scale: 1.2;
+  --gc-slider-thumb-hover-scale: 1.1;
+  --gc-slider-thick-track-height: 20px;
+  --gc-slider-thick-thumb-size: 28px;
+  --gc-slider-mark-size: 2.5px;
+  --gc-slider-mark-hover-size: 4px;
+  --gc-slider-thumb-shadow: 0 1px 2px
+    color-mix(in srgb, var(--gc-overlay) 30%, transparent);
+  --gc-slider-mark-color: color-mix(
+    in srgb,
+    var(--gc-text-muted) 40%,
+    var(--gc-progress-track)
+  );
   --gc-spinner-size-small: 16px;
   --gc-spinner-size-medium: 32px;
   --gc-spinner-size-large: 48px;

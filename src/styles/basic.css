@@ -767,6 +767,7 @@
 }
 .gc-slider-input {
   appearance: none;
+  touch-action: none;
   width: 100%;
   min-width: 0;
   height: var(--gc-control-height);
@@ -775,23 +776,74 @@
   accent-color: var(--gc-accent);
   cursor: pointer;
 }
+/* Fill ends at the thumb centre: thumb centre travels thumb/2 .. 100% - thumb/2. */
+.gc-slider-thick .gc-slider-input {
+  --gc-slider-track-height: var(--gc-slider-thick-track-height);
+  --gc-slider-thumb-size: var(--gc-slider-thick-thumb-size);
+}
+.gc-slider-input {
+  --gc-slider-fill: calc(
+    var(--gc-slider-thumb-size) / 2 + (100% - var(--gc-slider-thumb-size)) *
+      var(--gc-slider-ratio)
+  );
+  --gc-slider-hover-ratio: -1; /* off-track = no hovered dot */
+  --gc-slider-bg: linear-gradient(
+    to right,
+    var(--gc-accent) var(--gc-slider-fill),
+    var(--gc-progress-track) var(--gc-slider-fill)
+  );
+}
 .gc-slider-input::-webkit-slider-runnable-track {
   height: var(--gc-slider-track-height);
   border-radius: var(--gc-radius);
-  background: linear-gradient(
-    to right,
-    var(--gc-accent) var(--gc-slider-percentage),
-    var(--gc-progress-track) var(--gc-slider-percentage)
-  );
+  background: var(--gc-slider-bg);
 }
 .gc-slider-input::-moz-range-track {
   height: var(--gc-slider-track-height);
   border-radius: var(--gc-radius);
-  background: linear-gradient(
-    to right,
-    var(--gc-accent) var(--gc-slider-percentage),
-    var(--gc-progress-track) var(--gc-slider-percentage)
-  );
+  background: var(--gc-slider-bg);
+}
+/* Step dots: no border/padding on the track, or the browser shrinks the thumb
+   travel. Each tile is one step, starting at thumb/2, with half-dots on both
+   edges forming full dots; first dot at thumb/2, last at 100% - thumb/2.
+   Defined once on the input so the webkit and moz tracks share it. */
+.gc-slider-input[data-marks] {
+  --gc-slider-bg-marked:
+    radial-gradient(
+        circle at
+          calc(
+            var(--gc-slider-thumb-size) / 2 +
+              (100% - var(--gc-slider-thumb-size)) *
+              var(--gc-slider-hover-ratio)
+          )
+          50%,
+        var(--gc-slider-mark-color) var(--gc-slider-mark-hover-size),
+        transparent calc(var(--gc-slider-mark-hover-size) + 0.5px)
+      )
+      0 0 / 100% 100% no-repeat border-box,
+    radial-gradient(
+        circle at 0 50%,
+        var(--gc-slider-mark-color) var(--gc-slider-mark-size),
+        transparent calc(var(--gc-slider-mark-size) + 0.5px)
+      )
+      calc(var(--gc-slider-thumb-size) / 2) 0 /
+      calc((100% - var(--gc-slider-thumb-size)) / var(--gc-slider-mark-count))
+      100% repeat-x border-box,
+    radial-gradient(
+        circle at 100% 50%,
+        var(--gc-slider-mark-color) var(--gc-slider-mark-size),
+        transparent calc(var(--gc-slider-mark-size) + 0.5px)
+      )
+      calc(var(--gc-slider-thumb-size) / 2) 0 /
+      calc((100% - var(--gc-slider-thumb-size)) / var(--gc-slider-mark-count))
+      100% repeat-x border-box,
+    var(--gc-slider-bg) 0 0 / 100% 100% no-repeat border-box;
+}
+.gc-slider-input[data-marks]::-webkit-slider-runnable-track {
+  background: var(--gc-slider-bg-marked);
+}
+.gc-slider-input[data-marks]::-moz-range-track {
+  background: var(--gc-slider-bg-marked);
 }
 .gc-slider-input::-webkit-slider-thumb {
   appearance: none;
@@ -804,6 +856,8 @@
   border-radius: 50%;
   background: var(--gc-accent);
   box-shadow: 0 0 0 1px var(--gc-accent);
+  scale: 1;
+  transition: scale var(--gc-press-duration) var(--gc-press-easing);
 }
 .gc-slider-input::-moz-range-thumb {
   width: var(--gc-slider-thumb-size);
@@ -813,6 +867,36 @@
   border-radius: 50%;
   background: var(--gc-accent);
   box-shadow: 0 0 0 1px var(--gc-accent);
+  scale: 1;
+  transition: scale var(--gc-press-duration) var(--gc-press-easing);
+}
+.gc-slider-input[data-dragging]:not(:disabled)::-webkit-slider-thumb {
+  scale: var(--gc-slider-thumb-active-scale);
+}
+.gc-slider-input[data-dragging]:not(:disabled)::-moz-range-thumb {
+  scale: var(--gc-slider-thumb-active-scale);
+}
+.gc-slider-input:hover:not(:disabled):not(
+    [data-dragging]
+  )::-webkit-slider-thumb {
+  scale: var(--gc-slider-thumb-hover-scale);
+}
+.gc-slider-input:hover:not(:disabled):not([data-dragging])::-moz-range-thumb {
+  scale: var(--gc-slider-thumb-hover-scale);
+}
+.gc-slider-thick .gc-slider-input::-webkit-slider-thumb {
+  border: 0;
+  background: var(--gc-surface);
+  box-shadow:
+    var(--gc-slider-thumb-shadow),
+    0 0 0 1px var(--gc-border);
+}
+.gc-slider-thick .gc-slider-input::-moz-range-thumb {
+  border: 0;
+  background: var(--gc-surface);
+  box-shadow:
+    var(--gc-slider-thumb-shadow),
+    0 0 0 1px var(--gc-border);
 }
 .gc-slider-input:disabled {
   opacity: 0.5;
@@ -825,5 +909,13 @@
 @media (prefers-reduced-motion: reduce) {
   .gc-button:active:not(:disabled) {
     scale: 1;
+  }
+  .gc-slider-input::-webkit-slider-thumb {
+    scale: 1 !important;
+    transition: none !important;
+  }
+  .gc-slider-input::-moz-range-thumb {
+    scale: 1 !important;
+    transition: none !important;
   }
 }
