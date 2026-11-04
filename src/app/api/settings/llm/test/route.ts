@@ -15,6 +15,7 @@ export async function POST(req: Request) {
     apiFormat: body.apiFormat === "responses" || body.apiFormat === "chat" ? body.apiFormat : saved.apiFormat,
     model: pick(body.model, saved.model),
     apiKey: pick(body.apiKey, saved.apiKey),
+    effort: typeof body.effort === "string" ? body.effort.trim() : saved.effort,
   };
   if (!cfg.apiKey) return NextResponse.json({ ok: false, message: "API 키가 없습니다." }, { status: 400 });
 

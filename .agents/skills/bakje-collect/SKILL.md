@@ -5,7 +5,7 @@ description: 코드·UX 사례·문서·아이디어를 박제(bakje)에 수집�
 
 # 박제 수집과 재사용
 
-코드 검색·등록에는 [코드 지침](references/code.md), UX 문제·해결 기록에는 [UX 지침](references/ux.md)을 읽는다. 일반 문서와 메모에는 아래 공통 절차를 적용한다. 코드 profile과 신선도 필드를 일반 자료에 강제하지 않는다.
+코드 검색·등록에는 [코드 지침](references/code.md), UX 카드(문제·해결·원칙)에는 [UX 지침](references/ux.md)을 읽는다. 일반 문서와 메모에는 아래 공통 절차를 적용한다. 코드 profile과 신선도 필드를 일반 자료에 강제하지 않는다.
 
 ## 검색과 수집
 

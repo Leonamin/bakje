@@ -23,11 +23,16 @@ export async function PUT(req: Request) {
   if (typeof body.baseUrl === "string" && !/^https?:\/\/\S+$/.test(body.baseUrl.trim())) {
     return NextResponse.json({ error: "Base URL은 http(s):// 로 시작해야 합니다." }, { status: 400 });
   }
+  if (typeof body.effort === "string" && !/^[\w.-]{0,32}$/.test(body.effort.trim())) {
+    return NextResponse.json({ error: "추론 강도는 영문·숫자·-_. 32자까지 쓸 수 있습니다." }, { status: 400 });
+  }
   saveLlmSettings({
     provider: body.provider as LlmProvider | undefined,
     baseUrl: typeof body.baseUrl === "string" ? body.baseUrl : undefined,
     apiFormat: body.apiFormat === "responses" ? "responses" : body.apiFormat === "chat" ? "chat" : undefined,
     model: typeof body.model === "string" ? body.model : undefined,
+    // Empty = do not send. Free text, because levels differ per model (none, low, … xhigh, max, ultra).
+    effort: typeof body.effort === "string" ? body.effort.trim() : undefined,
     // An empty key field means "keep the current key".
     apiKey: typeof body.apiKey === "string" && body.apiKey.trim() ? body.apiKey : undefined,
   });
