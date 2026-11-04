@@ -53,7 +53,8 @@ CREATE TABLE IF NOT EXISTS part (
   text_original TEXT NOT NULL,
   text_ko TEXT,
   source_url TEXT,
-  posted_at TEXT
+  posted_at TEXT,
+  format TEXT NOT NULL DEFAULT 'text'
 );
 CREATE INDEX IF NOT EXISTS part_source ON part(source_id, ordinal);
 
@@ -187,6 +188,12 @@ export function db(): Database.Database {
   if (!srcColumns.has("hidden_at")) conn.exec("ALTER TABLE source ADD COLUMN hidden_at TEXT");
   const trColumns = new Set((conn.prepare("PRAGMA table_info(translation)").all() as { name: string }[]).map((c) => c.name));
   if (!trColumns.has("title_ko")) conn.exec("ALTER TABLE translation ADD COLUMN title_ko TEXT");
+  const partColumns = new Set((conn.prepare("PRAGMA table_info(part)").all() as { name: string }[]).map((c) => c.name));
+  if (!partColumns.has("format")) {
+    conn.exec("ALTER TABLE part ADD COLUMN format TEXT NOT NULL DEFAULT 'text'");
+    // X Article text is the only Markdown so far, and it always opens with `# title`.
+    conn.exec("UPDATE part SET format = 'markdown' WHERE text_original LIKE '# %' AND source_id IN (SELECT id FROM source WHERE platform = 'x')");
+  }
   for (const table of ["embedding", "media_embedding", "embed_state"]) {
     const columns = new Set((conn.prepare(`PRAGMA table_info(${table})`).all() as { name: string }[]).map(c => c.name));
     if (!columns.has("model_key")) conn.exec(`ALTER TABLE ${table} ADD COLUMN model_key TEXT NOT NULL DEFAULT 'google/embeddinggemma-2:256:chunks1500:jpeg896:v1'`);

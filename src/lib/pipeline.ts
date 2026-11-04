@@ -203,7 +203,7 @@ async function persist(
   conn.prepare("DELETE FROM part WHERE source_id = ?").run(sourceId);
 
   const insertPart = conn.prepare(
-    "INSERT INTO part (source_id, ordinal, kind, text_original, text_ko, source_url, posted_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
+    "INSERT INTO part (source_id, ordinal, kind, text_original, text_ko, source_url, posted_at, format) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
   );
 
   const partIds: number[] = [];
@@ -216,6 +216,7 @@ async function persist(
       oldKo.get(p.text) ?? null,
       p.sourceUrl,
       p.postedAt ?? null,
+      p.format ?? "text",
     );
     partIds.push(Number(info.lastInsertRowid));
   });
