@@ -88,7 +88,7 @@ export interface TranslateOutput {
   summaryKo: string;
 }
 
-const PROMPT_VERSION = 4;
+const PROMPT_VERSION = 5;
 
 const SYSTEM = [
   "You are a translation engine for a personal reading archive.",
@@ -219,17 +219,16 @@ async function callLlm(cfg: LlmConfig, system: string, user: string): Promise<st
   }
 }
 
-/** Above this many characters the post is cut into chunks that are translated in parallel. */
+/** Above this many characters the post is cut into chunks that are translated in turn. */
 const CHUNK_CHARS = 4000;
-// OpenCode answers parallel requests almost one by one and its gateway returns 502 when too many queue up.
-const CONCURRENCY = 2;
+const TAIL_CHARS = 600;
 const SUMMARY_CHARS = 12000;
 const CONTEXT_CHARS = 500;
 
 const CHUNK_SYSTEM = [
   "You are a translation engine for a personal reading archive.",
-  'The user message is a JSON object {"context": string, "text": string}. "text" is one section of a longer post.',
-  'Translate "text" into natural, idiomatic Korean. "context" is background only (title and opening of the whole post): never translate or return it; use it to keep terms and tone consistent.',
+  'The user message is a JSON object {"context": string, "previous": {"source": string, "korean": string} | null, "text": string}. "text" is one section of a longer post.',
+  'Translate "text" into natural, idiomatic Korean. "context" (title and opening of the whole post) and "previous" (the end of the section just before, in the original and in your Korean translation) are background only: never translate or return them. Reuse the same Korean terms, spelling of names and level of formality as "previous".',
   "Rules:",
   "- Keep every line break, blank line, list and markdown structure exactly. Do not merge, drop or reorder paragraphs.",
   "- Lines like ![](https://...) and the URL part of [text](https://...) must stay exactly as they are; translate only the link text.",
@@ -263,20 +262,6 @@ export function splitChunks(text: string, max = CHUNK_CHARS): string[] {
   return chunks;
 }
 
-async function mapLimit<T, R>(items: T[], limit: number, fn: (item: T) => Promise<R>): Promise<R[]> {
-  const out: R[] = new Array(items.length);
-  let next = 0;
-  await Promise.all(
-    Array.from({ length: Math.min(limit, items.length) }, async () => {
-      while (next < items.length) {
-        const i = next++;
-        out[i] = await fn(items[i]);
-      }
-    }),
-  );
-  return out;
-}
-
 function partsOf(content: string, expected: number): string[] {
   const parsed = parseJsonLoose(content);
   if (!parsed) throw new Error("LLM 응답을 JSON으로 읽지 못했습니다.");
@@ -304,18 +289,26 @@ async function translateWhole(input: TranslateInput, cfg: LlmConfig): Promise<Tr
   };
 }
 
-/** Long posts: chunks go out in parallel, each with the post's opening as context; title and summary come from a separate short call. */
+/** Long posts: chunks go out one after another, each with the post's opening and the end of the previous chunk as context; title and summary come from a separate short call. */
 async function translateChunked(input: TranslateInput, cfg: LlmConfig): Promise<TranslateOutput> {
   const joined = input.parts.join("\n\n");
   const context = [input.title, joined.slice(0, CONTEXT_CHARS)].filter(Boolean).join("\n\n");
   const units = input.parts.flatMap((text, part) => (text.trim() ? splitChunks(text).map((chunk) => ({ part, chunk })) : []));
 
-  const [translated, head] = await Promise.all([
-    mapLimit(units, CONCURRENCY, async (u) =>
-      translateChunk(await callLlm(cfg, CHUNK_SYSTEM, JSON.stringify({ context, text: u.chunk }))),
-    ),
-    callLlm(cfg, SUMMARY_SYSTEM, JSON.stringify({ title: input.title, text: joined.slice(0, SUMMARY_CHARS) })),
-  ]);
+  // Sequential on purpose: each chunk gets the end of the one before so terms and tone stay the same.
+  // The summary call runs beside the chain.
+  const summary = callLlm(cfg, SUMMARY_SYSTEM, JSON.stringify({ title: input.title, text: joined.slice(0, SUMMARY_CHARS) }));
+  const translated: string[] = [];
+  try {
+    for (const [i, u] of units.entries()) {
+      const previous = i ? { source: units[i - 1].chunk.slice(-TAIL_CHARS), korean: translated[i - 1].slice(-TAIL_CHARS) } : null;
+      translated.push(translateChunk(await callLlm(cfg, CHUNK_SYSTEM, JSON.stringify({ context, previous, text: u.chunk }))));
+    }
+  } catch (err) {
+    summary.catch(() => {}); // avoid an unhandled rejection when the chain already failed
+    throw err;
+  }
+  const head = await summary;
 
   const partsKo = input.parts.map(() => [] as string[]);
   units.forEach((u, i) => partsKo[u.part].push(translated[i]));
