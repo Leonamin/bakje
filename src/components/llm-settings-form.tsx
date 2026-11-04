@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { CheckCircle2, AlertCircle, PlugZap } from "lucide-react";
 import { Button } from "@/components/goodcase/basic/button";
+import { Slider } from "@/components/goodcase/basic/slider";
 import { useToast } from "@/components/goodcase/overlays/toast";
 
 type ApiFormat = "chat" | "responses";
@@ -12,6 +13,7 @@ interface PublicSettings {
   baseUrl: string;
   apiFormat: ApiFormat;
   model: string;
+  effort: string;
   key: { tail: string | null; source: "db" | "env" | null };
 }
 
@@ -21,6 +23,9 @@ interface Provider {
   baseUrl: string;
   apiFormat: ApiFormat;
 }
+
+/** Slider stops. Index 0 sends nothing; the rest are sent as-is. Other words go in the text field. */
+const EFFORTS = ["", "none", "low", "medium", "high", "xhigh", "max"];
 
 const inputClass =
   "h-12 w-full rounded-xl border border-[var(--line)] bg-[#11161e] px-3 text-[16px] text-[var(--ink)] outline-none focus:border-[var(--line-strong)]";
@@ -33,13 +38,14 @@ export function LlmSettingsForm({ initial, providers }: { initial: PublicSetting
   const [baseUrl, setBaseUrl] = useState(initial.baseUrl);
   const [apiFormat, setApiFormat] = useState<ApiFormat>(initial.apiFormat);
   const [model, setModel] = useState(initial.model);
+  const [effort, setEffort] = useState(initial.effort);
   const [apiKey, setApiKey] = useState("");
   const [key, setKey] = useState(initial.key);
   const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState(false);
   const [test, setTest] = useState<TestResult>(null);
 
-  const form = () => ({ provider, baseUrl, apiFormat, model, apiKey });
+  const form = () => ({ provider, baseUrl, apiFormat, model, effort, apiKey });
 
   function pickProvider(id: string) {
     setProvider(id);
@@ -160,6 +166,31 @@ export function LlmSettingsForm({ initial, providers }: { initial: PublicSetting
           value={model}
           onChange={(e) => setModel(e.target.value)}
           placeholder={provider === "openrouter" ? "openai/gpt-4o-mini" : "gpt-4o-mini"}
+          autoCapitalize="off"
+          autoCorrect="off"
+          spellCheck={false}
+          className={inputClass}
+        />
+      </div>
+
+      <div>
+        <Slider
+          label="추론 강도"
+          min={0}
+          max={EFFORTS.length - 1}
+          value={Math.max(0, EFFORTS.indexOf(effort))}
+          onValueChange={(i) => setEffort(EFFORTS[i])}
+          valueText={effort || "기본"}
+          description="낮출수록 빠릅니다. 기본은 값을 보내지 않고 모델 설정을 따릅니다. 모델이 모르는 값이면 자동으로 빼고 다시 요청합니다."
+        />
+        <label className="label mb-2 mt-3 block" htmlFor="llm-effort">
+          직접 입력
+        </label>
+        <input
+          id="llm-effort"
+          value={effort}
+          onChange={(e) => setEffort(e.target.value.trim())}
+          placeholder="슬라이더에 없는 값 (예: ultra)"
           autoCapitalize="off"
           autoCorrect="off"
           spellCheck={false}

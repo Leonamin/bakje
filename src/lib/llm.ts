@@ -7,6 +7,8 @@ export interface LlmConfig {
   apiKey: string;
   model: string;
   apiFormat: ApiFormat;
+  /** Reasoning effort sent as-is (`none`, `low`, … or a model-specific word). Empty = not sent. */
+  effort?: string;
 }
 
 /** Provider presets shown on the settings screen. `custom` leaves the base URL to the user. */
@@ -26,9 +28,10 @@ export interface LlmSettings {
   apiFormat: ApiFormat;
   model: string;
   apiKey: string;
+  effort: string;
 }
 
-const KEYS = ["provider", "base_url", "api_format", "model", "api_key"] as const;
+const KEYS = ["provider", "base_url", "api_format", "model", "api_key", "effort"] as const;
 
 function readStored(): Partial<Record<(typeof KEYS)[number], string>> {
   const rows = db().prepare("SELECT key, value FROM setting WHERE key LIKE 'llm.%'").all() as { key: string; value: string }[];
@@ -47,6 +50,7 @@ export function llmSettings(): LlmSettings {
     apiFormat: s.api_format === "responses" ? "responses" : "chat",
     model: s.model || process.env.OPENAI_MODEL?.trim() || "gpt-4o-mini",
     apiKey: s.api_key || process.env.OPENAI_API_KEY?.trim() || "",
+    effort: s.effort ?? "",
   };
 }
 
@@ -59,6 +63,7 @@ export function saveLlmSettings(patch: Partial<LlmSettings>): void {
     api_format: patch.apiFormat,
     model: patch.model,
     api_key: patch.apiKey,
+    effort: patch.effort,
   };
   for (const [k, v] of Object.entries(map)) if (typeof v === "string") upsert.run(`llm.${k}`, v.trim());
 }
@@ -74,7 +79,7 @@ export function keyInfo(): { tail: string | null; source: "db" | "env" | null } 
 export function llmConfig(): LlmConfig | null {
   const s = llmSettings();
   if (!s.apiKey) return null;
-  return { baseUrl: s.baseUrl, apiKey: s.apiKey, model: s.model, apiFormat: s.apiFormat };
+  return { baseUrl: s.baseUrl, apiKey: s.apiKey, model: s.model, apiFormat: s.apiFormat, effort: s.effort };
 }
 
 export interface TranslateInput {
@@ -131,10 +136,12 @@ function parseJsonLoose(text: string): any | null {
 const OPTIONAL: Record<ApiFormat, { field: string; mentions: RegExp }[]> = {
   chat: [
     { field: "response_format", mentions: /response_format|json_object|json mode/i },
+    { field: "reasoning_effort", mentions: /reasoning_effort|reasoning|effort/i },
     { field: "temperature", mentions: /temperature/i },
   ],
   responses: [
     { field: "text", mentions: /text\.format|json_object|json mode/i },
+    { field: "reasoning", mentions: /reasoning|effort/i },
     { field: "temperature", mentions: /temperature/i },
   ],
 };
@@ -147,6 +154,7 @@ function buildBody(cfg: LlmConfig, system: string, user: string): Record<string,
       input: user,
       temperature: 0.2,
       text: { format: { type: "json_object" } },
+      ...(cfg.effort && { reasoning: { effort: cfg.effort } }),
     };
   }
   return {
@@ -157,6 +165,7 @@ function buildBody(cfg: LlmConfig, system: string, user: string): Record<string,
     ],
     temperature: 0.2,
     response_format: { type: "json_object" },
+    ...(cfg.effort && { reasoning_effort: cfg.effort }),
   };
 }
 
@@ -197,8 +206,8 @@ async function callLlm(cfg: LlmConfig, system: string, user: string): Promise<st
 
       const text = await res.text().catch(() => "");
       const rejected = res.status === 400 ? OPTIONAL[cfg.apiFormat].filter((o) => o.field in body && o.mentions.test(text)) : [];
-      // One retry is enough: the fields a model refuses come back in the same error.
-      if (attempt === 0 && rejected.length > 0) {
+      // Each retry drops at least one field, so this ends; a model may name them one error at a time.
+      if (rejected.length > 0) {
         for (const o of rejected) delete body[o.field];
         continue;
       }
