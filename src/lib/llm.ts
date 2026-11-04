@@ -88,7 +88,7 @@ export interface TranslateOutput {
   summaryKo: string;
 }
 
-const PROMPT_VERSION = 2;
+const PROMPT_VERSION = 3;
 
 const SYSTEM = [
   "You are a translation engine for a personal reading archive.",
@@ -103,6 +103,7 @@ const SYSTEM = [
   "- Never add commentary, notes, or explanations.",
   '- "summary" is written in Korean, 2-4 short sentences, and says what the post is about and its main point. Do not just repeat the translation.',
   "- If the input title is null, return null for the title.",
+  '- If a "context" field is present, it is background only (title and opening of the whole post). Never translate or return it; use it to keep terms and tone consistent.',
   'Respond with JSON only: {"title": string|null, "parts": string[], "summary": string}',
 ].join("\n");
 
@@ -139,11 +140,11 @@ const OPTIONAL: Record<ApiFormat, { field: string; mentions: RegExp }[]> = {
   ],
 };
 
-function buildBody(cfg: LlmConfig, user: string): Record<string, unknown> {
+function buildBody(cfg: LlmConfig, system: string, user: string): Record<string, unknown> {
   if (cfg.apiFormat === "responses") {
     return {
       model: cfg.model,
-      instructions: SYSTEM,
+      instructions: system,
       input: user,
       temperature: 0.2,
       text: { format: { type: "json_object" } },
@@ -152,7 +153,7 @@ function buildBody(cfg: LlmConfig, user: string): Record<string, unknown> {
   return {
     model: cfg.model,
     messages: [
-      { role: "system", content: SYSTEM },
+      { role: "system", content: system },
       { role: "user", content: user },
     ],
     temperature: 0.2,
@@ -170,13 +171,16 @@ function readContent(cfg: LlmConfig, json: any): string {
     .join("");
 }
 
-async function callLlm(cfg: LlmConfig, user: string): Promise<string> {
-  const body = buildBody(cfg, user);
+/** A long article takes a slow model minutes, so the per-call limit is generous. Routes need maxDuration above it. */
+const LLM_TIMEOUT_MS = 300_000;
+
+async function callLlm(cfg: LlmConfig, system: string, user: string): Promise<string> {
+  const body = buildBody(cfg, system, user);
   const url = `${cfg.baseUrl}/${cfg.apiFormat === "responses" ? "responses" : "chat/completions"}`;
 
   for (let attempt = 0; ; attempt++) {
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 120_000);
+    const timer = setTimeout(() => controller.abort(), LLM_TIMEOUT_MS);
     try {
       const res = await fetch(url, {
         method: "POST",
@@ -200,7 +204,7 @@ async function callLlm(cfg: LlmConfig, user: string): Promise<string> {
       }
       throw new Error(`LLM ${res.status}: ${text.slice(0, 300)}`);
     } catch (err) {
-      if ((err as Error).name === "AbortError") throw new Error("LLM 응답이 120초 안에 오지 않았습니다.");
+      if ((err as Error).name === "AbortError") throw new Error("LLM 응답이 300초 안에 오지 않았습니다.");
       if (err instanceof TypeError) throw new Error(`LLM 서버에 연결하지 못했습니다. Base URL을 확인해주세요. (${err.message})`);
       throw err;
     } finally {
@@ -209,21 +213,97 @@ async function callLlm(cfg: LlmConfig, user: string): Promise<string> {
   }
 }
 
-export async function translateAndSummarize(input: TranslateInput, cfg: LlmConfig): Promise<TranslateOutput> {
-  const content = await callLlm(cfg, JSON.stringify({ title: input.title, parts: input.parts }));
+/** Above this many characters the post is cut into chunks that are translated in parallel. */
+const CHUNK_CHARS = 4000;
+const CONCURRENCY = 4;
+const SUMMARY_CHARS = 12000;
+const CONTEXT_CHARS = 500;
+
+const SUMMARY_SYSTEM = [
+  "You summarize a social media post for a personal reading archive.",
+  'The user message is a JSON object {"title": string|null, "text": string}. "text" may be the opening part of a longer post.',
+  'Respond with JSON only: {"title": string|null, "summary": string}',
+  '- "title" is the title translated into natural Korean; null if the input title is null.',
+  '- "summary" is Korean, 2-4 short sentences: what the post is about and its main point.',
+  "- Do not translate code, URLs, @handles, or names of products, companies, libraries and people.",
+].join("\n");
+
+/** Cuts at blank lines so a chunk never ends inside a paragraph, list or code block line. */
+export function splitChunks(text: string, max = CHUNK_CHARS): string[] {
+  const chunks: string[] = [];
+  let cur = "";
+  for (const block of text.split("\n\n")) {
+    if (cur && cur.length + block.length + 2 > max) {
+      chunks.push(cur);
+      cur = "";
+    }
+    cur = cur ? `${cur}\n\n${block}` : block;
+  }
+  if (cur) chunks.push(cur);
+  return chunks;
+}
+
+async function mapLimit<T, R>(items: T[], limit: number, fn: (item: T) => Promise<R>): Promise<R[]> {
+  const out: R[] = new Array(items.length);
+  let next = 0;
+  await Promise.all(
+    Array.from({ length: Math.min(limit, items.length) }, async () => {
+      while (next < items.length) {
+        const i = next++;
+        out[i] = await fn(items[i]);
+      }
+    }),
+  );
+  return out;
+}
+
+function chunkParts(content: string, expected: number): string[] {
   const parsed = parseJsonLoose(content);
   if (!parsed) throw new Error("LLM 응답을 JSON으로 읽지 못했습니다.");
-
   const partsKo: string[] = Array.isArray(parsed.parts) ? parsed.parts.map((p: unknown) => String(p ?? "")) : [];
   // A merged or split segment would shift every later translation onto the wrong original.
-  if (partsKo.length !== input.parts.length) {
-    throw new Error(`LLM이 본문 조각 수를 맞추지 못했습니다. (원문 ${input.parts.length}개, 응답 ${partsKo.length}개) 다시 시도해주세요.`);
+  if (partsKo.length !== expected) {
+    throw new Error(`LLM이 본문 조각 수를 맞추지 못했습니다. (원문 ${expected}개, 응답 ${partsKo.length}개) 다시 시도해주세요.`);
   }
+  return partsKo;
+}
+
+async function translateWhole(input: TranslateInput, cfg: LlmConfig): Promise<TranslateOutput> {
+  const content = await callLlm(cfg, SYSTEM, JSON.stringify({ title: input.title, parts: input.parts }));
+  const parsed = parseJsonLoose(content);
   return {
-    titleKo: typeof parsed.title === "string" ? parsed.title : null,
-    partsKo,
-    summaryKo: typeof parsed.summary === "string" ? parsed.summary.trim() : "",
+    titleKo: typeof parsed?.title === "string" ? parsed.title : null,
+    partsKo: chunkParts(content, input.parts.length),
+    summaryKo: typeof parsed?.summary === "string" ? parsed.summary.trim() : "",
   };
+}
+
+/** Long posts: chunks go out in parallel, each with the post's opening as context; title and summary come from a separate short call. */
+async function translateChunked(input: TranslateInput, cfg: LlmConfig): Promise<TranslateOutput> {
+  const joined = input.parts.join("\n\n");
+  const context = [input.title, joined.slice(0, CONTEXT_CHARS)].filter(Boolean).join("\n\n");
+  const units = input.parts.flatMap((text, part) => (text.trim() ? splitChunks(text).map((chunk) => ({ part, chunk })) : []));
+
+  const [translated, head] = await Promise.all([
+    mapLimit(units, CONCURRENCY, async (u) =>
+      chunkParts(await callLlm(cfg, SYSTEM, JSON.stringify({ title: null, context, parts: [u.chunk] })), 1)[0],
+    ),
+    callLlm(cfg, SUMMARY_SYSTEM, JSON.stringify({ title: input.title, text: joined.slice(0, SUMMARY_CHARS) })),
+  ]);
+
+  const partsKo = input.parts.map(() => [] as string[]);
+  units.forEach((u, i) => partsKo[u.part].push(translated[i]));
+  const meta = parseJsonLoose(head);
+  return {
+    titleKo: typeof meta?.title === "string" ? meta.title : null,
+    partsKo: partsKo.map((chunks) => chunks.join("\n\n")),
+    summaryKo: typeof meta?.summary === "string" ? meta.summary.trim() : "",
+  };
+}
+
+export async function translateAndSummarize(input: TranslateInput, cfg: LlmConfig): Promise<TranslateOutput> {
+  const total = input.parts.reduce((n, p) => n + p.length, 0);
+  return total <= CHUNK_CHARS ? translateWhole(input, cfg) : translateChunked(input, cfg);
 }
 
 export const LLM_PROMPT_VERSION = PROMPT_VERSION;

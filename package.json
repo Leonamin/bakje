@@ -18,6 +18,7 @@
     "test:library": "tsx scripts/test-library.ts",
     "test:library-patch": "tsx scripts/test-library-patch.ts",
     "check:library": "tsx scripts/check-library-import.ts",
+    "test:llm-chunks": "tsx scripts/test-llm-chunks.ts",
     "test:trash": "tsx scripts/test-trash.ts",
     "test:review-fixes": "tsx scripts/test-review-fixes.ts"
   },
