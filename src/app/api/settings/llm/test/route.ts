@@ -3,7 +3,7 @@ import { llmSettings, translateAndSummarize } from "@/lib/llm";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-export const maxDuration = 150;
+export const maxDuration = 330;
 
 /** Tests the form values before they are saved; an empty key falls back to the saved one. */
 export async function POST(req: Request) {
