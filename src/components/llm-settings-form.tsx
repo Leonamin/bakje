@@ -181,7 +181,9 @@ export function LlmSettingsForm({ initial, providers }: { initial: PublicSetting
           value={Math.max(0, EFFORTS.indexOf(effort))}
           onValueChange={(i) => setEffort(EFFORTS[i])}
           valueText={effort || "기본"}
-          description="낮출수록 빠릅니다. 기본은 값을 보내지 않고 모델 설정을 따릅니다. 모델이 모르는 값이면 자동으로 빼고 다시 요청합니다."
+          size="thick"
+          hasMarks
+          description="왼쪽일수록 빠릅니다. 기본은 값을 보내지 않고 모델 설정을 따릅니다. 모델이 모르는 값이면 자동으로 빼고 다시 요청합니다."
         />
         <label className="label mb-2 mt-3 block" htmlFor="llm-effort">
           직접 입력
