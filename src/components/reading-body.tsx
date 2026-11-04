@@ -9,6 +9,7 @@ import { Spinner } from "@/components/goodcase/basic/spinner";
 import type { MediaRow, PartRow } from "@/lib/types";
 import { buildAskPrompt } from "@/lib/ask-prompt";
 import { MediaGallery, splitMedia } from "./media-gallery";
+import { Markdown } from "./markdown-body";
 
 /** Parts longer than this start folded. The main post never folds. */
 const FOLD_AT = 600;
@@ -40,9 +41,9 @@ function linkify(text: string) {
 }
 
 /** Article 본문의 `![](원본 주소)` 줄을 저장된 미디어로 바꿔 원래 자리에 보여 준다. 못 찾으면 줄을 지운다. */
-function renderText(text: string, media: MediaRow[]) {
+function renderText(text: string, media: MediaRow[], markdown: boolean) {
   return text.split(/^!\[\]\((\S+)\)$/m).map((chunk, i) => {
-    if (i % 2 === 0) return <span key={i}>{linkify(chunk)}</span>;
+    if (i % 2 === 0) return markdown ? <Markdown key={i} text={chunk} /> : <span key={i}>{linkify(chunk)}</span>;
     const m = media.find((row) => row.remote_url === chunk);
     return m ? (
       <div key={i} className="my-4">
@@ -50,6 +51,11 @@ function renderText(text: string, media: MediaRow[]) {
       </div>
     ) : null;
   });
+}
+
+/** The page already shows the title as h1, so a leading `# title` line would repeat it. */
+function withoutHeading(text: string) {
+  return text.replace(/^\s*#\s.*\n+/, "");
 }
 
 type TranslateState = { kind: "idle" } | { kind: "loading" } | { kind: "error"; message: string };
@@ -319,8 +325,8 @@ export function ReadingBody({
           const folded = foldable && !expanded.has(part.id);
           const body = (
             <>
-              <div className={`post-text text-[var(--ink)] ${part.kind === "parent_context" ? "text-[var(--muted)]" : ""}`}>
-                {text ? renderText(text, partMedia) : <span className="text-[var(--muted)]">(본문 없음 — 미디어 게시글)</span>}
+              <div className={`post-text text-[var(--ink)] ${part.format === "markdown" ? "!whitespace-normal" : ""} ${part.kind === "parent_context" ? "text-[var(--muted)]" : ""}`}>
+                {text ? renderText(part.kind === "main" && part.format === "markdown" ? withoutHeading(text) : text, partMedia, part.format === "markdown") : <span className="text-[var(--muted)]">(본문 없음 — 미디어 게시글)</span>}
               </div>
               {partMedia.length > 0 ? (
                 <div className="mt-4">

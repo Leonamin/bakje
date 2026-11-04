@@ -30,11 +30,15 @@ function withoutTitle(text: string, title: string) {
   return m && m[1].trim() === title.trim() ? text.slice(m[0].length) : text;
 }
 
+export function Markdown({ text }: { text: string }) {
+  return <ReactMarkdown remarkPlugins={[remarkGfm]} components={components}>{text}</ReactMarkdown>;
+}
+
 /** Main document of an item: no card, with the raw text one tap away for copying. */
 export function MarkdownBody({ text, title }: { text: string; title: string }) {
   return <>
     <div className="break-words text-[16px] leading-[1.7] [&>*:first-child]:mt-0">
-      <ReactMarkdown remarkPlugins={[remarkGfm]} components={components}>{withoutTitle(text, title)}</ReactMarkdown>
+      <Markdown text={withoutTitle(text, title)} />
     </div>
     <Fold title="원문 보기" className="mt-8 border-t border-[var(--line)] pt-3" summaryClassName="label min-h-11">
       <div className="whitespace-pre-wrap break-words rounded-2xl bg-[var(--surface)] p-4 text-[14px] leading-relaxed">{text}</div>

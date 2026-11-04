@@ -18,6 +18,8 @@ export interface ParsedPart {
   text: string;
   sourceUrl: string;
   postedAt?: string | null;
+  /** `markdown` when the adapter built the text as Markdown (X Article). Plain post text when absent. */
+  format?: "markdown";
   media: MediaRef[];
 }
 
@@ -86,6 +88,7 @@ export interface PartRow {
   text_ko: string | null;
   source_url: string | null;
   posted_at: string | null;
+  format: "text" | "markdown";
 }
 
 export interface MediaRow {

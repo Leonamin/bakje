@@ -348,6 +348,7 @@ function partFrom(
     text: article ? `# ${node.articleTitle}\n\n${article}` : cleanText(node.text, node),
     sourceUrl: `https://x.com/${node.author ?? "i"}/status/${node.id}`,
     postedAt: node.createdAt,
+    format: article ? "markdown" : undefined,
     media: [...node.media, ...(articleMedia?.get(node.id) ?? [])],
   };
 }
