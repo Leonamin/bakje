@@ -88,7 +88,7 @@ export interface TranslateOutput {
   summaryKo: string;
 }
 
-const PROMPT_VERSION = 3;
+const PROMPT_VERSION = 4;
 
 const SYSTEM = [
   "You are a translation engine for a personal reading archive.",
@@ -103,7 +103,6 @@ const SYSTEM = [
   "- Never add commentary, notes, or explanations.",
   '- "summary" is written in Korean, 2-4 short sentences, and says what the post is about and its main point. Do not just repeat the translation.',
   "- If the input title is null, return null for the title.",
-  '- If a "context" field is present, it is background only (title and opening of the whole post). Never translate or return it; use it to keep terms and tone consistent.',
   'Respond with JSON only: {"title": string|null, "parts": string[], "summary": string}',
 ].join("\n");
 
@@ -178,6 +177,7 @@ async function callLlm(cfg: LlmConfig, system: string, user: string): Promise<st
   const body = buildBody(cfg, system, user);
   const url = `${cfg.baseUrl}/${cfg.apiFormat === "responses" ? "responses" : "chat/completions"}`;
 
+  let transient = 0;
   for (let attempt = 0; ; attempt++) {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), LLM_TIMEOUT_MS);
@@ -202,7 +202,13 @@ async function callLlm(cfg: LlmConfig, system: string, user: string): Promise<st
         for (const o of rejected) delete body[o.field];
         continue;
       }
-      throw new Error(`LLM ${res.status}: ${text.slice(0, 300)}`);
+      // Gateway hiccups (502/503/429) are usually gone on the next try.
+      if ((res.status >= 500 || res.status === 429) && transient++ < 2) {
+        await new Promise((r) => setTimeout(r, 3000 * transient));
+        continue;
+      }
+      const brief = text.startsWith("<") ? "(HTML 오류 페이지)" : text.slice(0, 300);
+      throw new Error(`LLM ${res.status}: ${brief}`);
     } catch (err) {
       if ((err as Error).name === "AbortError") throw new Error("LLM 응답이 300초 안에 오지 않았습니다.");
       if (err instanceof TypeError) throw new Error(`LLM 서버에 연결하지 못했습니다. Base URL을 확인해주세요. (${err.message})`);
@@ -215,9 +221,23 @@ async function callLlm(cfg: LlmConfig, system: string, user: string): Promise<st
 
 /** Above this many characters the post is cut into chunks that are translated in parallel. */
 const CHUNK_CHARS = 4000;
-const CONCURRENCY = 4;
+// OpenCode answers parallel requests almost one by one and its gateway returns 502 when too many queue up.
+const CONCURRENCY = 2;
 const SUMMARY_CHARS = 12000;
 const CONTEXT_CHARS = 500;
+
+const CHUNK_SYSTEM = [
+  "You are a translation engine for a personal reading archive.",
+  'The user message is a JSON object {"context": string, "text": string}. "text" is one section of a longer post.',
+  'Translate "text" into natural, idiomatic Korean. "context" is background only (title and opening of the whole post): never translate or return it; use it to keep terms and tone consistent.',
+  "Rules:",
+  "- Keep every line break, blank line, list and markdown structure exactly. Do not merge, drop or reorder paragraphs.",
+  "- Lines like ![](https://...) and the URL part of [text](https://...) must stay exactly as they are; translate only the link text.",
+  "- Do not translate code, URLs, @handles, #hashtags, emoji, or names of products, companies, libraries and people.",
+  "- Preserve the author's tone and level of formality.",
+  "- Never add commentary, notes, or explanations.",
+  'Respond with JSON only: {"text": string}',
+].join("\n");
 
 const SUMMARY_SYSTEM = [
   "You summarize a social media post for a personal reading archive.",
@@ -257,7 +277,7 @@ async function mapLimit<T, R>(items: T[], limit: number, fn: (item: T) => Promis
   return out;
 }
 
-function chunkParts(content: string, expected: number): string[] {
+function partsOf(content: string, expected: number): string[] {
   const parsed = parseJsonLoose(content);
   if (!parsed) throw new Error("LLM 응답을 JSON으로 읽지 못했습니다.");
   const partsKo: string[] = Array.isArray(parsed.parts) ? parsed.parts.map((p: unknown) => String(p ?? "")) : [];
@@ -268,12 +288,18 @@ function chunkParts(content: string, expected: number): string[] {
   return partsKo;
 }
 
+function translateChunk(content: string): string {
+  const text = parseJsonLoose(content)?.text;
+  if (typeof text !== "string" || !text.trim()) throw new Error("LLM이 번역문을 돌려주지 않았습니다. 다시 시도해주세요.");
+  return text.trim();
+}
+
 async function translateWhole(input: TranslateInput, cfg: LlmConfig): Promise<TranslateOutput> {
   const content = await callLlm(cfg, SYSTEM, JSON.stringify({ title: input.title, parts: input.parts }));
   const parsed = parseJsonLoose(content);
   return {
     titleKo: typeof parsed?.title === "string" ? parsed.title : null,
-    partsKo: chunkParts(content, input.parts.length),
+    partsKo: partsOf(content, input.parts.length),
     summaryKo: typeof parsed?.summary === "string" ? parsed.summary.trim() : "",
   };
 }
@@ -286,7 +312,7 @@ async function translateChunked(input: TranslateInput, cfg: LlmConfig): Promise<
 
   const [translated, head] = await Promise.all([
     mapLimit(units, CONCURRENCY, async (u) =>
-      chunkParts(await callLlm(cfg, SYSTEM, JSON.stringify({ title: null, context, parts: [u.chunk] })), 1)[0],
+      translateChunk(await callLlm(cfg, CHUNK_SYSTEM, JSON.stringify({ context, text: u.chunk }))),
     ),
     callLlm(cfg, SUMMARY_SYSTEM, JSON.stringify({ title: input.title, text: joined.slice(0, SUMMARY_CHARS) })),
   ]);
