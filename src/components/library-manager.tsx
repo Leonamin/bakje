@@ -21,11 +21,12 @@ export function LibraryManager({ initial }: { initial: State }) {
   const [state, setState] = useState(initial), [busy, setBusy] = useState(false), [message, setMessage] = useState("");
   const [selected, setSelected] = useState<number | null>(null), [folder, setFolder] = useState(".");
   const [files, setFiles] = useState<{ total: number; entries: { name: string; path: string; kind: string }[] }>({ total: 0, entries: [] });
-  const [fileOffset, setFileOffset] = useState(0), [manifest, setManifest] = useState(""), [rule, setRule] = useState("");
+  const [runLimit, setRunLimit] = useState(5), [fileOffset, setFileOffset] = useState(0), [manifest, setManifest] = useState(""), [rule, setRule] = useState("");
   async function refresh() { const r = await fetch("/api/library"); if (r.ok) setState(await r.json()); }
   useEffect(() => { const id = setInterval(() => void refresh().catch(() => {}), 4000); return () => clearInterval(id); }, []);
   useEffect(() => {
     if (!selected) return;
+    document.getElementById("folder-section")?.scrollIntoView({ behavior: "smooth", block: "start" });
     const controller = new AbortController();
     fetch(`/api/library/browse?storage=${selected}&folder=${encodeURIComponent(folder)}&offset=${fileOffset}`, { signal: controller.signal }).then(async r => { const data = await r.json(); if (!r.ok) throw new Error(data.error); setFiles(data); }).catch(err => { if (err.name !== "AbortError") setMessage(String(err)); });
     return () => controller.abort();
@@ -50,17 +51,22 @@ export function LibraryManager({ initial }: { initial: State }) {
     <section aria-labelledby="storage-heading"><h2 id="storage-heading" className="mb-3 font-semibold">저장소</h2>
       <ul className="space-y-3">{state.storages.map(s => <li key={s.id} className="rounded-2xl border border-[var(--line)] p-4">
         <div className="flex flex-wrap items-center gap-2"><Folder size={18} /><Link href={`/?storage=${s.id}`} className="press font-semibold">{s.name}</Link><span className="label ml-auto">{s.item_count.toLocaleString()}건 · {s.kind === "managed" ? "기본 저장소" : s.enabled ? "연결됨" : "연결 해제"}</span></div>
-        {s.kind === "linked" ? <><p className="label mt-2 break-all">{s.root_path}</p><Select
-            label={`${s.name} 자동 새로고침`}
-            className="mt-3"
-            value={String(s.scan_interval_minutes)}
-            isDisabled={busy}
-            onValueChange={value => { void act({ action: "schedule", storage_id: s.id, minutes: Number(value) }, "새로고침 주기를 변경했습니다. 기존 OpenNana 또는 파일 매니페스트 규칙을 사용합니다."); }}
-            options={[{ value: "0", label: "수동" }, { value: "60", label: "매시간" }, { value: "1440", label: "매일" }]}
-          />{s.error ? <p className="label mt-2 text-[var(--warn)]">{s.error}</p> : null}
-          <div className="mt-3"><Switch label="원본 삭제 허용" isChecked={!!s.allow_delete} isDisabled={busy} onCheckedChange={on => act({ action: "allow_delete", storage_id: s.id, allow: on }, on ? "이제부터 삭제가 만료된 박제본의 원본 파일도 이 폴더에서 지웁니다. 읽기 전용 마운트는 지울 수 없습니다." : "원본 삭제를 껐습니다.")} /><p className="label mt-1">{s.allow_delete ? "휴지통 7일이 지난 박제본의 원본 파일을 이 폴더에서 지웁니다. 다른 박제본이 쓰는 파일은 남깁니다." : "꺼짐: 휴지통 만료 후에도 이 폴더의 원본 파일은 유지됩니다."}</p></div>
-          <div className="mt-3 flex flex-wrap gap-2"><Button variant="secondary" disabled={busy || !s.enabled} onClick={() => { setSelected(s.id); setFolder("."); setFileOffset(0); }}>폴더 살펴보기</Button><Button variant="secondary" disabled={busy || !s.enabled} onClick={() => act({ action: "opennana", storage_id: s.id }, "OpenNana 등록 작업을 접수했습니다. 프롬프트·이미지·영상을 연결합니다.")}>OpenNana 등록·새로고침</Button><Switch label="연결 사용" isChecked={!!s.enabled} isDisabled={busy} onCheckedChange={on => act({ action: "storage", id: s.id, enabled: on }, on ? "다시 연결했습니다." : "연결을 해제했습니다. 원본은 유지됩니다.")} /></div>
-          <LibraryOrganizationPanel storageId={s.id} />
+        {s.kind === "linked" ? <><p className="label mt-2 break-all">{s.root_path}</p>{s.error ? <p className="label mt-2 text-[var(--warn)]">{s.error}</p> : null}
+          {s.allow_delete ? <p className="label mt-2 text-[var(--warn)]">원본 삭제 허용 켜짐{s.enabled ? "" : " · 연결을 켜면 휴지통 만료 원본을 지웁니다"}</p> : null}
+          <div className="mt-3 flex flex-wrap items-center gap-2"><Button variant="secondary" disabled={busy || !s.enabled} onClick={() => { setSelected(s.id); setFolder("."); setFileOffset(0); }}>폴더 살펴보기</Button><Button variant="secondary" disabled={busy || !s.enabled} onClick={() => act({ action: "opennana", storage_id: s.id }, "OpenNana 등록 작업을 접수했습니다. 프롬프트·이미지·영상을 연결합니다.")}>OpenNana 등록·새로고침</Button><Switch label="연결 사용" isChecked={!!s.enabled} isDisabled={busy} onCheckedChange={on => act({ action: "storage", id: s.id, enabled: on }, on ? "다시 연결했습니다." : "연결을 해제했습니다. 원본은 유지됩니다.")} /></div>
+          {/* ponytail: 드물게 쓰는 설정·위험 동작은 접어 둔다(점진적 공개). 위험 상태는 위 경고 줄로 항상 보인다. */}
+          <Fold title="설정·원본 정리" summaryClassName="text-[14px] font-semibold" className="mt-4 border-t border-[var(--line)] pt-3">
+            <Select
+              label={`${s.name} 자동 새로고침`}
+              className="mt-3"
+              value={String(s.scan_interval_minutes)}
+              isDisabled={busy}
+              onValueChange={value => { void act({ action: "schedule", storage_id: s.id, minutes: Number(value) }, "새로고침 주기를 변경했습니다. 기존 OpenNana 또는 파일 매니페스트 규칙을 사용합니다."); }}
+              options={[{ value: "0", label: "수동" }, { value: "60", label: "매시간" }, { value: "1440", label: "매일" }]}
+            />
+            <div className="mt-3"><Switch label="원본 삭제 허용" isChecked={!!s.allow_delete} isDisabled={busy} onCheckedChange={on => act({ action: "allow_delete", storage_id: s.id, allow: on }, on ? "이제부터 삭제가 만료된 박제본의 원본 파일도 이 폴더에서 지웁니다. 읽기 전용 마운트는 지울 수 없습니다." : "원본 삭제를 껐습니다.")} /><p className="label mt-1">{s.allow_delete ? "휴지통 7일이 지난 박제본의 원본 파일을 이 폴더에서 지웁니다. 다른 박제본이 쓰는 파일은 남깁니다." : "꺼짐: 휴지통 만료 후에도 이 폴더의 원본 파일은 유지됩니다."}</p></div>
+            <LibraryOrganizationPanel storageId={s.id} />
+          </Fold>
         </> : <p className="label mt-2">링크에서 수집한 원본과 박제가 보관하는 파일</p>}
       </li>)}</ul>
       <Fold title="폴더 연결" summaryClassName="font-semibold" className="mt-4 rounded-2xl border border-[var(--line)] p-4">
@@ -70,7 +76,7 @@ export function LibraryManager({ initial }: { initial: State }) {
         </form>
       </Fold>
     </section>
-    {selected ? <section aria-labelledby="folder-heading" className="rounded-2xl border border-[var(--line)] p-4"><h2 id="folder-heading" className="font-semibold">{state.storages.find(s => s.id === selected)?.name} 원본 폴더</h2>
+    {selected ? <section id="folder-section" aria-labelledby="folder-heading" className="rounded-2xl border border-[var(--line)] p-4"><h2 id="folder-heading" className="font-semibold">{state.storages.find(s => s.id === selected)?.name} 원본 폴더</h2>
       <div className="my-3 flex flex-wrap items-center gap-2"><Button variant="secondary" onClick={() => { setFolder(folder.split("/").slice(0, -1).join("/") || "."); setFileOffset(0); }} disabled={folder === "."}><ArrowLeft size={16} />상위 폴더</Button><span className="label break-all">{folder}</span><Link className="gc-button gc-button-secondary" href={`/?storage=${selected}&folder=${encodeURIComponent(folder === "." ? "" : folder)}`}>이 위치의 등록 자료</Link></div>
       <ul className="divide-y divide-[var(--line)]">{files.entries.map(f => <li key={f.path} className="py-2 text-[14px] break-all">{f.kind === "directory" ? <Button variant="secondary" onClick={() => { setFolder(f.path); setFileOffset(0); }}><Folder size={15} />{f.name}</Button> : f.name}</li>)}</ul>
       <div className="mt-3 flex gap-2"><Button variant="secondary" disabled={!fileOffset} onClick={() => setFileOffset(Math.max(0, fileOffset - 100))}>이전 파일</Button><span className="label self-center">{files.total.toLocaleString()}개 중 {fileOffset + 1}~{Math.min(fileOffset + 100, files.total)}</span><Button variant="secondary" disabled={fileOffset + 100 >= files.total} onClick={() => setFileOffset(fileOffset + 100)}>다음 파일</Button></div>
@@ -85,7 +91,7 @@ export function LibraryManager({ initial }: { initial: State }) {
       </Fold>
     </section> : null}
     <section aria-labelledby="runs-heading"><div className="mb-3 flex items-center justify-between"><h2 id="runs-heading" className="font-semibold">등록·내보내기 작업</h2><Button variant="secondary" onClick={() => void refresh()}><RefreshCw size={15} />새로고침</Button></div>
-      {!state.runs.length ? <p className="label">접수한 작업이 없습니다. 폴더 연결 후 등록하거나 AI 에이전트에 자료 묶음을 요청하세요.</p> : <ul className="space-y-3">{state.runs.map(r => <li key={r.id} className="rounded-2xl border border-[var(--line)] p-4">
+      {!state.runs.length ? <p className="label">접수한 작업이 없습니다. 폴더 연결 후 등록하거나 AI 에이전트에 자료 묶음을 요청하세요.</p> : <ul className="space-y-3">{state.runs.slice(0, runLimit).map(r => <li key={r.id} className="rounded-2xl border border-[var(--line)] p-4">
         <div className="flex justify-between gap-3"><span className="font-semibold">#{r.id} · {r.kind === "export" ? "규격 내보내기" : r.kind === "opennana" ? "OpenNana 등록" : "자료 묶음 등록"}</span><span className="label shrink-0">{labels[r.state] ?? r.state}</span></div>
         <p className="label mt-2">{r.grouping_rule}</p><p className="mt-2 text-[14px]">등록·처리 {r.succeeded.toLocaleString()}건 · 실패 {r.failed.toLocaleString()}건{r.total ? ` / 전체 ${r.total.toLocaleString()}건` : ""}</p>
         {r.error ? <p className="label mt-2 break-words text-[var(--warn)]">{r.error}</p> : null}
@@ -96,6 +102,7 @@ export function LibraryManager({ initial }: { initial: State }) {
           {r.failed ? <Button variant="secondary" onClick={async () => { const response = await fetch(`/api/library?run=${r.id}`); const data = await response.json(); setMessage((data.errors ?? []).map((e: { ordinal: number; error: string }) => `${e.ordinal}번: ${e.error}`).join("\n")); }}>실패 내역</Button> : null}
         </div>
       </li>)}</ul>}
+      {state.runs.length > runLimit ? <Button variant="secondary" className="mt-3" onClick={() => setRunLimit(n => n + 10)}>이전 작업 더 보기 ({(state.runs.length - runLimit).toLocaleString()}건)</Button> : null}
     </section>
   </div>;
 }
