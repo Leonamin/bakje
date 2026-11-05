@@ -73,6 +73,11 @@
   cursor: pointer;
   outline: none;
 }
+/* Highlight background already marks focus; the global ring would be clipped by the overflow list. */
+.gc-option:focus-visible,
+.gc-option[data-highlighted] {
+  outline: none;
+}
 .gc-option > span:first-child {
   min-width: 0;
   overflow-wrap: anywhere;
@@ -91,6 +96,7 @@
   color: var(--gc-danger);
 }
 .gc-combobox-list {
+  /* focus-ok: .gc-option draws no ring (highlight only) */
   width: var(--radix-popover-trigger-width);
   max-height: 280px;
   overflow: auto;

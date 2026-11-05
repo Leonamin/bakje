@@ -120,6 +120,23 @@ Pretendard Variable 하나를 `src/app/fonts/`에 두고 `next/font/local`로 �
 - 적용 전후로 6개 화면 1145개 요소의 computed style을 비교하니 차이는 세 곳이었다: `/add` 붙여넣기 버튼 14px→16px(`text-[16px]` 의도대로), 상세 메모 textarea 줄 높이 24→26px, 도움말 캡처 이미지 폭 303→260px(`max-w-[260px]` 의도대로, 페이지 높이 약 560px 감소). 도움말 이미지 축소는 사용자가 승인했다.
 - Goodcase CSS 전체를 `layer(components)`로 옮기는 안은 `.gc-*`가 유틸리티에 지게 되어 영향 범위가 넓어 보류했다.
 
+### 포커스 링 잘림과 `outline: none` 무효 (2026-11-05)
+
+드롭다운 항목에 테두리가 보이고 첫·마지막 항목에서 잘렸다. 테두리는 키보드 포커스 링(`:focus-visible`의 `outline`)이다.
+
+- `outline`은 **요소 바깥**에 그려진다(2px + offset 2px = 약 4px). 부모가 `overflow: auto/hidden`이면 부모 경계에서 잘린다. Radix `Select.Viewport`는 `overflow: auto`에 padding이 없어 잘렸다.
+- 탭 목록(`.gc-tabs-list`)은 `padding: var(--gc-focus-clearance)`(6px)로 링 공간을 미리 확보해서 잘리지 않는다.
+- `.gc-option { outline: none }`은 전역 `:focus-visible`에 졌다. 둘의 특이도가 (0,1,0)으로 같아서 로드 순서가 나중인 `bridge.css`가 이긴다. 컴포넌트의 `outline: none`은 이 때문에 믿으면 안 된다.
+- 조치: `.gc-option:focus-visible, .gc-option[data-highlighted] { outline: none }`(특이도 0,2,0). 하이라이트 배경이 이미 위치를 알려 준다.
+
+규칙:
+
+1. 스크롤 컨테이너(`overflow: auto/scroll`) 안에 포커스 가능한 자식이 있으면 `--gc-focus-clearance` padding을 주거나, 링을 끄고 대체 표시(배경)를 둔다.
+2. `outline: none`은 특이도를 높여서 쓴다.
+3. 예외는 규칙 안에 `/* focus-ok: 이유 */` 주석으로 남긴다.
+
+재발 방지: `pnpm lint:ui`가 `src/styles/*.css`의 `overflow: auto/scroll` 규칙을 검사한다. `--gc-focus-clearance`나 `focus-ok` 주석이 없으면 실패한다. 한계: 컨테이너 안에 무엇이 있는지는 보지 못한다. 그래서 규칙 단위 표시만 요구한다. Tailwind 클래스(`overflow-auto`)로 만든 스크롤 영역은 검사하지 않는다(미검증).
+
 ## Goodcase 이식
 
 `src/components/goodcase/`에 Button, Badge, Card, TextField, Drawer, Toast, ImageViewer, Spinner, Skeleton 등을 두고, `src/styles/bridge.css`에서 `--gc-*` 토큰을 앱 팔레트에 연결했다.

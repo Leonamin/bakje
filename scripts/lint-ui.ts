@@ -35,6 +35,20 @@ function scan(path: string) {
   }
 }
 
+// Focus rings draw outside the element, so a scrolling box clips them. Each
+// overflow auto/scroll rule needs `--gc-focus-clearance` padding or a
+// `/* focus-ok: why */` note (e.g. children draw no ring). See wiki ui-system.
+for (const name of readdirSync("src/styles")) {
+  const path = join("src/styles", name);
+  const css = readFileSync(path, "utf8");
+  for (const m of css.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
+    if (/overflow(-x|-y)?\s*:\s*(auto|scroll)/.test(m[2]) && !/--gc-focus-clearance|focus-ok/.test(m[2])) {
+      const line = css.slice(0, m.index! + m[0].indexOf("{")).split("\n").length;
+      bad.push(`${path}:${line}  ${m[1].trim().split("\n").pop()} scrolls without focus clearance (clips focus rings)`);
+    }
+  }
+}
+
 walk("src");
 if (bad.length) {
   console.error(bad.join("\n"));

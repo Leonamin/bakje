@@ -52,6 +52,7 @@
   margin-bottom: var(--gc-space-3);
 }
 .gc-table-scroll {
+  /* focus-ok: ring is on the wrap itself, outside its own box */
   overflow: auto;
 }
 .gc-c-table {
@@ -293,6 +294,7 @@
   font-size: var(--gc-text-sm);
 }
 .gc-viewer-caption p {
+  /* focus-ok: text only, nothing focusable inside */
   margin: 0;
   line-height: 1.5;
   overflow-wrap: anywhere;
@@ -300,6 +302,7 @@
   overflow: auto;
 }
 .gc-viewer-filmstrip {
+  /* focus-ok: padding is wider than the 4px ring */
   display: flex;
   align-items: center;
   justify-content: flex-start;
