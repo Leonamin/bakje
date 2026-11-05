@@ -1,7 +1,9 @@
 import fs from "node:fs/promises";
 import path from "node:path";
-import { createReadStream } from "node:fs";
-import { createHash } from "node:crypto";
+import { createReadStream, createWriteStream } from "node:fs";
+import { createHash, randomBytes } from "node:crypto";
+import { Readable, Transform } from "node:stream";
+import { pipeline } from "node:stream/promises";
 import { db, DATA_DIR } from "./db";
 
 export interface StorageRow {
@@ -47,9 +49,11 @@ export async function resolveFile(storageId: number, relative: string) {
   if (full !== root && !full.startsWith(root + path.sep)) throw new Error("연결 루트 밖의 파일입니다.");
   return full;
 }
+export const UPLOAD_DIR = path.join(DATA_DIR, "uploads");
+export const MAX_UPLOAD = 200 * 1024 * 1024;
 /** Linked roots must sit under LIBRARY_ALLOWED_ROOTS (":"-separated, default /library) or the export folder; never the rest of the data volume. */
 async function assertAllowedRoot(canonical: string) {
-  const allowed = [...(process.env.LIBRARY_ALLOWED_ROOTS ?? "/library").split(":").filter(Boolean), path.join(DATA_DIR, "exports")];
+  const allowed = [...(process.env.LIBRARY_ALLOWED_ROOTS ?? "/library").split(":").filter(Boolean), path.join(DATA_DIR, "exports"), UPLOAD_DIR];
   for (const candidate of allowed) {
     const real = await fs.realpath(candidate).catch(() => null);
     if (real && (canonical === real || canonical.startsWith(real + path.sep))) return;
@@ -101,4 +105,18 @@ export async function catalogMediaReferences() {
     if (full.startsWith(MEDIA_DIR + path.sep)) references.add(path.relative(MEDIA_DIR, full));
   }
   return references;
+}
+
+/** Stream one uploaded file into the uploads folder (a linked storage, created on first use). Returns the path for register_library_items. */
+export async function saveUpload(filename: string, body: ReadableStream<Uint8Array>) {
+  const safe = path.basename(filename).replace(/[^\p{L}\p{N}._-]+/gu, "_").slice(-120) || "file";
+  const dir = path.join(UPLOAD_DIR, new Date().toISOString().slice(0, 7));
+  await fs.mkdir(dir, { recursive: true });
+  const full = path.join(dir, `${randomBytes(4).toString("hex")}-${safe}`);
+  let size = 0;
+  const limit = new Transform({ transform(chunk, _e, cb) { size += chunk.length; cb(size > MAX_UPLOAD ? new Error("파일이 너무 큽니다(최대 200MB).") : null, chunk); } });
+  try { await pipeline(Readable.fromWeb(body as never), limit, createWriteStream(full, { flags: "wx" })); }
+  catch (err) { await fs.rm(full, { force: true }); throw err; }
+  const s = await connectStorage("업로드", UPLOAD_DIR);
+  return { storage_id: s.id, path: path.relative(UPLOAD_DIR, full), mime: fileMime(full), size };
 }
