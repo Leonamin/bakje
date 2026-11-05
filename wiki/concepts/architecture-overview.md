@@ -16,7 +16,7 @@ timestamp: 2026-11-03
 
 - **검색(파란 선)**: AI 개발 에이전트가 MCP로 `https://hamsbox.badger-viper.ts.net:8888/mcp`에 접속한다. `tailscale serve`가 `:8888`을 `127.0.0.1:3020`으로 넘기고, 이것이 Docker 안 web 컨테이너의 `:3000`이다. web은 SQLite(FTS5와 벡터)를 검색한다.
 - **임베딩**: web이 같은 컴포즈의 embedder(Python 사이드카)에 임베딩을 요청한다.
-- **코드 등록(점선)**: 에이전트가 호스트의 `/home/leonamin/Library/<이름>`에 파일을 쓰고, web은 그 폴더를 `/library/<이름>`에 읽기 전용으로 마운트해 읽는다. 연결 폴더는 `code-notes`, `opennana`, `ai-costume`, `ai-pose`다. → [결정 020](../decisions/020-code-profile-and-embed-flag.md)
+- **코드 등록(점선)**: 에이전트가 호스트의 `/home/leonamin/Library/<이름>`에 파일을 쓰고, web은 그 폴더를 `/library/<이름>`에 마운트해 읽는다(2026-11-05 기준 `ux-notes`만 읽기 전용, 나머지는 읽기/쓰기). 연결 폴더는 `code-notes`, `opennana`, `ai-costume`, `ai-pose`다. → [결정 020](../decisions/020-code-profile-and-embed-flag.md)
 - **SNS 수집**: iOS 단축어가 tailnet으로 `/api/ingest`를 호출한다. → [iOS 단축어 수집](./ios-shortcut.md)
 
 ## 근거와 한계
