@@ -213,6 +213,7 @@
 }
 /* Scrolling activates only when the expanded measured stage exceeds the screen. Padding budgets the modest shadow. */
 .gc-toast-viewport[data-can-scroll="true"] {
+  /* focus-ok: padding budgets the ring */
   overflow-y: auto;
   overflow-x: hidden;
   scroll-padding: 16px;

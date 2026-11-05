@@ -8,6 +8,8 @@ okf_version: "0.1"
 
 # Logs
 
+
+- [2026-11-05-focus-ring-clipping.md](./2026-11-05-focus-ring-clipping.md) — 포커스 링 잘림 수정과 lint:ui 검사
 - [2026-11-03-collect-deploy-ux-migration.md](./2026-11-03-collect-deploy-ux-migration.md) — 운영 배포·UX 사례와 초안 규칙 이전·스킬 저장소 반영
 
 - [2026-11-03-bakje-collect-plan.md](./2026-11-03-bakje-collect-plan.md) — 박제 수집 스킬 통합·부분 수정 구현과 검증

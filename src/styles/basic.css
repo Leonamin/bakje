@@ -496,6 +496,7 @@
   border-top: 1px solid var(--gc-border);
 }
 .gc-table-wrap {
+  /* focus-ok: ring is on the wrap itself, outside its own box */
   overflow-x: auto;
   max-width: 100%;
   border: 1px solid var(--gc-border);

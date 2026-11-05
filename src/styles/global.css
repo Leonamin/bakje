@@ -49,6 +49,7 @@ a {
   color: var(--gc-accent);
 }
 pre {
+  /* focus-ok: text only, nothing focusable inside */
   white-space: pre;
   overflow: auto;
   max-width: 100%;
