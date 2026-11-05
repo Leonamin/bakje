@@ -1,12 +1,14 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js";
-import { timingSafeEqual } from "node:crypto";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { mediaUrl } from "@/lib/format";
 import { getSource, searchHybrid, topTags } from "@/lib/search";
 import sharp from "sharp";
-import { connectStorage, storages, listFiles, readFolderText, resolveFile } from "@/lib/library-files";
+import { lookup } from "node:dns/promises";
+import { isIP } from "node:net";
+import { authorized } from "@/lib/mcp-auth";
+import { saveUpload, connectStorage, storages, listFiles, readFolderText, resolveFile } from "@/lib/library-files";
 import { searchLibrary } from "@/lib/library-search";
 import { getLibraryItem, itemManifestSchema, editLibraryItem, patchLibraryItemSchema, patchLibraryItem } from "@/lib/library-catalog";
 import { submitManifest, submitManifestFile, submitOpenNana, getRun, controlRun, submitExport } from "@/lib/library-import";
@@ -138,6 +140,19 @@ function buildServer() {
     const jpeg = await sharp(await resolveFile(storage_id, path)).rotate().resize({ width: 1024, height: 1024, fit: "inside", withoutEnlargement: true }).jpeg({ quality: 80 }).toBuffer();
     return { content: [{ type: "image" as const, mimeType: "image/jpeg", data: jpeg.toString("base64") }] };
   });
+  server.registerTool("upload_library_file", {
+    description: "Download a public http(s) URL into bakje's uploads storage (max 200MB). Returns {storage_id, path, mime}; pass them as a component path to register_library_items. For local files use `curl -H 'Authorization: Bearer $MCP_TOKEN' -F file=@x POST /api/library/upload` instead.",
+    inputSchema: { url: z.string().url(), filename: z.string().max(200).optional() },
+  }, async ({ url, filename }) => {
+    const u = new URL(url);
+    if (!/^https?:$/.test(u.protocol)) throw new Error("http(s) URL만 허용합니다.");
+    // ponytail: blocks private/loopback targets; redirects are refused so the check cannot be bypassed
+    const ip = isIP(u.hostname) ? u.hostname : (await lookup(u.hostname)).address;
+    if (/^(127\.|10\.|0\.|169\.254\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.|100\.(6[4-9]|[7-9]\d|1[01]\d|12[0-7])\.|::1$|f[cd]|fe80)/i.test(ip)) throw new Error("내부망 주소는 받을 수 없습니다.");
+    const res = await fetch(u, { redirect: "error" });
+    if (!res.ok || !res.body) throw new Error(`다운로드 실패: ${res.status}`);
+    return text(await saveUpload(filename ?? decodeURIComponent(u.pathname.split("/").pop() || "file"), res.body));
+  });
   server.registerTool("register_library_items", {
     description: "Submit 1-100 AI-interpreted groups to a durable import job. Supply the user's grouping criterion, stable external_id per group, explicit component keys/roles and relative paths. Set review_required for uncertain groups. Repeating IDs updates rather than duplicates. User-edited items are preserved unless expected_revision is supplied. Registration and analysis continue after the agent exits; poll get_library_job. Never reorganizes originals. " + PROFILE_HINT,
     inputSchema: { storage_id: z.number().int().positive(), grouping_rule: z.string().min(1).max(5000), items: z.array(itemManifestSchema).min(1).max(100) },
@@ -203,15 +218,6 @@ function buildServer() {
   });
 
   return server;
-}
-
-function authorized(req: Request): boolean {
-  const token = process.env.MCP_TOKEN;
-  if (!token) return false; // ponytail: no token configured = endpoint off
-  const given = (req.headers.get("authorization") ?? "").replace(/^Bearer /, "");
-  const a = Buffer.from(given);
-  const b = Buffer.from(token);
-  return a.length === b.length && timingSafeEqual(a, b);
 }
 
 // ponytail: stateless, new server per request; add sessions only if a client needs server push
