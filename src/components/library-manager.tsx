@@ -6,6 +6,7 @@ import { Folder, ArrowLeft, RefreshCw } from "lucide-react";
 import { Button } from "@/components/goodcase/basic/button";
 import { Switch } from "@/components/goodcase/basic/switch";
 import { Fold } from "./fold";
+import { Tabs } from "@/components/goodcase/overlays/tabs";
 import { Select } from "@/components/goodcase/overlays/select";
 import { TextField } from "@/components/goodcase/basic/text-field";
 import { LibraryOrganizationPanel } from "./library-organization-panel";
@@ -42,12 +43,8 @@ export function LibraryManager({ initial }: { initial: State }) {
   return <div className="space-y-8">
     <p className="text-[15px] leading-relaxed text-[var(--muted)]">출처는 자료가 나온 곳, 저장 위치는 파일이 있는 곳입니다. 원본 폴더를 유지하면서 프롬프트·이미지·영상을 하나의 자료로 묶어 관리합니다.</p>
     {message ? <p role="status" className="rounded-xl border border-[var(--line)] p-3 text-[14px] whitespace-pre-wrap break-words">{message}</p> : null}
-    <section aria-labelledby="analysis-heading" className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-4 md:p-5">
-      <h2 id="analysis-heading" className="font-semibold">배경 분석</h2><p className="label mt-2">대기·진행 {pending.toLocaleString()}개 · 실패 {failed.toLocaleString()}개 · {state.bulk_paused ? "대량 분석 일시 정지" : "대량 분석 사용 중"}</p>
-      <div className="mt-3 grid grid-cols-2 gap-3">{["text", "image"].map(modality => <div key={modality} className="rounded-xl bg-[var(--surface-2)] p-3"><p className="text-[14px] font-semibold">{modality === "text" ? "텍스트" : "이미지"}</p><p className="label mt-1">완료 {state.analysis.filter(a => a.modality === modality && a.state === "done").reduce((n, a) => n + a.count, 0).toLocaleString()} · 대기 {state.analysis.filter(a => a.modality === modality && ["pending", "running"].includes(a.state)).reduce((n, a) => n + a.count, 0).toLocaleString()}</p></div>)}</div>
-      <p className="label mt-2">분석 중에도 새 박제는 저장됩니다. 검색과 새 박제 분석을 우선 처리합니다.</p>
-      <div className="mt-4 flex flex-wrap gap-2"><Switch label="대량 분석 사용" isChecked={!state.bulk_paused} isDisabled={busy} onCheckedChange={on => act({ action: "bulk", paused: !on }, "대량 분석 설정을 변경했습니다.")} /><Button variant="secondary" disabled={busy || !failed} onClick={() => act({ action: "retry_analysis" }, "실패한 분석을 다시 대기열에 넣었습니다.")}>실패 분석 재시도</Button></div>
-    </section>
+    <Tabs variant="underline" label="폴더와 작업" items={[
+      { value: "storage", label: "저장소", badge: state.storages.length, content: <div className="space-y-8 pt-6">
     <section aria-labelledby="storage-heading"><h2 id="storage-heading" className="mb-3 font-semibold">저장소</h2>
       <ul className="space-y-3">{state.storages.map(s => <li key={s.id} className="rounded-2xl border border-[var(--line)] p-4">
         <div className="flex flex-wrap items-center gap-2"><Folder size={18} /><Link href={`/?storage=${s.id}`} className="press font-semibold">{s.name}</Link><span className="label ml-auto">{s.item_count.toLocaleString()}건 · {s.kind === "managed" ? "기본 저장소" : s.enabled ? "연결됨" : "연결 해제"}</span></div>
@@ -90,6 +87,16 @@ export function LibraryManager({ initial }: { initial: State }) {
         </form>
       </Fold>
     </section> : null}
+</div> },
+      { value: "analysis", label: "분석", badge: failed ? "dot" : undefined, content: <div className="pt-6">
+    <section aria-labelledby="analysis-heading" className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-4 md:p-5">
+      <h2 id="analysis-heading" className="font-semibold">배경 분석</h2><p className="label mt-2">대기·진행 {pending.toLocaleString()}개 · 실패 {failed.toLocaleString()}개 · {state.bulk_paused ? "대량 분석 일시 정지" : "대량 분석 사용 중"}</p>
+      <div className="mt-3 grid grid-cols-2 gap-3">{["text", "image"].map(modality => <div key={modality} className="rounded-xl bg-[var(--surface-2)] p-3"><p className="text-[14px] font-semibold">{modality === "text" ? "텍스트" : "이미지"}</p><p className="label mt-1">완료 {state.analysis.filter(a => a.modality === modality && a.state === "done").reduce((n, a) => n + a.count, 0).toLocaleString()} · 대기 {state.analysis.filter(a => a.modality === modality && ["pending", "running"].includes(a.state)).reduce((n, a) => n + a.count, 0).toLocaleString()}</p></div>)}</div>
+      <p className="label mt-2">분석 중에도 새 박제는 저장됩니다. 검색과 새 박제 분석을 우선 처리합니다.</p>
+      <div className="mt-4 flex flex-wrap gap-2"><Switch label="대량 분석 사용" isChecked={!state.bulk_paused} isDisabled={busy} onCheckedChange={on => act({ action: "bulk", paused: !on }, "대량 분석 설정을 변경했습니다.")} /><Button variant="secondary" disabled={busy || !failed} onClick={() => act({ action: "retry_analysis" }, "실패한 분석을 다시 대기열에 넣었습니다.")}>실패 분석 재시도</Button></div>
+    </section>
+</div> },
+      { value: "runs", label: "작업", badge: state.runs.filter(r => ["pending", "running"].includes(r.state)).length, content: <div className="pt-6">
     <section aria-labelledby="runs-heading"><div className="mb-3 flex items-center justify-between"><h2 id="runs-heading" className="font-semibold">등록·내보내기 작업</h2><Button variant="secondary" onClick={() => void refresh()}><RefreshCw size={15} />새로고침</Button></div>
       {!state.runs.length ? <p className="label">접수한 작업이 없습니다. 폴더 연결 후 등록하거나 AI 에이전트에 자료 묶음을 요청하세요.</p> : <ul className="space-y-3">{state.runs.slice(0, runLimit).map(r => <li key={r.id} className="rounded-2xl border border-[var(--line)] p-4">
         <div className="flex justify-between gap-3"><span className="font-semibold">#{r.id} · {r.kind === "export" ? "규격 내보내기" : r.kind === "opennana" ? "OpenNana 등록" : "자료 묶음 등록"}</span><span className="label shrink-0">{labels[r.state] ?? r.state}</span></div>
@@ -104,5 +111,7 @@ export function LibraryManager({ initial }: { initial: State }) {
       </li>)}</ul>}
       {state.runs.length > runLimit ? <Button variant="secondary" className="mt-3" onClick={() => setRunLimit(n => n + 10)}>이전 작업 더 보기 ({(state.runs.length - runLimit).toLocaleString()}건)</Button> : null}
     </section>
+</div> },
+    ]} />
   </div>;
 }
