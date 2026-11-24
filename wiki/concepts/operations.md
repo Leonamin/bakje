@@ -77,7 +77,8 @@ sudo가 있으면 `sudo ARCHIVE_UID=$(id -u) ./scripts/prepare-host.sh`.
 ```
 
 - `scripts/backup.sh`: 호스트에 sqlite3가 없어서 web 컨테이너 안에서 better-sqlite3 온라인 백업 API로 DB 사본을 만든다. 사본은 `journal_mode=DELETE`로 바꾸고 `integrity_check`를 통과해야 저장한다. 결과는 `~/bakje-backup/db/archive-<UTC>.db.gz`(최근 14개), `media`·`raw`·`browser`는 `~/bakje-backup/files/`에 rsync로 추가만 한다(`--delete` 없음). `thumbs`·`models`는 다시 만들 수 있어 뺀다.
-- `~/backups`는 root 소유라 쓰지 못한다. 그래서 `~/bakje-backup`을 쓴다.
+- `~/backups`는 root 소유라 쓰지 못한다. 그래서 `~/bakje-backup`을 쓴다. 2026-11-24부터 `~/bakje-backup`은 `~/data/backups/bakje`를 가리키는 심볼릭 링크다(아래 **연결 폴더 원본 경로 이동** 절 참조).
+- **crontab은 이 호스트에서 직접 고칠 수 없다.** `/usr/bin/crontab`이 setuid가 아니라 setgid `root:crontab`이고 서비스 사용자는 `crontab` 그룹이 아니며, sudo도 `no_new_privs`로 막혀 있다. 그래서 cron 줄이 참조하는 `$HOME/bakje-backup` 경로는 반드시 존재해야 하고, 로그 경로를 바꾸려면 root 권한이 필요하다. 새 주기 점검은 cron이 아니라 systemd 사용자 타이머로 붙인다.
 - **아직 같은 디스크다.** 디스크 고장에 대비하려면 `BAKJE_BACKUP_DEST`를 다른 기기(NAS·USB) 마운트로 바꾼다.
 - 복원: `zcat archive-<UTC>.db.gz > archive.db`, `files/*`를 데이터 디렉터리에 복사. 2026-10-26에 복원본으로 `pnpm reparse -- --check`를 돌려 확인했다.
 
@@ -103,6 +104,22 @@ sudo가 있으면 `sudo ARCHIVE_UID=$(id -u) ./scripts/prepare-host.sh`.
 - 재시작과 포기는 `scripts/alert.sh`로 알린다. 상태 파일은 `~/bakje-backup/watchdog/`.
 - 검증: 가짜 `docker`로 임계값·상한·락·정상 복귀를 확인했다. 실제 장애에서의 동작은 미검증.
 - 이 스크립트는 처음에 현재 릴리스 디렉터리에 직접 복사했다. 다음 배포부터는 릴리스에 포함된다.
+
+## 운영 점검과 재발 방지 (2026-11-24)
+
+`scripts/watchdog.sh`는 Docker가 `unhealthy`라고 할 때만 움직이고, 컨테이너가 아예 뜨지 못한 상태(`exited`, `restarting`, 없음)는 일부러 건드리지 않는다. 2026-11-23 장애는 바로 그 사각지대였다. 그래서 원인을 이름으로 알려 주는 점검을 따로 붙였다.
+
+- `scripts/guard.sh`: 5분마다 다음을 확인한다.
+  - `/etc/bakje/compose.override.yml`의 모든 bind 마운트 `source`가 디렉터리로 존재하는지 (`docker compose config --format json`으로 실제 병합 결과를 읽는다)
+  - `bakje-web-1`의 상태와 `State.Error`(컨테이너 생성 실패 사유)
+  - `127.0.0.1:3020/api/health` 응답(컨테이너는 running인데 프록시가 502인 경우)
+  - 최신 DB 백업의 나이(`BACKUP_MAX_AGE_HOURS`, 기본 36시간)와 백업 폴더 존재
+- 알림은 같은 문제에 대해 한 번만 보내고, 같은 지문이면 6시간 간격으로만 반복한다(`ALERT_REPEAT_SECONDS`). 정상으로 돌아오면 복구 알림을 한 번 보낸다. `scripts/alert.sh`를 쓰므로 `BAKJE_ALERT_WEBHOOK`이 없으면 로그와 journal에만 남는다.
+- 수동 실행: `scripts/guard.sh`(보고만), `scripts/guard.sh --check`(문제를 출력하고 문제가 있으면 exit 1).
+- 주기는 systemd 사용자 타이머가 맡는다(`~/.config/systemd/user/bakje-guard.{service,timer}`, `OnBootSec=2min`, `OnUnitActiveSec=5min`). 이 사용자는 `Linger=yes`라 로그아웃·재부팅 뒤에도 돈다. cron을 쓰지 않는 이유는 위 백업 절의 crontab 권한 문제 때문이다.
+- `scripts/deploy.sh`는 배포 전에 병합된 마운트 `source`를 검사하고, 없으면 `up`을 부르지 않고 어느 경로가 없는지 출력하며 멈춘다.
+- 검증(2026-11-24): 존재하지 않는 경로를 넣은 임시 override로 문제 탐지·중복 알림 억제·복구 알림을 확인했고, 없는 컨테이너 이름으로 컨테이너 부재 탐지를 확인했다. 실제 운영에서는 `ok`로 통과했다.
+- 배포 전에는 `guard.sh`를 현재 릴리스에 직접 복사해 두었다(타이머가 첫날부터 돌도록). 다음 배포부터는 릴리스에 포함된다.
 
 ## 확인된 것
 
@@ -192,3 +209,21 @@ services:
 - 운영 MCP 도구 목록·부분 수정·검색, 상세 HTTP 200, 첨부 파일 응답 해시 확인. 새 UX 실제 분석 20개 done, 벡터 22개. 현재 웹 로그 오류 없음.
 
 이전 생성기는 개발 저장소 `scripts/migrate-ux-library.py`다. 실제 자료는 Git에 넣지 않으며 `~/Library/ux-notes/items.jsonl`로 재등록할 수 있다. 기존 UX 원본·CLI는 보존한다. 상세 전환 범위는 [수집 통합 계획](./bakje-collect-plan.md) 참조.
+
+### 연결 폴더 원본 경로 이동 (2026-11-24)
+
+홈 폴더 정리로 `~/Library`가 사라지면서 `/etc/bakje/compose.override.yml`의 `source`가 모두 존재하지 않게 됐다. `bind.create_host_path: false`라 Docker가 폴더를 만들지 않고 컨테이너 생성을 거부했고, 11월 23일 재시작부터 web이 `Exited (127)`로 남아 `:8888`이 502를 돌려줬다. override의 `source`만 새 경로로 바꾸고 web만 재생성해 복구했다(이미지 재빌드 없음, 릴리스 `20261105T032654Z` 유지).
+
+현재 호스트 경로는 다음과 같다. DB의 `root_path`는 컨테이너 안 경로라 바꾸지 않았다.
+
+| 저장소 | 컨테이너 경로 | 호스트 경로 | 마운트 |
+|---|---|---|---|
+| Opennana | `/library/opennana` | `~/data/opennana` | 읽기/쓰기 |
+| ai-costume | `/library/ai-costume` | `~/data/datasets/ai-costume` | 읽기/쓰기 |
+| ai-pose | `/library/ai-pose` | `~/data/datasets/ai-pose` | 읽기/쓰기 |
+| code-notes | `/library/code-notes` | `~/docs/notes/code-notes` | 읽기/쓰기 |
+| UX 자료 | `/library/ux-notes` | `~/docs/notes/ux-notes` | 읽기 전용 |
+
+호스트에서 폴더를 옮기면 override의 `source`도 같이 고쳐야 한다. 경로가 없으면 웹은 뜨지 않는다. 상세 진단·검증은 [복구 기록](../logs/2026-11-24-library-mount-path-recovery.md)에 있다.
+
+같은 홈 폴더 정리로 백업과 감시도 함께 멈춰 있었다. cron 줄이 `>> $HOME/bakje-backup/...`로 로그를 남기는데 그 폴더가 사라져 매 실행이 리다이렉트에서 실패했고, cron은 출력을 버리므로 조용히 죽었다. 2026-11-05 이후 DB 백업이 없었다. `~/bakje-backup`을 `~/data/backups/bakje`로 향하는 심볼릭 링크로 되살리고 `scripts/backup.sh`를 한 번 돌려 새 스냅샷(`archive-20261124T075533Z.db.gz`, 347MB, integrity_check=ok)을 만들었다. 재발을 막기 위해 위 **운영 점검과 재발 방지** 절의 5분 점검을 추가했고, 마운트 원본 부재·컨테이너 미기동·웹 무응답·백업 중단을 모두 알린다.
