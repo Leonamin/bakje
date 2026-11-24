@@ -70,6 +70,31 @@ compose() {
 # them before changing the current release pointer.
 compose config --quiet
 
+# Docker refuses to create a container when a bind source is missing
+# (`create_host_path: false`), and `restart: unless-stopped` then retries
+# silently. A moved home folder once left the service down for 19 hours, so
+# stop the deploy here with the exact path instead of failing during `up`.
+echo "==> checking bind mount sources"
+if ! missing_sources="$(compose config --format json | python3 -c '
+import json, os, sys
+for svc in json.load(sys.stdin).get("services", {}).values():
+    for vol in svc.get("volumes", []) or []:
+        if vol.get("type") != "bind":
+            continue
+        src = vol.get("source") or ""
+        if src and not os.path.isdir(src):
+            print(src)
+')"; then
+  echo "Could not read the merged compose config for the mount check." >&2
+  exit 1
+fi
+if [ -n "$missing_sources" ]; then
+  echo "Bind mount source(s) do not exist:" >&2
+  printf '  %s\n' $missing_sources >&2
+  echo "Fix the source in $compose_override (or recreate the folder), then retry." >&2
+  exit 1
+fi
+
 ln -sfn "$release_dir" /opt/bakje/current.new
 mv -Tf /opt/bakje/current.new /opt/bakje/current
 

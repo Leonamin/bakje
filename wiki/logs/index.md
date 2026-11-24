@@ -9,6 +9,7 @@ okf_version: "0.1"
 # Logs
 
 
+- [2026-11-24-library-mount-path-recovery.md](./2026-11-24-library-mount-path-recovery.md) — 연결 폴더 원본 경로 이동으로 웹이 뜨지 못한 장애 진단·복구
 - [2026-11-05-focus-ring-clipping.md](./2026-11-05-focus-ring-clipping.md) — 포커스 링 잘림 수정과 lint:ui 검사
 - [2026-11-03-collect-deploy-ux-migration.md](./2026-11-03-collect-deploy-ux-migration.md) — 운영 배포·UX 사례와 초안 규칙 이전·스킬 저장소 반영
 
